@@ -1476,6 +1476,7 @@ function list_oxidized(Illuminate\Http\Request $request)
             'hostname' => $device->hostname,
             'os' => $device->os,
             'ip' => $device->ip,
+            'sysName' => $device->sysName,
         ];
 
         // Pre-populate the group with the default
