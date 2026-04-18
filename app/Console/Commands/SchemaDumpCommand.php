@@ -27,7 +27,7 @@ class SchemaDumpCommand extends DumpCommand
      *
      * @return int
      */
-    public function handle(ConnectionResolverInterface $connections, Dispatcher $dispatcher)
+    public function handle(ConnectionResolverInterface $connections, Dispatcher $dispatcher): int
     {
         $database = $this->option('database');
 
@@ -36,6 +36,7 @@ class SchemaDumpCommand extends DumpCommand
             foreach ($databases as $database) {
                 $this->line("Database: $database");
                 $this->input->setOption('database', $database);
+                $this->input->setOption('verbose', 3);
                 parent::handle($connections, $dispatcher);
             }
 
@@ -56,7 +57,7 @@ class SchemaDumpCommand extends DumpCommand
 
         \Artisan::call('migrate', $parameters, $stdout);
 
-        $file = $this->option('path') ?: base_path('/misc/db_schema.yaml');
+        $file = $this->option('path') ?: resource_path('definitions/schema/db_schema.yaml');
         $yaml = Yaml::dump(Schema::dump($database), 3, 2);
 
         if (file_put_contents($file, $yaml)) {

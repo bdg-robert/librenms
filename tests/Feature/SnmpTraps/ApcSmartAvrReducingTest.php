@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ApcSmartAvrReducingTest.php
  *
@@ -24,7 +25,9 @@
 
 namespace LibreNMS\Tests\Feature\SnmpTraps;
 
-class ApcSmartAvrReducingTest extends SnmpTrapTestCase
+use LibreNMS\Enum\Severity;
+
+final class ApcSmartAvrReducingTest extends SnmpTrapTestCase
 {
     /**
      * Test ApcSmartAvrReducing handle
@@ -43,7 +46,7 @@ SNMPv2-MIB::snmpTrapEnterprise.0 PowerNet-MIB::apc
 TRAP,
             'UPS: Compensating for a high input voltage.',
             'Could not handle testApcSmartAvrReducing trap',
-            [3],
+            [Severity::Notice],
         );
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SocialiateController.php
  *
@@ -22,15 +23,16 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Facades\LibrenmsConfig;
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Config;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
-use LibreNMS\Config as LibreNMSConfig;
 use LibreNMS\Exceptions\AuthenticationException;
 
 class SocialiteController extends Controller
@@ -52,11 +54,32 @@ class SocialiteController extends Controller
         // Re-store target url since it will be forgotten after the redirect
         $request->session()->put('url.intended', redirect()->intended()->getTargetUrl());
 
-        return Socialite::driver($provider)->redirect();
+        $driver = Socialite::driver($provider);
+
+        // https://laravel.com/docs/10.x/socialite#access-scopes
+        if ($driver instanceof \Laravel\Socialite\Two\AbstractProvider) {
+            $scopes = LibrenmsConfig::get('auth.socialite.scopes');
+            if (! empty($scopes) && is_array($scopes)) {
+                return $driver
+                    ->scopes($scopes)
+                    ->redirect();
+            }
+        }
+
+        return $driver->redirect();
     }
 
     public function callback(Request $request, string $provider): RedirectResponse
     {
+        /* If we get an error in the callback then attempt to handle nicely  */
+        if (array_key_exists('error', $request->query())) {
+            $error = $request->query('error');
+            $error_description = $request->query('error_description');
+            toast()->error($error . ': ' . $error_description);
+
+            return redirect()->route('login')->with('block_auto_redirect', true);
+        }
+
         $this->socialite_user = Socialite::driver($provider)->user();
 
         // If we already have a valid session, user is trying to pair their account
@@ -80,7 +103,7 @@ class SocialiteController extends Controller
             return $socialite->getServiceProviderMetadata();
         }
 
-        return abort(404);
+        abort(404);
     }
 
     private function login(string $provider): RedirectResponse
@@ -95,24 +118,25 @@ class SocialiteController extends Controller
             }
 
             Auth::login($user);
+            $this->setRolesFromClaim($provider, $user);
 
             return redirect()->intended();
         } catch (AuthenticationException $e) {
-            flash()->addError($e->getMessage());
-        }
+            toast()->error($e->getMessage());
 
-        return redirect()->route('login');
+            return redirect()->route('login')->with('block_auto_redirect', true);
+        }
     }
 
     private function register(string $provider): void
     {
-        if (! LibreNMSConfig::get('auth.socialite.register', false)) {
+        if (! LibrenmsConfig::get('auth.socialite.register', false)) {
             return;
         }
 
         $user = User::firstOrNew([
             'auth_type' => "socialite_$provider",
-            'auth_id'   => $this->socialite_user->getId(),
+            'auth_id' => $this->socialite_user->getId(),
         ]);
 
         if ($user->user_id) {
@@ -124,6 +148,54 @@ class SocialiteController extends Controller
         $user->realname = $this->buildRealName();
 
         $user->save();
+
+        $default_role = LibrenmsConfig::get('auth.socialite.default_role');
+        if ($default_role !== null && $default_role != 'none') {
+            $user->syncRoles([$default_role]);
+        }
+    }
+
+    private function setRolesFromClaim(string $provider, $user): bool
+    {
+        $scopes = LibrenmsConfig::get('auth.socialite.scopes');
+        $claims = LibrenmsConfig::get('auth.socialite.claims');
+
+        if (! is_array($scopes) || ! $this->socialite_user instanceof \Laravel\Socialite\AbstractUser || empty($claims)) {
+            return false;
+        }
+
+        $attributes = $this->normalizeAttributes($this->socialite_user->getRaw());
+
+        $claimField = LibrenmsConfig::get("auth.socialite.configs.$provider.claim_field");
+        $scopeValues = $claimField !== null
+            ? Arr::wrap($attributes[$claimField] ?? [])
+            : collect($attributes)
+                ->filter(fn ($values, $name) => collect($scopes)->contains(fn ($scope) => str_contains((string) $name, (string) $scope)))
+                ->flatten()
+                ->all();
+
+        $roles = [];
+        foreach ($scopeValues as $value) {
+            $roles = array_merge($roles, $claims[$value]['roles'] ?? []);
+        }
+
+        if (empty($roles)) {
+            return false;
+        }
+
+        $user->syncRoles(array_unique($roles));
+
+        return true;
+    }
+
+    private function normalizeAttributes(array $attributes): array
+    {
+        $first = current($attributes);
+        if (! is_object($first) || ! method_exists($first, 'getName') || ! method_exists($first, 'getAllAttributeValues')) {
+            return $attributes;
+        }
+
+        return collect($attributes)->keyBy->getName()->map->getAllAttributeValues()->all();
     }
 
     private function pairUser(string $provider): RedirectResponse
@@ -169,7 +241,7 @@ class SocialiteController extends Controller
      */
     private function injectConfig(): void
     {
-        foreach (LibreNMSConfig::get('auth.socialite.configs', []) as $provider => $config) {
+        foreach (LibrenmsConfig::get('auth.socialite.configs', []) as $provider => $config) {
             Config::set("services.$provider", $config);
 
             // Inject redirect URL automatically if not set

@@ -9,27 +9,14 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 class Canopsis extends Transport
 {
-    public function deliverAlert($obj, $opts)
-    {
-        if (! empty($this->config)) {
-            $opts['host'] = $this->config['canopsis-host'];
-            $opts['port'] = $this->config['canopsis-port'];
-            $opts['user'] = $this->config['canopsis-user'];
-            $opts['pass'] = $this->config['canopsis-pass'];
-            $opts['vhost'] = $this->config['canopsis-vhost'];
-        }
-
-        return $this->contactCanopsis($obj, $opts);
-    }
-
-    public function contactCanopsis($obj, $opts)
+    public function deliverAlert(array $alert_data): bool
     {
         // Configurations
-        $host = $opts['host'];
-        $port = $opts['port'];
-        $user = $opts['user'];
-        $pass = $opts['pass'];
-        $vhost = $opts['vhost'];
+        $host = $this->config['canopsis-host'];
+        $port = $this->config['canopsis-port'];
+        $user = $this->config['canopsis-user'];
+        $pass = $this->config['canopsis-pass'];
+        $vhost = $this->config['canopsis-vhost'];
         $exchange = 'canopsis.events';
 
         // Connection
@@ -41,29 +28,22 @@ class Canopsis extends Transport
         $ch->exchange_declare($exchange, AMQPExchangeType::TOPIC, false, true, false);
 
         // Create Canopsis event, see: https://github.com/capensis/canopsis/wiki/Event-specification
-        switch ($obj['severity']) {
-            case 'ok':
-                $state = 0;
-                break;
-            case 'warning':
-                $state = 2;
-                break;
-            case 'critical':
-                $state = 3;
-                break;
-            default:
-                $state = 0;
-        }
+        $state = match ($alert_data['severity']) {
+            'ok' => 0,
+            'warning' => 2,
+            'critical' => 3,
+            default => 0,
+        };
         $msg_body = [
             'timestamp' => time(),
             'connector' => 'librenms',
             'connector_name' => 'LibreNMS1',
             'event_type' => 'check',
             'source_type' => 'resource',
-            'component' => $obj['hostname'],
-            'resource' => $obj['name'],
+            'component' => $alert_data['hostname'],
+            'resource' => $alert_data['name'],
             'state' => $state,
-            'output' => $obj['msg'],
+            'output' => $alert_data['msg'],
             'display_name' => 'librenms',
         ];
         $msg_raw = json_encode($msg_body);
@@ -84,7 +64,7 @@ class Canopsis extends Transport
         return true;
     }
 
-    public static function configTemplate()
+    public static function configTemplate(): array
     {
         return [
             'config' => [
@@ -110,7 +90,7 @@ class Canopsis extends Transport
                     'title' => 'Password',
                     'name' => 'canopsis-pass',
                     'descr' => 'Canopsis Password',
-                    'type' => 'text',
+                    'type' => 'password',
                 ],
                 [
                     'title' => 'Vhost',

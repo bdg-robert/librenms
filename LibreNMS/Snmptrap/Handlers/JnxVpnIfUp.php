@@ -1,4 +1,5 @@
 <?php
+
 /**
  * JnxVpnIfUp.php
  *
@@ -26,6 +27,7 @@
 namespace LibreNMS\Snmptrap\Handlers;
 
 use App\Models\Device;
+use LibreNMS\Enum\Severity;
 use LibreNMS\Interfaces\SnmptrapHandler;
 use LibreNMS\Snmptrap\Trap;
 
@@ -44,11 +46,11 @@ class JnxVpnIfUp implements SnmptrapHandler
         $vpnType = $trap->getOidData($trap->findOid('JUNIPER-VPN-MIB::jnxVpnIfVpnType'));
         $vpnName = $trap->getOidData($trap->findOid('JUNIPER-VPN-MIB::jnxVpnIfVpnName'));
 
-        if (substr($vpnName, 0, 6) === 'vt/lsi') {
+        if (str_starts_with($vpnName, 'vt/lsi')) {
             $vpnDevice = substr($vpnName, 7, 15);
-            $trap->log("$vpnType to device $vpnDevice is now connected", 1);
+            $trap->log("$vpnType to device $vpnDevice is now connected", Severity::Ok);
         } else {
-            $trap->log("$vpnType on interface $vpnName is now connected", 1);
+            $trap->log("$vpnType on interface $vpnName is now connected", Severity::Ok);
         }
     }
 }

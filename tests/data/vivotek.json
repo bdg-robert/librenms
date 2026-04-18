@@ -327,7 +327,7 @@
                     "ifMtu": 1500,
                     "ifType": "ethernetCsmacd",
                     "ifAlias": "eth0",
-                    "ifPhysAddress": "303a323a6431",
+                    "ifPhysAddress": "0002d143a526",
                     "ifLastChange": 0,
                     "ifVlan": null,
                     "ifTrunk": null,
@@ -429,5 +429,25 @@
             ]
         },
         "poller": "matches discovery"
+    },
+    "ipv4-addresses": {
+        "discovery": {
+            "ipv4_addresses": [
+                {
+                    "ipv4_address": "127.0.0.1",
+                    "ipv4_prefixlen": 8,
+                    "context_name": "",
+                    "ipv4_network": "127.0.0.0/8",
+                    "ifIndex": 1
+                },
+                {
+                    "ipv4_address": "192.168.1.2",
+                    "ipv4_prefixlen": 24,
+                    "context_name": "",
+                    "ipv4_network": "192.168.1.0/24",
+                    "ifIndex": 2
+                }
+            ]
+        }
     }
 }

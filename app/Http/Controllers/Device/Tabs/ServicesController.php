@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ServicesController.php
  *
@@ -26,13 +27,14 @@
 namespace App\Http\Controllers\Device\Tabs;
 
 use App\Models\Device;
+use Illuminate\Http\Request;
 use LibreNMS\Interfaces\UI\DeviceTab;
 
 class ServicesController implements DeviceTab
 {
     public function visible(Device $device): bool
     {
-        return (bool) \LibreNMS\Config::get('show_services') && $device->services()->exists();
+        return (bool) \App\Facades\LibrenmsConfig::get('show_services') && $device->services()->exists();
     }
 
     public function slug(): string
@@ -50,7 +52,7 @@ class ServicesController implements DeviceTab
         return __('Services');
     }
 
-    public function data(Device $device): array
+    public function data(Device $device, Request $request): array
     {
         return [];
     }

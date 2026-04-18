@@ -10,55 +10,52 @@ $transparency = 15;
 
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'bind', $app->app_id, 'resolver']);
 
-$rrd_list = [];
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'NXDOMAIN',
-        'ds'       => 'nr',
-    ];
-    $rrd_list[] = [
+        'descr' => 'NXDOMAIN',
+        'ds' => 'nr',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'SERVFAIL',
-        'ds'       => 'sr',
-    ];
-    $rrd_list[] = [
+        'descr' => 'SERVFAIL',
+        'ds' => 'sr',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'FORMERR',
-        'ds'       => 'fr',
-    ];
-    $rrd_list[] = [
+        'descr' => 'FORMERR',
+        'ds' => 'fr',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'REFUSED',
-        'ds'       => 'rr',
-    ];
-    $rrd_list[] = [
+        'descr' => 'REFUSED',
+        'ds' => 'rr',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'EDNS(0) qry fl',
-        'ds'       => 'eqf',
-    ];
-    $rrd_list[] = [
+        'descr' => 'EDNS(0) qry fl',
+        'ds' => 'eqf',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Trnctd Rcvd',
-        'ds'       => 'trr',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Trnctd Rcvd',
+        'ds' => 'trr',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Retry',
-        'ds'       => 'qr',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Retry',
+        'ds' => 'qr',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Timeout',
-        'ds'       => 'qt',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Timeout',
+        'ds' => 'qt',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Lame Dele.',
-        'ds'       => 'ldr',
-    ];
-} else {
-    d_echo('RRD "' . $rrd_filename . '" not found');
-}
+        'descr' => 'Lame Dele.',
+        'ds' => 'ldr',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

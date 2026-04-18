@@ -7,9 +7,9 @@ $nototal = (($width < 224) ? 1 : 0);
 $unit_text = 'Milliseconds';
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'ntp-client', $app->app_id]);
 $array = [
-    'offset'    => ['descr' => 'Offset'],
-    'jitter'    => ['descr' => 'Jitter'],
-    'noise'     => ['descr' => 'Noise'],
+    'offset' => ['descr' => 'Offset'],
+    'jitter' => ['descr' => 'Jitter'],
+    'noise' => ['descr' => 'Noise'],
     'stability' => ['descr' => 'Stability'],
 ];
 
@@ -20,11 +20,11 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $rrd_list[$i]['filename'] = $rrd_filename;
         $rrd_list[$i]['descr'] = $var['descr'];
         $rrd_list[$i]['ds'] = $ds;
-        $rrd_list[$i]['colour'] = \LibreNMS\Config::get("graph_colours.$colours.$i");
+        $rrd_list[$i]['colour'] = \App\Facades\LibrenmsConfig::get("graph_colours.$colours.$i");
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

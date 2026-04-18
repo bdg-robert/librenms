@@ -6,10 +6,10 @@ if (is_numeric($vars['vsvr'])) {
     // echo('<a href="'.generate_url($vars, array('vsvr' => NULL)).'">All</a>');
     // print_optionbar_end();
     $graph_types = [
-        'bits'    => 'Bits',
-        'pkts'    => 'Packets',
-        'conns'   => 'Connections',
-        'reqs'    => 'Requests',
+        'bits' => 'Bits',
+        'pkts' => 'Packets',
+        'conns' => 'Connections',
+        'reqs' => 'Requests',
         'hitmiss' => 'Hit/Miss',
     ];
 
@@ -23,10 +23,10 @@ if (is_numeric($vars['vsvr'])) {
     // Can this really return more than one row?
     $vservers = dbFetchRows('SELECT * FROM `netscaler_vservers` WHERE `device_id` = ? AND `vsvr_id` = ? ORDER BY `vsvr_name`', [$device['device_id'], $vars['vsvr']]);
     foreach ($vservers as $vsvr) {
-        if (is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         if ($vsvr['vsvr_state'] == 'up') {
@@ -42,8 +42,8 @@ if (is_numeric($vars['vsvr'])) {
         echo '<td>' . $vsvr['vsvr_ip'] . ':' . $vsvr['vsvr_port'] . '</td>';
         echo "<td><span class='label label-" . $vsvr_label . "'>" . $vsvr['vsvr_state'] . '</span></td>';
         echo '<td><span class="label label-default">' . $vsvr['vsvr_type'] . '</span></td>';
-        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_in'] * 8, 2, 3, '') . 'bps</a></td>';
-        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_out'] * 8, 2, 3, '') . 'bps</a></td>';
+        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_in'] * 8, 2, 0, '') . 'bps</a></td>';
+        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_out'] * 8, 2, 0, '') . 'bps</a></td>';
         echo '</tr>';
 
         foreach ($graph_types as $graph_type => $graph_text) {
@@ -53,7 +53,7 @@ if (is_numeric($vars['vsvr'])) {
             $graph_type = 'netscalervsvr_' . $graph_type;
             $graph_array['height'] = '100';
             $graph_array['width'] = '213';
-            $graph_array['to'] = \LibreNMS\Config::get('time.now');
+            $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
             $graph_array['id'] = $vsvr['vsvr_id'];
             $graph_array['type'] = $graph_type;
 
@@ -96,10 +96,10 @@ if (is_numeric($vars['vsvr'])) {
     unset($sep);
     echo ' Graphs: ';
     $graph_types = [
-        'bits'    => 'Bits',
-        'pkts'    => 'Packets',
-        'conns'   => 'Connections',
-        'reqs'    => 'Requests',
+        'bits' => 'Bits',
+        'pkts' => 'Packets',
+        'conns' => 'Connections',
+        'reqs' => 'Requests',
         'hitmiss' => 'Hit/Miss',
     ];
 
@@ -135,22 +135,18 @@ if (is_numeric($vars['vsvr'])) {
     } else {
         $sort_key = 'vsvr_name';
     }
-    switch ($sort_key) {
-        case 'vsvr_bps_in':
-        case 'vsvr_bps_out':
-            $sort_direction = SORT_DESC;
-            break;
-        default:
-            $sort_direction = SORT_ASC;
-    }
-    $vservers = array_sort_by_column($vservers, $sort_key, $sort_direction);
+    $sort_descending = match ($sort_key) {
+        'vsvr_bps_in', 'vsvr_bps_out' => true,
+        default => false,
+    };
+    $vservers = collect($vservers)->sortBy($sort_key, descending: $sort_descending)->all();
 
     $i = '0';
     foreach ($vservers as $vsvr) {
-        if (is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         if ($vsvr['vsvr_state'] == 'up') {
@@ -166,8 +162,8 @@ if (is_numeric($vars['vsvr'])) {
         echo '<td>' . $vsvr['vsvr_ip'] . ':' . $vsvr['vsvr_port'] . '</td>';
         echo "<td><span class='label label-" . $vsvr_label . "'>" . $vsvr['vsvr_state'] . '</span></td>';
         echo '<td><span class="label label-default">' . $vsvr['vsvr_type'] . '</span></td>';
-        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_in'] * 8, 2, 3, '') . 'bps</a></td>';
-        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_out'] * 8, 2, 3, '') . 'bps</a></td>';
+        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_in'] * 8, 2, 0, '') . 'bps</a></td>';
+        echo '<td>' . \LibreNMS\Util\Number::formatSi($vsvr['vsvr_bps_out'] * 8, 2, 0, '') . 'bps</a></td>';
         echo '</tr>';
         if ($vars['view'] == 'graphs') {
             echo '<tr class="list-bold" bgcolor="' . $bg_colour . '">';
@@ -175,7 +171,7 @@ if (is_numeric($vars['vsvr'])) {
             $graph_type = 'netscalervsvr_' . $vars['graph'];
             $graph_array['height'] = '100';
             $graph_array['width'] = '213';
-            $graph_array['to'] = \LibreNMS\Config::get('time.now');
+            $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
             $graph_array['id'] = $vsvr['vsvr_id'];
             $graph_array['type'] = $graph_type;
 

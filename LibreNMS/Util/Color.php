@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Color.php
  *
@@ -28,6 +29,7 @@ namespace LibreNMS\Util;
 use App\Models\BgpPeer;
 use App\Models\Device;
 use App\Models\Port;
+use LibreNMS\Enum\IfOperStatus;
 
 class Color
 {
@@ -57,7 +59,7 @@ class Color
         if ($percentage > 75) {
             return [
                 'left' => 'bf5d5b',
-                'right' => 'd39392',
+                'right' => 'eaeaea',
                 'middle' => 'c97e7d',
             ];
         }
@@ -65,7 +67,7 @@ class Color
         if ($percentage > 50) {
             return [
                 'left' => 'bf875b',
-                'right' => 'd3ae92',
+                'right' => 'eaeaea',
                 'middle' => 'cca07e',
             ];
         }
@@ -73,16 +75,25 @@ class Color
         if ($percentage > 25) {
             return [
                 'left' => '5b93bf',
-                'right' => '92b7d3',
+                'right' => 'eaeaea',
                 'middle' => '7da8c9',
             ];
         }
 
         return [
             'left' => '9abf5b',
-            'right' => 'bbd392',
+            'right' => 'eaeaea',
             'middle' => 'afcc7c',
         ];
+    }
+
+    public static function percent(int|float|null $numerator = null, int|float|null $denominator = null, int|float|null $percent = null): string
+    {
+        $percent = $percent ? round($percent) : Number::calculatePercent($numerator, $denominator, 0);
+        $r = min(255, 5 * ($percent - 25));
+        $b = max(0, 255 - (5 * ($percent + 25)));
+
+        return sprintf('#%02x%02x%02x', $r, $b, $b);
     }
 
     /**
@@ -112,12 +123,12 @@ class Color
         }
 
         // Shutdown ports
-        if ($port->ifAdminStatus === 'down') {
+        if ($port->ifAdminStatus == IfOperStatus::Down) {
             return '#808080';
         }
 
         // Down Ports
-        if ($port->ifOperStatus !== 'up') {
+        if ($port->ifOperStatus != IfOperStatus::Up) {
             return '#ff0000';
         }
 

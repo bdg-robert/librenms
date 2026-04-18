@@ -5,13 +5,14 @@ namespace App\View\Components;
 use App\Models\Port;
 use Illuminate\Support\Arr;
 use Illuminate\View\Component;
+use LibreNMS\Enum\IfOperStatus;
 use LibreNMS\Util\Rewrite;
 use LibreNMS\Util\Url;
 
 class PortLink extends Component
 {
     /**
-     * @var \App\Models\Port
+     * @var Port
      */
     public $port;
     /**
@@ -40,10 +41,10 @@ class PortLink extends Component
      *
      * @return void
      */
-    public function __construct(Port $port, ?array $graphs = null)
+    public function __construct(Port $port, ?array $graphs = null, public bool $basic = false, array $vars = [])
     {
         $this->port = $port;
-        $this->link = Url::portUrl($port);
+        $this->link = Url::portUrl($port, $vars);
         $this->label = Rewrite::normalizeIfName($port->getLabel());
         $this->description = $port->getDescription();
         $this->status = $this->status();
@@ -64,29 +65,28 @@ class PortLink extends Component
      */
     public function render()
     {
-        return view('components.port-link');
+        return $this->basic
+            ? view('components.port-link_basic')
+            : view('components.port-link');
     }
 
     private function status(): string
     {
-        if ($this->port->ifAdminStatus == 'down') {
+        if ($this->port->ifAdminStatus == IfOperStatus::Down) {
             return 'disabled';
         }
 
-        return $this->port->ifAdminStatus == 'up' && $this->port->ifOperStatus != 'up'
+        return $this->port->ifAdminStatus == IfOperStatus::Up && $this->port->ifOperStatus != IfOperStatus::Up
             ? 'down'
             : 'up';
     }
 
     public function fillDefaultVars(array $vars): array
     {
-        return array_map(function ($graph_vars) {
-            return array_merge([
-                'from' => '-1d',
-                'type' => 'port_bits',
-                'legend' => 'yes',
-                'text' => '',
-            ], Arr::wrap($graph_vars));
-        }, $vars);
+        return array_map(fn ($graph_vars) => array_merge([
+            'from' => '-1d',
+            'legend' => 'yes',
+            'text' => '',
+        ], Arr::wrap($graph_vars)), $vars);
     }
 }

@@ -18,25 +18,25 @@ if (Rrd::checkRrdExists($rrd_filename)) {
     $rrd_list = [
         [
             'filename' => $rrd_filename,
-            'descr'    => 'write ops',
-            'ds'       => 'writeops',
-            'colour'   => 'aa6c39',
+            'descr' => 'write ops',
+            'ds' => 'writeops',
+            'colour' => 'aa6c39',
         ],
         [
             'filename' => $rrd_filename,
-            'descr'    => 'write rpc',
-            'ds'       => 'writerpc',
-            'colour'   => '582a72',
+            'descr' => 'write rpc',
+            'ds' => 'writerpc',
+            'colour' => '582a72',
         ],
         [
             'filename' => $rrd_filename,
-            'descr'    => 'ops saved',
-            'ds'       => 'opsaved',
-            'colour'   => '28536c',
+            'descr' => 'ops saved',
+            'ds' => 'opsaved',
+            'colour' => '28536c',
         ],
     ];
 } else {
-    echo "file missing: $rrd_filename";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_v3_multiline.inc.php';

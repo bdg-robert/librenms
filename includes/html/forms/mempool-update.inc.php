@@ -12,11 +12,14 @@
  * the source code distribution for details.
  */
 
+use App\Models\Mempool;
+use Illuminate\Support\Facades\Gate;
+
 header('Content-type: application/json');
 
-if (! Auth::user()->hasGlobalAdmin()) {
+if (Gate::denies('update', Mempool::class)) {
     $response = [
-        'status'  => 'error',
+        'status' => 'error',
         'message' => 'Need to be admin',
     ];
     echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -37,7 +40,7 @@ if (! is_numeric($device_id)) {
 } elseif (! is_numeric($data)) {
     $message = 'Missing value';
 } else {
-    if (dbUpdate(['mempool_perc_warn'=>$data], 'mempools', '`mempool_id`=? AND `device_id`=?', [$mempool_id, $device_id]) >= 0) {
+    if (Mempool::where('mempool_id', $mempool_id)->where('device_id', $device_id)->update(['mempool_perc_warn' => $data]) >= 0) {
         $message = 'Memory information updated';
         $status = 'ok';
     } else {
@@ -46,8 +49,8 @@ if (! is_numeric($device_id)) {
 }
 
 $response = [
-    'status'        => $status,
-    'message'       => $message,
-    'extra'         => $extra,
+    'status' => $status,
+    'message' => $message,
+    'extra' => $extra,
 ];
 echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

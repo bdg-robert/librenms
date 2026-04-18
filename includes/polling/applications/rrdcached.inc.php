@@ -1,4 +1,5 @@
 <?php
+
 /**
  * rrdcached.inc.php
  *
@@ -26,11 +27,12 @@
  */
 
 use LibreNMS\RRD\RrdDefinition;
+use LibreNMS\Util\Number;
 
 $data = '';
 $name = 'rrdcached';
 
-if ($agent_data['app'][$name]) {
+if (! empty($agent_data['app'][$name])) {
     $data = $agent_data['app'][$name];
 } else {
     d_echo("\nNo Agent Data. Attempting to connect directly to the rrdcached server " . $device['hostname'] . ":42217\n");
@@ -45,14 +47,14 @@ if ($agent_data['app'][$name]) {
         $data = str_replace("<<<rrdcached>>>\n", '', $data);
     }
     if (strlen($data) < 100) {
-        $socket = \LibreNMS\Config::get('rrdcached');
-        if (substr($socket, 0, 6) == 'unix:/') {
+        $socket = (string) \App\Facades\LibrenmsConfig::get('rrdcached');
+        if (str_starts_with($socket, 'unix:/')) {
             $socket_file = substr($socket, 5);
             if (file_exists($socket_file)) {
                 $sock = fsockopen('unix://' . $socket_file);
             }
+            d_echo("\nNo SnmpData " . $device['hostname'] . ' fallback to local rrdcached unix://' . $socket_file . "\n");
         }
-        d_echo("\nNo SnmpData " . $device['hostname'] . ' fallback to local rrdcached unix://' . $socket_file . "\n");
     }
     if ($sock) {
         fwrite($sock, "STATS\n");
@@ -62,7 +64,7 @@ if ($agent_data['app'][$name]) {
             $data .= fgets($sock, 128);
             if ($max == -1) {
                 $tmp_max = explode(' ', $data);
-                $max = $tmp_max[0] + 1;
+                $max = Number::cast($tmp_max[0]) + 1;
             }
             $count++;
         }
@@ -72,7 +74,6 @@ if ($agent_data['app'][$name]) {
     }
 }
 
-$rrd_name = ['app', $name, $app->app_id];
 $rrd_def = RrdDefinition::make()
     ->addDataset('queue_length', 'GAUGE', 0)
     ->addDataset('updates_received', 'COUNTER', 0)
@@ -85,16 +86,21 @@ $rrd_def = RrdDefinition::make()
     ->addDataset('journal_rotate', 'COUNTER', 0);
 
 $fields = [];
-foreach (explode("\n", $data) as $line) {
+foreach (explode("\n", (string) $data) as $line) {
     $split = explode(': ', $line);
     if (count($split) == 2) {
-        $ds = strtolower(preg_replace('/[A-Z]/', '_$0', lcfirst($split[0])));
+        $ds = strtolower((string) preg_replace('/[A-Z]/', '_$0', lcfirst($split[0])));
         $fields[$ds] = $split[1];
     }
 }
 
-$tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
-data_update($device, 'app', $tags, $fields);
+$tags = [
+    'name' => $name,
+    'app_id' => $app->app_id,
+    'rrd_name' => ['app', $name, $app->app_id],
+    'rrd_def' => $rrd_def,
+];
+app('Datastore')->put($device, 'app', $tags, $fields);
 update_application($app, $data, $fields);
 
-unset($data, $rrd_name, $rrd_def, $fields, $tags);
+unset($data, $rrd_def, $fields, $tags);

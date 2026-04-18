@@ -31,9 +31,8 @@ require_once 'includes/html/modal/delete_service.inc.php';
                     'basic' => 'Basic',
                 ];
 
-                if (! $vars['view']) {
-                    $vars['view'] = 'basic';
-                }
+                $vars['view'] ??= 'basic';
+                $vars['state'] ??= 'all';
 
                 $status_options = [
                     'all' => 'All',
@@ -42,9 +41,6 @@ require_once 'includes/html/modal/delete_service.inc.php';
                     'critical' => 'Critical',
                 ];
 
-                if (! $vars['state']) {
-                    $vars['state'] = 'all';
-                }
 
                 // The menu option - on the left
 
@@ -69,8 +65,6 @@ require_once 'includes/html/modal/delete_service.inc.php';
 
                     $sep = ' | ';
                 }
-
-                unset($sep);
 
                 // The status option - on the right
 
@@ -104,6 +98,7 @@ require_once 'includes/html/modal/delete_service.inc.php';
                 echo '<div class="panel-body">';
 
                 $sql_param = [];
+                $where = '';
 
                 if (isset($vars['state'])) {
                     if ($vars['state'] == 'ok') {
@@ -122,7 +117,7 @@ require_once 'includes/html/modal/delete_service.inc.php';
 
                 $host_par = [];
                 $perms_sql = null;
-                if (! Auth::user()->hasGlobalRead()) {
+                if (Gate::denies('viewAll', \App\Models\Device::class)) {
                     $device_ids = Permissions::devicesForUser()->toArray() ?: [0];
                     $perms_sql .= ' AND `D`.`device_id` IN ' . dbGenPlaceholders(count($device_ids));
                     $host_par = $device_ids;
@@ -134,7 +129,7 @@ require_once 'includes/html/modal/delete_service.inc.php';
                 foreach (dbFetchRows($host_sql, $host_par) as $device) {
                     $device_id = $device['device_id'];
                     $device_hostname = $device['hostname'];
-                    $device_sysName = $device['sysName'];
+                    $device_sysName = htmlspecialchars((string) $device['sysName']);
                     $devlink = generate_device_link($device, null, ['tab' => 'services']);
                     if ($shift == 1) {
                         array_unshift($sql_param, $device_id);
@@ -144,10 +139,9 @@ require_once 'includes/html/modal/delete_service.inc.php';
                     }
 
                     $header = true;
-                    $footer = false;
 
                     $service_iteration = 0;
-                    $services = dbFetchRows("SELECT * FROM `services` WHERE `device_id` = ? $where ORDER BY service_type", $sql_param);
+                    $services = dbFetchRows("SELECT * FROM `services` WHERE `device_id` = ? $where ORDER BY service_type, service_name", $sql_param);
                     $services_count = count($services);
                     foreach ($services as $service) {
                         if ($service['service_status'] == '2') {
@@ -169,7 +163,6 @@ require_once 'includes/html/modal/delete_service.inc.php';
                         if ($service_iteration < 2 && $header) {
                             echo '<div class="panel panel-default">';
                             echo '<div class="panel-heading"><h3 class="panel-title">' . $devlink . '</h3>' . $device_sysName . '</div>';
-                            echo '<div class="panel-body">';
                             echo '<table class="table table-hover table-condensed">';
                             echo '<thead>';
                             echo '<th style="width:1%;max-width:1%;"></th>';
@@ -181,7 +174,7 @@ require_once 'includes/html/modal/delete_service.inc.php';
                             echo '<th style="width:15%;max-width: 15%;">Last Changed</th>';
                             echo '<th style="width:2%;max-width: 2%;">Alert</th>';
                             echo '<th style="width:4%;max-width: 4%;">Status</th>';
-                            echo '<th style="width:80px;max-width: 80px;"></th>';
+                            echo '<th style="width:100px;max-width: 100px;"></th>';
                             echo '</thead>';
                         }
 
@@ -194,7 +187,7 @@ require_once 'includes/html/modal/delete_service.inc.php';
                         echo '<td>' . nl2br(\LibreNMS\Util\Clean::html($service['service_ip'], [])) . '</td>';
                         echo '<td>' . nl2br(\LibreNMS\Util\Clean::html($service['service_message'], [])) . '</td>';
                         echo '<td>' . nl2br(\LibreNMS\Util\Clean::html($service['service_desc'], [])) . '</td>';
-                        echo '<td>' . \LibreNMS\Util\Time::formatInterval(time() - $service['service_changed']) . '</td>';
+                        echo '<td>' . (isset($service['service_changed']) ? \LibreNMS\Util\Time::formatInterval(time() - $service['service_changed']) : 'Waiting for first service check') . '</td>';
 
                         $service_checked = '';
                         $ico = 'pause';
@@ -227,21 +220,17 @@ require_once 'includes/html/modal/delete_service.inc.php';
                         echo "<input id='" . $service_id . "' type='checkbox' name='service_status' data-orig_colour='" . $orig_colour . "' data-orig_state='" . $orig_ico . "' data-service_id='" . $service_id . "' data-service_name='" . $service_name . "' " . $service_checked . " data-size='small' data-toggle='modal'>";
                         echo '</div></td>';
 
-                        if (Auth::user()->hasGlobalAdmin()) {
-                            echo "<td>
-                                    <button type='button' class='btn btn-primary btn-sm' aria-label='Edit' data-toggle='modal' data-target='#create-service' data-service_id='{$service['service_id']}' name='edit-service'><i class='fa fa-pencil' aria-hidden='true'></i></button>
-                                    <button type='button' class='btn btn-danger btn-sm' aria-label='Delete' data-toggle='modal' data-target='#confirm-delete' data-service_id='{$service['service_id']}' name='delete-service'><i class='fa fa-trash' aria-hidden='true'></i></button>
-                                    </td>";
+                        echo '<td>';
+                        if (Gate::allows('update', \App\Models\Service::class)) {
+                            echo "<button type='button' class='btn btn-primary btn-sm' aria-label='Edit' data-toggle='modal' data-target='#create-service' data-service_id='{$service['service_id']}' name='edit-service'><i class='fa fa-pencil' aria-hidden='true'></i></button>";
                         }
-                        echo '</tr>';
+                        if (Gate::allows('delete', \App\Models\Service::class)) {
+                            echo "<button type='button' class='btn btn-danger btn-sm' aria-label='Delete' data-toggle='modal' data-target='#confirm-delete' data-service_id='{$service['service_id']}' name='delete-service'><i class='fa fa-trash' aria-hidden='true'></i></button>";
+                        }
+                        echo '</td></tr>';
 
                         if ($service_iteration >= $services_count) {
-                            $footer = true;
-                        }
-
-                        if ($footer) {
                             echo '</table>';
-                            echo '</div>';
                             echo '</div>';
                         }
                     }

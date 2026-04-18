@@ -4,7 +4,7 @@ $total = true;
 
 if (isset($total) && $total === true) {
     $graphs = [
-        'shoutcast_multi_bits'  => 'Traffic Statistics - Total of all Shoutcast servers',
+        'shoutcast_multi_bits' => 'Traffic Statistics - Total of all Shoutcast servers',
         'shoutcast_multi_stats' => 'Shoutcast Statistics - Total of all Shoutcast servers',
     ];
 
@@ -12,7 +12,7 @@ if (isset($total) && $total === true) {
         $graph_type = $key;
         $graph_array['height'] = '100';
         $graph_array['width'] = '215';
-        $graph_array['to'] = \LibreNMS\Config::get('time.now');
+        $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
         $graph_array['id'] = $app['app_id'];
         $graph_array['type'] = 'application_' . $key;
 
@@ -35,7 +35,7 @@ foreach ($files as $file) {
     $hostname = end($pieces);
     [$host, $port] = explode('_', $hostname, 2);
     $graphs = [
-        'shoutcast_bits'  => 'Traffic Statistics - ' . $host . ' (Port: ' . $port . ')',
+        'shoutcast_bits' => 'Traffic Statistics - ' . $host . ' (Port: ' . $port . ')',
         'shoutcast_stats' => 'Shoutcast Statistics - ' . $host . ' (Port: ' . $port . ')',
     ];
 
@@ -43,7 +43,7 @@ foreach ($files as $file) {
         $graph_type = $key;
         $graph_array['height'] = '100';
         $graph_array['width'] = '215';
-        $graph_array['to'] = \LibreNMS\Config::get('time.now');
+        $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
         $graph_array['id'] = $app['app_id'];
         $graph_array['type'] = 'application_' . $key;
         $graph_array['hostname'] = $hostname;

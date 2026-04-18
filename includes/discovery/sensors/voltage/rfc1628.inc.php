@@ -1,14 +1,17 @@
 <?php
 
+use Illuminate\Support\Facades\Log;
+use LibreNMS\Util\Number;
+
 echo 'RFC1628 ';
 
-$battery_volts = snmp_get($device, 'upsBatteryVoltage.0', '-OqvU', 'UPS-MIB');
+$battery_volts = SnmpQuery::get('UPS-MIB::upsBatteryVoltage.0')->value();
 if (is_numeric($battery_volts)) {
     $volt_oid = '.1.3.6.1.2.1.33.1.2.5.0';
     $divisor = get_device_divisor($device, $pre_cache['poweralert_serial'] ?? 0, 'voltage', $volt_oid);
 
     discover_sensor(
-        $valid['sensor'],
+        null,
         'voltage',
         $device,
         $volt_oid,
@@ -34,15 +37,21 @@ foreach ($output_volts as $index => $data) {
         $descr .= " Phase $index";
     }
 
-    $upsOutputVoltage_value = $data['upsOutputVoltage'];
+    $upsOutputVoltage_value = $data['upsOutputVoltage'] ?? null;
 
     if (is_array($data['upsOutputVoltage'])) {
         $upsOutputVoltage_value = $data['upsOutputVoltage'][0];
         $volt_oid .= '.0';
     }
 
+    if (! is_numeric($upsOutputVoltage_value)) {
+        Log::debug("skipped $descr: $upsOutputVoltage_value is not numeric");
+
+        continue;
+    }
+
     discover_sensor(
-        $valid['sensor'],
+        null,
         'voltage',
         $device,
         $volt_oid,
@@ -55,7 +64,7 @@ foreach ($output_volts as $index => $data) {
         null,
         null,
         null,
-        $upsOutputVoltage_value / $divisor
+        Number::cast($upsOutputVoltage_value) / $divisor
     );
 }
 
@@ -68,15 +77,20 @@ foreach ($input_volts as $index => $data) {
         $descr .= " Phase $index";
     }
 
-    $upsInputVoltage_value = $data['upsInputVoltage'];
+    $upsInputVoltage_value = $data['upsInputVoltage'] ?? null;
 
     if (is_array($data['upsInputVoltage'])) {
         $upsInputVoltage_value = $data['upsInputVoltage'][0];
         $volt_oid .= '.0';
     }
+    if (! is_numeric($upsInputVoltage_value)) {
+        Log::debug("skipped $descr: $upsInputVoltage_value is not numeric");
+
+        continue;
+    }
 
     discover_sensor(
-        $valid['sensor'],
+        null,
         'voltage',
         $device,
         $volt_oid,
@@ -89,7 +103,7 @@ foreach ($input_volts as $index => $data) {
         null,
         null,
         null,
-        $upsInputVoltage_value / $divisor
+        Number::cast($upsInputVoltage_value) / $divisor
     );
 }
 
@@ -101,13 +115,20 @@ foreach ($bypass_volts as $index => $data) {
     if (count($bypass_volts) > 1) {
         $descr .= " Phase $index";
     }
-    if (is_array($data['upsBypassVoltage'])) {
-        $data['upsBypassVoltage'] = $data['upsBypassVoltage'][0];
+    $bypassVoltage = $data['upsBypassVoltage'] ?? null;
+    if (is_array($bypassVoltage)) {
+        $bypassVoltage = $bypassVoltage[0];
         $volt_oid .= '.0';
     }
 
+    if (! is_numeric($bypassVoltage)) {
+        Log::debug("skipped $descr: $bypassVoltage is not numeric");
+
+        continue;
+    }
+
     discover_sensor(
-        $valid['sensor'],
+        null,
         'voltage',
         $device,
         $volt_oid,
@@ -120,7 +141,7 @@ foreach ($bypass_volts as $index => $data) {
         null,
         null,
         null,
-        $data['upsBypassVoltage'] / $divisor
+        Number::cast($bypassVoltage) / $divisor
     );
 }
 

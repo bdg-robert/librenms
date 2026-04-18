@@ -2,17 +2,26 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Traits\ProcessesDevices;
 use App\Console\LnmsCommand;
+use App\Events\DevicePolled;
+use App\Facades\LibrenmsConfig;
+use App\Jobs\PollDevice;
+use App\Models\Device;
+use App\PerDeviceProcess;
 use App\Polling\Measure\MeasurementManager;
 use Illuminate\Database\QueryException;
-use LibreNMS\Config;
-use LibreNMS\Poller;
+use LibreNMS\Enum\ProcessType;
+use LibreNMS\Util\ModuleList;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
 class DevicePoll extends LnmsCommand
 {
+    use ProcessesDevices;
+
     protected $name = 'device:poll';
+    protected ProcessType $processType = ProcessType::Poller;
 
     /**
      * Create a new command instance.
@@ -23,65 +32,68 @@ class DevicePoll extends LnmsCommand
     {
         parent::__construct();
         $this->addArgument('device spec', InputArgument::REQUIRED);
-        $this->addOption('modules', 'm', InputOption::VALUE_REQUIRED);
+        $this->addOption('modules', 'm', InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY);
+        $this->addOption('os', null, InputOption::VALUE_REQUIRED);
+        $this->addOption('type', null, InputOption::VALUE_REQUIRED);
         $this->addOption('no-data', 'x', InputOption::VALUE_NONE);
+        $this->addOption('dispatch', null, InputOption::VALUE_NONE);
     }
 
     public function handle(MeasurementManager $measurements): int
     {
-        $this->configureOutputOptions();
+        if ($this->option('dispatch')) {
+            return $this->dispatchWork();
+        }
 
         if ($this->option('no-data')) {
-            Config::set('rrd.enable', false);
-            Config::set('influxdb.enable', false);
-            Config::set('prometheus.enable', false);
-            Config::set('graphite.enable', false);
+            LibrenmsConfig::set('rrd.enable', false);
+            LibrenmsConfig::set('influxdb.enable', false);
+            LibrenmsConfig::set('influxdbv2.enable', false);
+            LibrenmsConfig::set('prometheus.enable', false);
+            LibrenmsConfig::set('graphite.enable', false);
+            LibrenmsConfig::set('kafka.enable', false);
         }
 
         try {
-            /** @var \LibreNMS\Poller $poller */
-            $poller = app(Poller::class, ['device_spec' => $this->argument('device spec'), 'module_override' => explode(',', $this->option('modules'))]);
-            $polled = $poller->poll();
+            $this->handleDebug();
 
-            if ($polled > 0) {
-                if (! $this->output->isQuiet()) {
-                    if ($polled > 1) {
-                        $this->output->newLine();
-                        $time_spent = sprintf('%0.3fs', $measurements->getCategory('device')->getSummary('poll')->getDuration());
-                        $this->line(trans('commands.device:poll.polled', ['count' => $polled, 'time' => $time_spent]));
-                    }
-                    $this->output->newLine();
-                    $measurements->printStats();
-                }
+            $processor = new PerDeviceProcess(
+                $this->processType,
+                $this->argument('device spec'),
+                PollDevice::class,
+                DevicePolled::class,
+                ModuleList::fromUserOverrides($this->option('modules')),
+                $this->option('os'),
+                $this->option('type')
+            );
 
-                return 0;
-            }
+            $this->line(__('commands.device:poll.starting'));
+            $this->newLine();
 
-            // polled 0 devices, maybe there were none to poll
-            if ($poller->totalDevices() == 0) {
-                $this->error(trans('commands.device:poll.errors.no_devices'));
+            $processor->run();
 
-                return 1;
-            }
+            return $processor->processResults($measurements, $this->getOutput());
         } catch (QueryException $e) {
-            if ($e->getCode() == 2002) {
-                $this->error(trans('commands.device:poll.errors.db_connect'));
+            return $this->handleQueryException($e);
+        }
+    }
 
-                return 1;
-            } elseif ($e->getCode() == 1045) {
-                // auth failed, don't need to include the query
-                $this->error(trans('commands.device:poll.errors.db_auth', ['error' => $e->getPrevious()->getMessage()]));
+    private function dispatchWork(): int
+    {
+        $modules = ModuleList::fromUserOverrides($this->option('modules'));
+        $devices = Device::whereDeviceSpec($this->argument('device spec'))->pluck('device_id');
 
-                return 1;
-            }
-
-            $this->error($e->getMessage());
-
-            return 1;
+        if (\config('queue.default') == 'sync') {
+            $this->error('Queue driver is sync, work will run in process.');
+            sleep(1);
         }
 
-        $this->error(trans('commands.device:poll.errors.none_polled'));
+        foreach ($devices as $device_id) {
+            PollDevice::dispatch($device_id, $modules);
+        }
 
-        return 1; // failed to poll
+        $this->line('Submitted work for ' . $devices->count() . ' devices');
+
+        return 0;
     }
 }

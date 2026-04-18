@@ -9,11 +9,11 @@ $unit_text = 'Packets/sec';
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'powerdns', $app->app_id]);
 $array = [
     'qc_miss' => [
-        'descr'  => 'Misses',
+        'descr' => 'Misses',
         'colour' => '750F7DFF',
     ],
-    'qc_hit'  => [
-        'descr'  => 'Hits',
+    'qc_hit' => [
+        'descr' => 'Hits',
         'colour' => '00FF00FF',
     ],
 ];
@@ -29,7 +29,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

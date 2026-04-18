@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Nios.php
  *
@@ -25,12 +26,13 @@
 
 namespace LibreNMS\OS;
 
+use LibreNMS\Interfaces\Data\DataStorageInterface;
 use LibreNMS\Interfaces\Polling\OSPolling;
 use LibreNMS\RRD\RrdDefinition;
 
 class Nios extends \LibreNMS\OS implements OSPolling
 {
-    public function pollOS(): void
+    public function pollOS(DataStorageInterface $datastore): void
     {
         //#############
         // Create ddns update rrd
@@ -58,8 +60,8 @@ class Nios extends \LibreNMS\OS implements OSPolling
             'prereq_reject' => $data[0]['ibDDNSUpdatePrerequisiteReject'] ?? null,
         ];
 
-        $tags = compact('rrd_def');
-        data_update($this->getDeviceArray(), 'ib_dns_dyn_updates', $tags, $fields);
+        $tags = ['rrd_def' => $rrd_def];
+        $datastore->put($this->getDeviceArray(), 'ib_dns_dyn_updates', $tags, $fields);
         $this->enableGraph('ib_dns_dyn_updates');
 
         //#################
@@ -82,8 +84,8 @@ class Nios extends \LibreNMS\OS implements OSPolling
             'PerfnonAA' => $data[0]['ibNetworkMonitorDNSNonAAT1AvgLatency'] ?? null,
         ];
 
-        $tags = compact('rrd_def');
-        data_update($this->getDeviceArray(), 'ib_dns_performance', $tags, $fields);
+        $tags = ['rrd_def' => $rrd_def];
+        $datastore->put($this->getDeviceArray(), 'ib_dns_performance', $tags, $fields);
         $this->enableGraph('ib_dns_performance');
 
         //#################
@@ -112,8 +114,8 @@ class Nios extends \LibreNMS\OS implements OSPolling
             'nxrrset' => $data['"summary"']['ibBindZoneNxRRset'] ?? null,
         ];
 
-        $tags = compact('rrd_def');
-        data_update($this->getDeviceArray(), 'ib_dns_request_return_codes', $tags, $fields);
+        $tags = ['rrd_def' => $rrd_def];
+        $datastore->put($this->getDeviceArray(), 'ib_dns_request_return_codes', $tags, $fields);
         $this->enableGraph('ib_dns_request_return_codes');
 
         //#################
@@ -157,8 +159,8 @@ class Nios extends \LibreNMS\OS implements OSPolling
             'request' => $data[0]['ibDhcpTotalNoOfRequests'] ?? null,
         ];
 
-        $tags = compact('rrd_def');
-        data_update($this->getDeviceArray(), 'ib_dhcp_messages', $tags, $fields);
+        $tags = ['rrd_def' => $rrd_def];
+        $datastore->put($this->getDeviceArray(), 'ib_dhcp_messages', $tags, $fields);
         $this->enableGraph('ib_dhcp_messages');
     }
 }

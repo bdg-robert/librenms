@@ -5,28 +5,24 @@ require 'includes/html/graphs/common.inc.php';
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'mysql', $app->app_id]);
 
 $array = [
-    'SFJn'  => 'Full Join',
+    'SFJn' => 'Full Join',
     'SFRJn' => 'Full Range',
-    'SRe'   => 'Range',
-    'SRCk'  => 'Range Check',
-    'SSn'   => 'Scan',
+    'SRe' => 'Range',
+    'SRCk' => 'Range Check',
+    'SSn' => 'Scan',
 ];
 
 $i = 0;
-if (Rrd::checkRrdExists($rrd_filename)) {
-    foreach ($array as $ds => $var) {
-        $rrd_list[$i]['filename'] = $rrd_filename;
-        if (is_array($var)) {
-            $rrd_list[$i]['descr'] = $var['descr'];
-        } else {
-            $rrd_list[$i]['descr'] = $var;
-        }
-
-        $rrd_list[$i]['ds'] = $ds;
-        $i++;
+foreach ($array as $ds => $var) {
+    $rrd_list[$i]['filename'] = $rrd_filename;
+    if (is_array($var)) {
+        $rrd_list[$i]['descr'] = $var['descr'];
+    } else {
+        $rrd_list[$i]['descr'] = $var;
     }
-} else {
-    echo "file missing: $file";
+
+    $rrd_list[$i]['ds'] = $ds;
+    $i++;
 }
 
 $colours = 'mixed';

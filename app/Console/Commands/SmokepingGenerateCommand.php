@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SmokepingGenerateCommand.php
  *
@@ -26,8 +27,8 @@
 namespace App\Console\Commands;
 
 use App\Console\LnmsCommand;
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
-use LibreNMS\Config;
 use Symfony\Component\Console\Input\InputOption;
 
 class SmokepingGenerateCommand extends LnmsCommand
@@ -71,7 +72,7 @@ class SmokepingGenerateCommand extends LnmsCommand
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         if (! $this->validateOptions()) {
             return 1;
@@ -79,7 +80,7 @@ class SmokepingGenerateCommand extends LnmsCommand
 
         $devices = Device::isNotDisabled()->orderBy('type')->orderBy('hostname')->get();
 
-        if (sizeof($devices) < 1) {
+        if (count($devices) < 1) {
             $this->error(__('commands.smokeping:generate.no-devices'));
 
             return 3;
@@ -111,7 +112,7 @@ class SmokepingGenerateCommand extends LnmsCommand
      */
     public function buildProbesConfiguration()
     {
-        $probes = $this->assembleProbes(Config::get('smokeping.probes'));
+        $probes = $this->assembleProbes(LibrenmsConfig::get('smokeping.probes'));
         $header = $this->buildHeader($this->option('no-header'), $this->option('compat'));
 
         return $this->render($header, $probes);
@@ -127,10 +128,13 @@ class SmokepingGenerateCommand extends LnmsCommand
         // Take the devices array and build it into a hierarchical list
         $smokelist = [];
         foreach ($devices as $device) {
-            $smokelist[$device->type][$device->hostname] = ['transport' => $device->transport];
+            $smokelist[$device->type][$device->hostname] = [
+                'transport' => $device->transport,
+                'displayname' => $device->displayName(),
+            ];
         }
 
-        $targets = $this->buildTargets($smokelist, Config::get('smokeping.probes'), $this->option('single-process'));
+        $targets = $this->buildTargets($smokelist, LibrenmsConfig::get('smokeping.probes'), $this->option('single-process'));
         $header = $this->buildHeader($this->option('no-header'), $this->option('compat'));
 
         return $this->render($header, $targets);
@@ -159,8 +163,8 @@ class SmokepingGenerateCommand extends LnmsCommand
         }
 
         return array_merge(
-            $this->buildProbes('FPing', self::DEFAULTIP4PROBE, self::IP4PROBE, Config::get('fping'), $probeCount),
-            $this->buildProbes('FPing6', self::DEFAULTIP6PROBE, self::IP6PROBE, Config::get('fping6'), $probeCount)
+            $this->buildProbes('FPing', self::DEFAULTIP4PROBE, self::IP4PROBE, LibrenmsConfig::get('fping'), $probeCount),
+            $this->buildProbes('FPing6', self::DEFAULTIP6PROBE, self::IP6PROBE, LibrenmsConfig::get('fping6'), $probeCount)
         );
     }
 
@@ -253,9 +257,9 @@ class SmokepingGenerateCommand extends LnmsCommand
      */
     private function validateOptions()
     {
-        if (! Config::has('smokeping.probes') ||
-            ! Config::has('fping') ||
-            ! Config::has('fping6')
+        if (! LibrenmsConfig::has('smokeping.probes') ||
+            ! LibrenmsConfig::has('fping') ||
+            ! LibrenmsConfig::has('fping6')
         ) {
             $this->error(__('commands.smokeping:generate.config-insufficient'));
 
@@ -268,7 +272,7 @@ class SmokepingGenerateCommand extends LnmsCommand
             return false;
         }
 
-        if (Config::get('smokeping.probes') < 1) {
+        if (LibrenmsConfig::get('smokeping.probes') < 1) {
             $this->error(__('commands.smokeping:generate.no-probes'));
 
             return false;
@@ -315,8 +319,8 @@ class SmokepingGenerateCommand extends LnmsCommand
         foreach ($devices as $hostname => $config) {
             if (! $this->dnsLookup || $this->deviceIsResolvable($hostname)) {
                 $lines[] = sprintf('++ %s', $this->buildMenuEntry($hostname));
-                $lines[] = sprintf('   menu = %s', $hostname);
-                $lines[] = sprintf('   title = %s', $hostname);
+                $lines[] = sprintf('   menu = %s', $config['displayname']);
+                $lines[] = sprintf('   title = %s', $config['displayname']);
 
                 if (! $singleProcess) {
                     $lines[] = sprintf('   probe = %s', $this->balanceProbes($config['transport'], $probeCount));
@@ -338,6 +342,9 @@ class SmokepingGenerateCommand extends LnmsCommand
      */
     private function deviceIsResolvable($hostname)
     {
+        if (empty($hostname)) {
+            return false;
+        }
         // First we check for IP literals, then for a dns entry, finally for a hosts entry due to a PHP/libc limitation
         // We look for the hosts entry last (and separately) as this only works for v4 - v6 host entries won't be found
         if (filter_var($hostname, FILTER_VALIDATE_IP) || checkdnsrr($hostname, 'ANY') || is_array(gethostbynamel($hostname))) {
@@ -368,7 +375,7 @@ class SmokepingGenerateCommand extends LnmsCommand
      */
     private function balanceProbes($transport, $probeCount)
     {
-        if ($transport === 'udp') {
+        if ($transport === 'udp' || $transport === 'tcp') {
             if ($probeCount === $this->ip4count) {
                 $this->ip4count = 0;
             }

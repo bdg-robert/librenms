@@ -10,7 +10,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('service_templates', function (Blueprint $table) {
             $table->increments('id');
@@ -18,14 +18,14 @@ return new class extends Migration
             $table->string('type');
             $table->string('dtype', 16)->default('static');
             $table->text('drules')->nullable();
-            if (\LibreNMS\DB\Eloquent::getDriver() !== 'sqlite') {
+            if (LibreNMS\DB\Eloquent::getDriver() !== 'sqlite') {
                 $table->string('dgtype', 16)->default('static');
                 $table->text('dgrules')->nullable();
             }
             $table->text('desc')->nullable()->default(null);
             $table->text('param')->nullable()->default(null);
             $table->boolean('ignore')->default(0);
-            if (\LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
+            if (LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
                 $table->timestamp('changed')->default(DB::raw('CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'));
             } else {
                 $table->timestamp('changed')->useCurrent();
@@ -40,7 +40,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::drop('service_templates');
     }

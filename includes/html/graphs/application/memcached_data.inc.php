@@ -9,12 +9,12 @@ $nototal = 0;
 $unit_text = 'Packets/sec';
 $array = [
     'limit_maxbytes' => [
-        'descr'  => 'Capacity',
+        'descr' => 'Capacity',
         'colour' => '555555',
     ],
-    'bytes'          => [
-        'descr'      => 'Used',
-        'colour'     => 'cc0000',
+    'bytes' => [
+        'descr' => 'Used',
+        'colour' => 'cc0000',
         'areacolour' => 'ff999955',
     ],
 ];
@@ -34,7 +34,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

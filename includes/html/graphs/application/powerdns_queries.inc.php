@@ -9,19 +9,19 @@ $unit_text = 'Packets/sec';
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'powerdns', $app->app_id]);
 $array = [
     'q_tcpAnswers' => [
-        'descr'  => 'TCP Answers',
+        'descr' => 'TCP Answers',
         'colour' => '008800FF',
     ],
     'q_tcpQueries' => [
-        'descr'  => 'TCP Queries',
+        'descr' => 'TCP Queries',
         'colour' => '00FF00FF',
     ],
     'q_udpAnswers' => [
-        'descr'  => 'UDP Answers',
+        'descr' => 'UDP Answers',
         'colour' => '336699FF',
     ],
     'q_udpQueries' => [
-        'descr'  => 'UDP Queries',
+        'descr' => 'UDP Queries',
         'colour' => '6699CCFF',
     ],
 ];
@@ -37,7 +37,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_multi_simplex_seperated.inc.php';

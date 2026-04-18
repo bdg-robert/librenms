@@ -1,4 +1,5 @@
 <?php
+
 /**
  * UpsTrapOnBatteryTest.php
  *
@@ -27,22 +28,20 @@ namespace LibreNMS\Tests\Feature\SnmpTraps;
 use App\Models\Device;
 use App\Models\Sensor;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use LibreNMS\Enum\Severity;
 use LibreNMS\Tests\Traits\RequiresDatabase;
 
-class UpsTrapOnBatteryTest extends SnmpTrapTestCase
+final class UpsTrapOnBatteryTest extends SnmpTrapTestCase
 {
     use RequiresDatabase;
     use DatabaseTransactions;
 
     public function testOnBattery(): void
     {
-        $device = Device::factory()->create(); /** @var Device $device */
-        $state = Sensor::factory()->make(['sensor_class' => 'state', 'sensor_type' => 'upsOutputSourceState', 'sensor_current' => '2']); /** @var Sensor $state */
-        $time = Sensor::factory()->make(['sensor_class' => 'runtime', 'sensor_index' => '100', 'sensor_type' => 'rfc1628', 'sensor_current' => '0']); /** @var Sensor $time */
-        $remaining = Sensor::factory()->make(['sensor_class' => 'runtime', 'sensor_index' => '200', 'sensor_type' => 'rfc1628', 'sensor_current' => '371']); /** @var Sensor $remaining */
-        $device->sensors()->save($state);
-        $device->sensors()->save($time);
-        $device->sensors()->save($remaining);
+        $device = Device::factory()->create();
+        $state = Sensor::factory()->for($device)->create(['sensor_class' => 'state', 'sensor_type' => 'upsOutputSourceState', 'sensor_current' => '2']);
+        $time = Sensor::factory()->for($device)->create(['sensor_class' => 'runtime', 'sensor_index' => '100', 'sensor_type' => 'rfc1628', 'sensor_current' => '0']);
+        $remaining = Sensor::factory()->for($device)->create(['sensor_class' => 'runtime', 'sensor_index' => '200', 'sensor_type' => 'rfc1628', 'sensor_current' => '371']);
 
         \Log::shouldReceive('warning')->never()->with("Snmptrap upsTrapOnBattery: Could not find matching sensor \'Estimated battery time remaining\' for device: " . $device->hostname);
         \Log::shouldReceive('warning')->never()->with("Snmptrap upsTrapOnBattery: Could not find matching sensor \'Time on battery\' for device: " . $device->hostname);
@@ -57,7 +56,7 @@ UPS-MIB::upsSecondsOnBattery 120 seconds
 UPS-MIB::upsConfigLowBattTime 1 minutes",
             'UPS running on battery for 120 seconds. Estimated 100 minutes remaining',
             'Could not handle UPS-MIB::upsTrapOnBattery trap',
-            [5],
+            [Severity::Error],
             $device,
         );
 

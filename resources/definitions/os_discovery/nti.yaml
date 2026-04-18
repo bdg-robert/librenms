@@ -1,0 +1,89 @@
+modules:
+    sensors:
+        temperature:
+            data:
+                -
+                    oid: ENVIROMUXMICRO-MIB::intSensorEntry
+                    value: ENVIROMUXMICRO-MIB::intSensorValue
+                    num_oid: '.1.3.6.1.4.1.3699.1.1.12.1.1.1.1.4.{{ $index }}'
+                    descr: '{{ ENVIROMUXMICRO-MIB::intSensorDescription }}'
+                    index: 'intSensorEntry.{{ $index }}'
+                    divisor: 10
+                    group: Internal
+                    skip_values:
+                        -
+                            oid: ENVIROMUXMICRO-MIB::intSensorType
+                            op: '!='
+                            value: 1
+                -
+                   oid: ENVIROMUX-1W-MIB::extSensorTable
+                   value: ENVIROMUX-1W-MIB::extSensorValue
+                   num_oid: '.1.3.6.1.4.1.3699.1.1.12.1.2.1.1.4.{{ $index }}'
+                   index: 'extSensorValue.{{ $index }}'
+                   descr: "{{ ENVIROMUX-1W-MIB::extSensorDescription }}"
+                   divisor: 10
+                   skip_values:
+                      -
+                           oid: ENVIROMUX-1W-MIB::extSensorType
+                           op: 'not_in_array'
+                           value: ['1', '24']
+        humidity:
+            data:
+                -
+                    oid: ENVIROMUXMICRO-MIB::intSensorEntry
+                    value: ENVIROMUXMICRO-MIB::intSensorValue
+                    num_oid: '.1.3.6.1.4.1.3699.1.1.12.1.1.1.1.4.{{ $index }}'
+                    descr: '{{ ENVIROMUXMICRO-MIB::intSensorDescription }}'
+                    index: 'intSensorEntry.{{ $index }}'
+                    divisor: 10
+                    group: Internal
+                    skip_values:
+                        -
+                            oid: ENVIROMUXMICRO-MIB::intSensorType
+                            op: '!='
+                            value: 2
+                -
+                   oid: ENVIROMUX-1W-MIB::extSensorTable
+                   value: ENVIROMUX-1W-MIB::extSensorValue
+                   num_oid: '.1.3.6.1.4.1.3699.1.1.12.1.2.1.1.4.{{ $index }}'
+                   index: 'extSensorValue.{{ $index }}'
+                   descr: "{{ ENVIROMUX-1W-MIB::extSensorDescription }}"
+                   divisor: 10
+                   skip_values:
+                       -
+                           oid: ENVIROMUX-1W-MIB::extSensorType
+                           op: 'not_in_array'
+                           value: ['2']
+        state:
+            data:
+                -
+                    oid: ENVIROMUX-1W-MIB::digInputEntry
+                    value: ENVIROMUX-1W-MIB::digInputValue
+                    num_oid: '.1.3.6.1.4.1.3699.1.1.12.1.3.1.1.3.{{ $index }}'
+                    descr: '{{ ENVIROMUX-1W-MIB::digInputDescription }}'
+                    state_name: DigitalInputs
+                    group: Inputs
+                    states:
+                        - { descr: closed, value: 0, generic: 0 }
+                        - { descr: open, value: 1, generic: 1 }
+                -
+                    oid: ENVIROMUX-1W-MIB::alertEntry
+                    value: ENVIROMUX-1W-MIB::alertStatus
+                    num_oid: '.1.3.6.1.4.1.3699.1.1.12.1.5.1.1.7.{{ $index }}'
+                    descr: '{{ ENVIROMUX-1W-MIB::alertSensor }}#{{ $index }}'
+                    group: Alerts
+                    state_name: alertStatus
+                    states:
+                        - { descr: normal, value: 0, generic: 0 }
+                        - { descr: enterinCritical, value: 1, generic: 1 }
+                        - { descr: Critical, value: 2, generic: 2 }
+                        - { descr: exitingCritical, value: 3, generic: 1 }
+                        - { descr: waitingAckDismiss, value: 4, generic: 1 }
+                        - { descr: acknowledged, value: 5, generic: 1 }
+                        - { descr: dismissed, value: 6, generic: 1 }
+                        - { descr: disconnected, value: 7, generic: 3 }
+                    skip_values:
+                        -
+                            oid: ENVIROMUX-1W-MIB::alertEnabled
+                            op: '='
+                            value: 0

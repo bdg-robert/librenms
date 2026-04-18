@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Package;
+use LibreNMS\Util\Number;
 
 $pkgs_id = [];
 $pkgs_db_id = [];
@@ -9,7 +10,7 @@ $managers = [
     'rpm' => [
         'name' => 'RPM',
         'process' => function ($line) {
-            [$name, $version, $build, $arch, $size] = explode(' ', $line);
+            [$name, $version, $build, $arch, $size] = explode(' ', (string) $line);
 
             return new Package([
                 'manager' => 'rpm',
@@ -25,7 +26,7 @@ $managers = [
     'dpkg' => [
         'name' => 'DEB',
         'process' => function ($line) {
-            [$name, $version, $arch, $size] = explode(' ', $line);
+            [$name, $version, $arch, $size] = explode(' ', (string) $line);
 
             return new Package([
                 'manager' => 'deb',
@@ -33,7 +34,23 @@ $managers = [
                 'arch' => $arch,
                 'version' => $version,
                 'build' => '',
-                'size' => cast_number($size) * 1024,
+                'size' => Number::cast($size) * 1024,
+                'status' => 1,
+            ]);
+        },
+    ],
+    'pacman' => [
+        'name' => 'Pacman',
+        'process' => function ($line) {
+            [$name, $version, $arch, $size] = explode(' ', (string) $line);
+
+            return new Package([
+                'manager' => 'pacman',
+                'name' => $name,
+                'arch' => $arch,
+                'version' => $version,
+                'build' => '',
+                'size' => (int) \LibreNMS\Util\Number::toBytes($size),
                 'status' => 1,
             ]);
         },
@@ -51,9 +68,14 @@ foreach ($managers as $key => $manager) {
             return $package;
         })->keyBy->getCompositeKey();
 
-        foreach (explode("\n", trim($agent_data[$key])) as $line) {
+        foreach (explode("\n", trim((string) $agent_data[$key])) as $line) {
             /** @var \App\Models\Package $package */
             $package = $manager['process']($line);
+
+            if (! $package->isValid()) {
+                continue; // failed to parse
+            }
+
             $package_key = $package->getCompositeKey();
             if ($existing_package = $packages->get($package_key)) {
                 $existing_package->fill($package->attributesToArray());

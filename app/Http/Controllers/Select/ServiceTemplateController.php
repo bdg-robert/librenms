@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ServiceTemplateController.php
  *
@@ -36,7 +37,7 @@ class ServiceTemplateController extends SelectController
 
     protected function baseQuery($request)
     {
-        return ServiceTemplate::hasAccess($request->user())->select('id', 'name');
+        return ServiceTemplate::hasAccess($request->user())->select(['id', 'name']);
     }
 
     /**

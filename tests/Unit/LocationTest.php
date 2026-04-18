@@ -1,4 +1,5 @@
 <?php
+
 /*
  * LocationTest.php
  *
@@ -25,17 +26,17 @@
 
 namespace LibreNMS\Tests\Unit;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use App\Models\Location;
-use LibreNMS\Config;
 use LibreNMS\Interfaces\Geocoder;
 use LibreNMS\Tests\TestCase;
 use LibreNMS\Util\Dns;
 use Mockery\MockInterface;
 
-class LocationTest extends TestCase
+final class LocationTest extends TestCase
 {
-    public function testCanSetLocation()
+    public function testCanSetLocation(): void
     {
         $device = Device::factory()->make(); /** @var Device $device */
         $device->setLocation('Where');
@@ -48,7 +49,7 @@ class LocationTest extends TestCase
         $this->assertNull($device->location);
     }
 
-    public function testCanNotSetLocation()
+    public function testCanNotSetLocation(): void
     {
         $device = Device::factory()->make(); /** @var Device $device */
         $location = Location::factory()->make(); /** @var Location $location */
@@ -57,9 +58,9 @@ class LocationTest extends TestCase
         $this->assertNull($device->location);
     }
 
-    public function testCanSetEncodedLocation()
+    public function testCanSetEncodedLocation(): void
     {
-        Config::set('geoloc.dns', false);
+        LibrenmsConfig::set('geoloc.dns', false);
         $device = Device::factory()->make(); /** @var Device $device */
 
         // valid coords
@@ -90,9 +91,9 @@ class LocationTest extends TestCase
         $this->assertNull($device->location->lng);
     }
 
-    public function testCanHandleGivenCoordinates()
+    public function testCanHandleGivenCoordinates(): void
     {
-        Config::set('geoloc.dns', false);
+        LibrenmsConfig::set('geoloc.dns', false);
         $device = Device::factory()->make(); /** @var Device $device */
         $location = Location::factory()->withCoordinates()->make(); /** @var Location $location */
         $device->setLocation($location);
@@ -103,7 +104,7 @@ class LocationTest extends TestCase
         $this->assertEquals($location->lng, $device->location->lng);
     }
 
-    public function testCanNotSetFixedCoordinates()
+    public function testCanNotSetFixedCoordinates(): void
     {
         $device = Device::factory()->make(); /** @var Device $device */
         $locationOne = Location::factory()->withCoordinates()->make(); /** @var Location $locationOne */
@@ -123,22 +124,31 @@ class LocationTest extends TestCase
         $this->assertEquals($locationTwo->lng, $device->location->lng);
     }
 
-    public function testDnsLookup()
+    public function testDnsLookup(): void
     {
         $example = 'SW1A2AA.find.me.uk';
         $expected = ['lat' => 51.50354111111111, 'lng' => -0.12766972222222223];
 
-        $result = (new Dns())->getCoordinates($example);
+        $this->mock(\Net_DNS2_Resolver::class, function (MockInterface $mock) use ($example, $expected): void {
+            $loc = new \Net_DNS2_RR_LOC();
+            $loc->name = $example;
+            $loc->latitude = $expected['lat'];
+            $loc->longitude = $expected['lng'];
+            $answer = (object) ['answer' => [$loc]];
+            $mock->shouldReceive('query')->with($example, 'LOC')->once()->andReturn($answer);
+        });
+
+        $result = $this->app->make(Dns::class)->getCoordinates($example);
 
         $this->assertEquals($expected, $result);
     }
 
-    public function testCanSetDnsCoordinate()
+    public function testCanSetDnsCoordinate(): void
     {
-        Config::set('geoloc.dns', true);
+        LibrenmsConfig::set('geoloc.dns', true);
         $device = Device::factory()->make(); /** @var Device $device */
         $location = Location::factory()->withCoordinates()->make(); /** @var Location $location */
-        $this->mock(Dns::class, function (MockInterface $mock) use ($location) {
+        $this->mock(Dns::class, function (MockInterface $mock) use ($location): void {
             $mock->shouldReceive('getCoordinates')->once()->andReturn($location->only(['lat', 'lng']));
         });
 
@@ -147,28 +157,30 @@ class LocationTest extends TestCase
         $this->assertEquals($location->lat, $device->location->lat);
         $this->assertEquals($location->lng, $device->location->lng);
 
-        Config::set('geoloc.dns', false);
+        LibrenmsConfig::set('geoloc.dns', false);
         $device->setLocation('No DNS', true);
         $this->assertEquals('No DNS', $device->location->location);
         $this->assertNull($device->location->lat);
         $this->assertNull($device->location->lng);
     }
 
-    public function testCanSetByApi()
+    public function testCanSetByApi(): void
     {
         $device = Device::factory()->make(); /** @var Device $device */
         $location = Location::factory()->withCoordinates()->make(); /** @var Location $location */
-        $this->mock(Geocoder::class, function (MockInterface $mock) use ($location) {
+        $this->mock(Geocoder::class, function (MockInterface $mock) use ($location): void {
             $mock->shouldReceive('getCoordinates')->once()->andReturn($location->only(['lat', 'lng']));
         });
+        // Disable DNS lookup since we're not testing that.
+        LibrenmsConfig::set('geoloc.dns', false);
 
-        Config::set('geoloc.latlng', false);
+        LibrenmsConfig::set('geoloc.latlng', false);
         $device->setLocation('No API', true);
         $this->assertEquals('No API', $device->location->location);
         $this->assertNull($device->location->lat);
         $this->assertNull($device->location->lng);
 
-        Config::set('geoloc.latlng', true);
+        LibrenmsConfig::set('geoloc.latlng', true);
         $device->setLocation('API', true);
         $this->assertEquals('API', $device->location->location);
         $this->assertEquals($location->lat, $device->location->lat);
@@ -180,15 +192,15 @@ class LocationTest extends TestCase
         $this->assertEquals($location->lng, $device->location->lng);
     }
 
-    public function testCorrectPrecedence()
+    public function testCorrectPrecedence(): void
     {
         $device = Device::factory()->make(); /** @var Device $device */
         $location_encoded = Location::factory()->withCoordinates()->make(); /** @var Location $location_encoded */
         $location_fixed = Location::factory()->withCoordinates()->make(); /** @var Location $location_fixed */
         $location_api = Location::factory()->withCoordinates()->make(); /** @var Location $location_api */
         $location_dns = Location::factory()->withCoordinates()->make(); /** @var Location $location_dns */
-        Config::set('geoloc.dns', true);
-        $this->mock(Dns::class, function (MockInterface $mock) use ($location_dns) {
+        LibrenmsConfig::set('geoloc.dns', true);
+        $this->mock(Dns::class, function (MockInterface $mock) use ($location_dns): void {
             $mock->shouldReceive('getCoordinates')->times(3)->andReturn(
                 $location_dns->only(['lat', 'lng']),
                 [],
@@ -196,8 +208,8 @@ class LocationTest extends TestCase
             );
         });
 
-        Config::set('geoloc.latlng', true);
-        $this->mock(Geocoder::class, function (MockInterface $mock) use ($location_api) {
+        LibrenmsConfig::set('geoloc.latlng', true);
+        $this->mock(Geocoder::class, function (MockInterface $mock) use ($location_api): void {
             $mock->shouldReceive('getCoordinates')->once()->andReturn($location_api->only(['lat', 'lng']));
         });
 

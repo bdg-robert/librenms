@@ -1,4 +1,5 @@
 <?php
+
 /*
  * PortSearchController.php
  *
@@ -39,7 +40,7 @@ class PortSearchController extends SearchController
             ->with('device')
             ->where('deleted', 0)
             ->where(function (Builder $query) use ($request) {
-                $search = $request->get('search');
+                $search = $request->input('search');
                 $like_search = "%$search%";
 
                 return $query->orWhere('ifAlias', 'LIKE', $like_search)
@@ -52,7 +53,7 @@ class PortSearchController extends SearchController
     }
 
     /**
-     * @param  \App\Models\Port  $port
+     * @param  Port  $port
      * @return array
      */
     public function formatItem($port): array
@@ -65,12 +66,12 @@ class PortSearchController extends SearchController
         }
 
         return [
-            'url'         => Url::portUrl($port),
-            'name'        => $label,
+            'url' => Url::portUrl($port),
+            'name' => $label,
             'description' => $description,
-            'colours'     => Color::forPortStatus($port),
-            'hostname'    => $port->device->displayName(),
-            'port_id'     => $port->port_id,
+            'colours' => Color::forPortStatus($port),
+            'hostname' => $port->device?->displayName(),
+            'port_id' => $port->port_id,
         ];
     }
 }

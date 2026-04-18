@@ -1,4 +1,5 @@
 <?php
+
 /**
  * procurve.inc.php
  *
@@ -22,7 +23,7 @@
  * @copyright  2017 Neil Lathwood
  * @author     Neil Lathwood <gh+n@laf.io>
  */
-foreach ($pre_cache['procurve_hpicfSensorTable'] as $index => $data) {
+foreach (snmpwalk_cache_oid($device, 'hpicfSensorTable', [], 'HP-ICF-CHASSIS', null, '-OeQUs') as $index => $data) {
     $state_name = $data['hpicfSensorObjectId'];
     $state_oid = '.1.3.6.1.4.1.11.2.14.11.1.2.6.1.4.';
     $state_descr = $data['hpicfSensorDescr'];
@@ -30,14 +31,13 @@ foreach ($pre_cache['procurve_hpicfSensorTable'] as $index => $data) {
     $state_index = $state_name . '.' . $index;
 
     $states = [
-        ['value' => 1, 'generic' => 3, 'graph' => 0, 'descr' => 'unknown'],
-        ['value' => 2, 'generic' => 2, 'graph' => 1, 'descr' => 'bad'],
-        ['value' => 3, 'generic' => 1, 'graph' => 1, 'descr' => 'warning'],
-        ['value' => 4, 'generic' => 0, 'graph' => 1, 'descr' => 'good'],
-        ['value' => 5, 'generic' => 3, 'graph' => 0, 'descr' => 'notPresent'],
+        ['value' => 1, 'generic' => 3, 'descr' => 'unknown'],
+        ['value' => 2, 'generic' => 2, 'descr' => 'bad'],
+        ['value' => 3, 'generic' => 1, 'descr' => 'warning'],
+        ['value' => 4, 'generic' => 0, 'descr' => 'good'],
+        ['value' => 5, 'generic' => 3, 'descr' => 'notPresent'],
     ];
     create_state_index($state_name, $states);
 
-    discover_sensor($valid['sensor'], 'state', $device, $state_oid . $index, $state_index, $state_name, $state_descr, '1', '1', null, null, null, null, $state);
-    create_sensor_to_state_index($device, $state_name, $state_index);
+    discover_sensor(null, 'state', $device, $state_oid . $index, $state_index, $state_name, $state_descr, '1', '1', null, null, null, null, $state);
 }

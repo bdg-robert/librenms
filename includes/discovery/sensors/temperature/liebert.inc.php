@@ -1,4 +1,5 @@
 <?php
+
 /**
  * liebert.inc.php
  *
@@ -42,7 +43,7 @@ foreach ($lib_data as $index => $data) {
     }
     if (is_numeric($current)) {
         $descr = $data['lgpEnvTemperatureDescrDegC'];
-        discover_sensor($valid['sensor'], 'temperature', $device, $oid, $new_index, 'liebert', $descr, $divisor, 1, $low_limit, null, null, $high_limit, $current / $divisor);
+        discover_sensor(null, 'temperature', $device, $oid, $new_index, 'liebert', $descr, $divisor, 1, $low_limit, null, null, $high_limit, $current / $divisor);
         unset($current);
     }
 }
@@ -58,20 +59,20 @@ unset(
     $new_index
 );
 
-$return_temp = snmp_get($device, 'lgpEnvReturnAirTemperature.0', '-Oqv');
+$return_temp = SnmpQuery::get('lgpEnvReturnAirTemperature.0')->value();
 if (is_numeric($return_temp)) {
     $oid = '.1.3.6.1.4.1.476.1.42.3.4.1.1.2.0';
     $index = 'lgpEnvReturnAirTemperature.0';
     $descr = 'Return Air Temp';
     $divisor = 1;
-    discover_sensor($valid['sensor'], 'temperature', $device, $oid, $index, 'liebert', $descr, $divisor, '1', null, null, null, null, $return_temp);
+    discover_sensor(null, 'temperature', $device, $oid, $index, 'liebert', $descr, $divisor, '1', null, null, null, null, $return_temp);
 }
 
-$supply_temp = snmp_get($device, 'lgpEnvSupplyAirTemperature.0', '-Oqv');
+$supply_temp = SnmpQuery::get('lgpEnvSupplyAirTemperature.0')->value();
 if (is_numeric($supply_temp)) {
     $oid = '.1.3.6.1.4.1.476.1.42.3.4.1.1.3.0';
     $index = 'lgpEnvSupplyAirTemperature.0';
     $descr = 'Supply Air Temp';
     $divisor = 1;
-    discover_sensor($valid['sensor'], 'temperature', $device, $oid, $index, 'liebert', $descr, $divisor, '1', null, null, null, null, $supply_temp);
+    discover_sensor(null, 'temperature', $device, $oid, $index, 'liebert', $descr, $divisor, '1', null, null, null, null, $supply_temp);
 }

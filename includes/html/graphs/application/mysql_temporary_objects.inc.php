@@ -6,8 +6,8 @@ $rrd_filename = Rrd::name($device['hostname'], ['app', 'mysql', $app->app_id]);
 
 $array = [
     'CTMPDTs' => 'disk tables',
-    'CTMPTs'  => 'tables',
-    'CTMPFs'  => 'files',
+    'CTMPTs' => 'tables',
+    'CTMPFs' => 'files',
 ];
 
 $i = 0;
@@ -24,7 +24,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 $colours = 'mixed';

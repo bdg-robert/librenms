@@ -9,7 +9,7 @@ $nototal = 0;
 $unit_text = 'Items';
 $array = [
     'curr_items' => [
-        'descr'  => 'Items',
+        'descr' => 'Items',
         'colour' => '555555',
     ],
 ];
@@ -29,7 +29,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

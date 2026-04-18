@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Fping.php
  *
@@ -25,46 +26,51 @@
 
 namespace LibreNMS\Data\Source;
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
+use LibreNMS\Enum\AddressFamily;
+use LibreNMS\Exceptions\FpingUnparsableLine;
 use Log;
 use Symfony\Component\Process\Process;
 
 class Fping
 {
+    private readonly int $count;
+    private readonly int $timeout;
+    private readonly int $interval;
+    private readonly int $tos;
+    private readonly int $retries;
+
+    public function __construct()
+    {
+        // prep fping parameters
+        $this->count = max(LibrenmsConfig::get('fping_options.count', 3), 1);
+        $this->interval = max(LibrenmsConfig::get('fping_options.interval', 500), 20);
+        $this->timeout = max(LibrenmsConfig::get('fping_options.timeout', 500), $this->interval);
+        $this->retries = LibrenmsConfig::get('fping_options.retries', 2);
+        $this->tos = LibrenmsConfig::get('fping_options.tos', 0);
+    }
+
     /**
      * Run fping against a hostname/ip in count mode and collect stats.
      *
-     * @param  string  $host
-     * @param  int  $count  (min 1)
-     * @param  int  $interval  (min 20)
-     * @param  int  $timeout  (not more than $interval)
-     * @param  string  $address_family  ipv4 or ipv6
-     * @return \LibreNMS\Data\Source\FpingResponse
+     * @param  string  $host  hostname or ip
+     * @param  AddressFamily  $address_family  ipv4 or ipv6
+     * @return FpingResponse
      */
-    public function ping($host, $count = 3, $interval = 1000, $timeout = 500, $address_family = 'ipv4'): FpingResponse
+    public function ping(string $host, AddressFamily $address_family = AddressFamily::IPv4): FpingResponse
     {
-        $interval = max($interval, 20);
-
-        $fping = Config::get('fping');
-        $fping_tos = Config::get('fping_options.tos', 0);
-        $cmd = [$fping];
-        if ($address_family == 'ipv6') {
-            $fping6 = Config::get('fping6');
-            $cmd = is_executable($fping6) ? [$fping6] : [$fping, '-6'];
-        }
-
         // build the command
-        $cmd = array_merge($cmd, [
+        $cmd = array_merge(LibrenmsConfig::fpingCommand($address_family), [
             '-e',
             '-q',
             '-c',
-            max($count, 1),
+            $this->count,
             '-p',
-            $interval,
+            $this->interval,
             '-t',
-            max($timeout, $interval),
+            $this->timeout,
             '-O',
-            $fping_tos,
+            $this->tos,
             $host,
         ]);
 
@@ -72,10 +78,51 @@ class Fping
         Log::debug('[FPING] ' . $process->getCommandLine() . PHP_EOL);
         $process->run();
 
-        $response = FpingResponse::parseOutput($process->getErrorOutput(), $process->getExitCode());
+        $response = FpingResponse::parseLine($process->getErrorOutput(), $process->getExitCode());
 
         Log::debug("response: $response");
 
         return $response;
+    }
+
+    public function bulkPing(array $hosts, callable $callback): void
+    {
+        $process = app()->make(Process::class, ['command' => [
+            LibrenmsConfig::get('fping', 'fping'),
+            '-f', '-',
+            '-e',
+            '-t', $this->timeout,
+            '-r', $this->retries,
+            '-O', $this->tos,
+            '-c', $this->count,
+        ]]);
+
+        // twice polling interval
+        $process->setTimeout(LibrenmsConfig::get('rrd.step', 300) * 2);
+        // send hostnames to stdin to avoid overflowing cli length limits
+        $process->setInput(implode(PHP_EOL, $hosts) . PHP_EOL);
+
+        Log::debug('[FPING] ' . $process->getCommandLine() . PHP_EOL);
+
+        $partial = '';
+        $process->run(function ($type, $output) use ($callback, &$partial): void {
+            // stdout contains individual ping responses, stderr contains summaries
+            if ($type == Process::ERR) {
+                $lines = explode(PHP_EOL, $output);
+                foreach ($lines as $index => $line) {
+                    if ($line) {
+                        Log::debug("Fping OUTPUT|$line PARTIAL|$partial");
+                        try {
+                            $response = FpingResponse::parseLine($partial . $line);
+                            call_user_func($callback, $response);
+                            $partial = '';
+                        } catch (FpingUnparsableLine $e) {
+                            // handle possible partial line (only save it if it is the last line of output)
+                            $partial = $index === array_key_last($lines) ? $e->unparsedLine : '';
+                        }
+                    }
+                }
+            }
+        });
     }
 }

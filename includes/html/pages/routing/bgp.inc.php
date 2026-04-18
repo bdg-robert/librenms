@@ -1,13 +1,20 @@
 <?php
 
+use App\Models\BgpPeer;
+use App\Models\Device;
 use LibreNMS\Exceptions\InvalidIpException;
 use LibreNMS\Util\IPv6;
+use LibreNMS\Util\Number;
+use LibreNMS\Util\Time;
+use LibreNMS\Util\Url;
 
-if (! Auth::user()->hasGlobalRead()) {
+if (\Illuminate\Support\Facades\Gate::denies('viewAny', BgpPeer::class)) {
     include 'includes/html/error-no-perm.inc.php';
 } else {
+    $where = '';
+    $extra_sql = '';
     $link_array = [
-        'page'     => 'routing',
+        'page' => 'routing',
         'protocol' => 'bgp',
     ];
 
@@ -226,7 +233,7 @@ if (! Auth::user()->hasGlobalRead()) {
     $peer_query = "SELECT * FROM `bgpPeers` AS `B`, `devices` AS `D` WHERE `B`.`device_id` = `D`.`device_id` $where $extra_sql ORDER BY `D`.`hostname`, `B`.`bgpPeerRemoteAs`, `B`.`bgpPeerIdentifier`";
     foreach (dbFetchRows($peer_query) as $peer) {
         unset($alert);
-
+        $peer['alert'] = 0;
         if ($peer['bgpPeerState'] == 'established') {
             $col = 'green';
         } else {
@@ -249,46 +256,49 @@ if (! Auth::user()->hasGlobalRead()) {
             $peer_type = "<span style='color: #00f;'>iBGP</span>";
         } else {
             $peer_type = "<span style='color: #0a0;'>eBGP</span>";
-            if ($peer['bgpPeerRemoteAS'] >= '64512' && $peer['bgpPeerRemoteAS'] <= '65535') {
-                $peer_type = "<span style='color: #f00;'>Priv eBGP</span>";
+            // Private ASN ranges
+            // 64512 - 65534 (Private)
+            // 4200000000 - 4294967294 (Private)
+            if (($peer['bgpPeerRemoteAs'] >= 64512 && $peer['bgpPeerRemoteAs'] <= 65534) || ($peer['bgpPeerRemoteAs'] >= 4200000000 && $peer['bgpPeerRemoteAs'] <= 4294967294)) {
+                $peer_type = "<span style='color: #0af;'>Priv eBGP</span>";
             }
         }
 
         try {
-            $peer_ip = new IPv6($peer['bgpLocalAddr']);
+            $local_addr = new IPv6($peer['bgpLocalAddr']);
         } catch (InvalidIpException $e) {
-            $peer_ip = $peer['bgpLocalAddr'];
+            $local_addr = $peer['bgpLocalAddr'];
         }
 
         try {
-            $peer_ident = new IPv6($peer['bgpPeerIdentifier']);
+            $peer_addr = new IPv6($peer['bgpPeerRemoteAddr'] != '0.0.0.0' ? $peer['bgpPeerRemoteAddr'] : $peer['bgpPeerIdentifier']);
         } catch (InvalidIpException $e) {
-            $peer_ident = $peer['bgpPeerIdentifier'];
+            $peer_addr = $peer['bgpPeerIdentifier'];
         }
 
         // display overlib graphs
         $graph_array = [];
         $graph_array['type'] = 'bgp_updates';
-        $graph_array['id'] = $peer['bgpPeer_id'];
-        $graph_array['to'] = \LibreNMS\Config::get('time.now');
-        $graph_array['from'] = \LibreNMS\Config::get('time.day');
+        $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
+        $graph_array['from'] = \App\Facades\LibrenmsConfig::get('time.day');
         $graph_array['height'] = '110';
         $graph_array['width'] = $width;
 
         // Peer Address
+        $peer_device = Device::whereHas('bgppeers', fn ($q) => $q->where('bgpLocalAddr', $peer['bgpPeerIdentifier']))->first();
+        $peeraddresslink = '<span class=list-large>' . Url::deviceLink($peer_device, $peer_addr, ['tab' => 'routing', 'proto' => 'bgp']) . '</span>';
+
+        // Local Address
+        $graph_array['id'] = $peer['bgpPeer_id'];
+        $graph_array['afi'] = 'ipv4';
+        $graph_array['safi'] = 'unicast';
         $graph_array_zoom = $graph_array;
         $graph_array_zoom['height'] = '150';
         $graph_array_zoom['width'] = '500';
-        $overlib_link = 'device/device=' . $peer['device_id'] . '/tab=routing/proto=bgp/';
-        $peeraddresslink = '<span class=list-large>' . \LibreNMS\Util\Url::overlibLink($overlib_link, $peer_ident, \LibreNMS\Util\Url::graphTag($graph_array_zoom)) . '</span>';
-
-        // Local Address
-        $graph_array['afi'] = 'ipv4';
-        $graph_array['safi'] = 'unicast';
         $graph_array_zoom['afi'] = 'ipv4';
         $graph_array_zoom['safi'] = 'unicast';
         $overlib_link = 'device/device=' . $peer['device_id'] . '/tab=routing/proto=bgp/';
-        $localaddresslink = '<span class=list-large>' . \LibreNMS\Util\Url::overlibLink($overlib_link, $peer_ip, \LibreNMS\Util\Url::graphTag($graph_array_zoom)) . '</span>';
+        $localaddresslink = '<span class=list-large>' . Url::overlibLink($overlib_link, $local_addr, Url::graphTag($graph_array_zoom)) . '</span>';
 
         if ($peer['bgpPeerLastErrorCode'] == 0 && $peer['bgpPeerLastErrorSubCode'] == 0) {
             $last_error = $peer['bgpPeerLastErrorText'];
@@ -298,41 +308,40 @@ if (! Auth::user()->hasGlobalRead()) {
 
         echo '<tr class="bgp"' . ($peer['alert'] ? ' bordercolor="#cc0000"' : '') . ($peer['disabled'] ? ' bordercolor="#cccccc"' : '') . '>';
 
-        unset($sep);
+        $sep = '';
         foreach (dbFetchRows('SELECT * FROM `bgpPeers_cbgp` WHERE `device_id` = ? AND bgpPeerIdentifier = ?', [$peer['device_id'], $peer['bgpPeerIdentifier']]) as $afisafi) {
             $afi = $afisafi['afi'];
             $safi = $afisafi['safi'];
             $this_afisafi = $afi . $safi;
-            $peer['afi'] .= $sep . $afi . '.' . $safi;
+            $peer['afi'] = ($peer['afi'] ?? '') . $sep . $afi . '.' . $safi;
             $sep = '<br />';
             $peer['afisafi'][$this_afisafi] = 1;
             // Build a list of valid AFI/SAFI for this peer
         }
 
-        unset($sep);
-
         echo '  <td></td>
             <td width=150>' . $localaddresslink . '<br />' . generate_device_link($peer, null, ['tab' => 'routing', 'proto' => 'bgp']) . '</td>
             <td width=30><b>&#187;</b></td>
-            <td width=150>' . $peeraddresslink . "</td>
+            <td width=150>' . $peeraddresslink . '<br />' . Url::deviceLink($peer_device, vars: ['tab' => 'routing', 'proto' => 'bgp']) . "</td>
             <td width=50><b>$peer_type</b></td>
-            <td width=50>" . $peer['afi'] . '</td>
+            <td width=50>" . ($peer['afi'] ?? '') . '</td>
             <td><strong>AS' . $peer['bgpPeerRemoteAs'] . '</strong><br />' . $peer['astext'] . '</td>
             <td>' . $peer['bgpPeerDescr'] . "</td>
             <td><strong><span style='color: $admin_col;'>" . $peer['bgpPeerAdminStatus'] . "</span><br /><span style='color: $col;'>" . $peer['bgpPeerState'] . '</span></strong></td>
             <td>' . $last_error . '</td>
-            <td>' . \LibreNMS\Util\Time::formatInterval($peer['bgpPeerFsmEstablishedTime']) . "<br />
-            Updates <i class='fa fa-arrow-down icon-theme' aria-hidden='true'></i> " . \LibreNMS\Util\Number::formatSi($peer['bgpPeerInUpdates'], 2, 3, '') . "
-            <i class='fa fa-arrow-up icon-theme' aria-hidden='true'></i> " . \LibreNMS\Util\Number::formatSi($peer['bgpPeerOutUpdates'], 2, 3, '') . '</td></tr>';
+            <td>' . Time::formatInterval($peer['bgpPeerFsmEstablishedTime']) . "<br />
+            Updates <i class='fa fa-arrow-down icon-theme' aria-hidden='true'></i> " . Number::formatSi($peer['bgpPeerInUpdates'], 2, 0, '') . "
+            <i class='fa fa-arrow-up icon-theme' aria-hidden='true'></i> " . Number::formatSi($peer['bgpPeerOutUpdates'], 2, 0, '') . '</td></tr>';
 
         unset($invalid);
+
         switch ($vars['graph']) {
             case 'prefixes_ipv4unicast':
             case 'prefixes_ipv4multicast':
             case 'prefixes_ipv4vpn':
             case 'prefixes_ipv6unicast':
             case 'prefixes_ipv6multicast':
-                [,$afisafi] = explode('_', $vars['graph']);
+                [,$afisafi] = explode('_', (string) $vars['graph']);
                 if (isset($peer['afisafi'][$afisafi])) {
                     $peer['graph'] = 1;
                 }
@@ -346,8 +355,7 @@ if (! Auth::user()->hasGlobalRead()) {
             case 'macaccounting_bits':
             case 'macaccounting_pkts':
                 $acc = dbFetchRow('SELECT * FROM `ipv4_mac` AS I, `mac_accounting` AS M, `ports` AS P, `devices` AS D WHERE I.ipv4_address = ? AND M.mac = I.mac_address AND P.port_id = M.port_id AND D.device_id = P.device_id', [$peer['bgpPeerIdentifier']]);
-                $database = Rrd::name($device['hostname'], ['cip', $acc['ifIndex'], $acc['mac']]);
-                if (is_array($acc) && is_file($database)) {
+                if (is_array($acc) && Rrd::checkRrdExists(Rrd::name($device['hostname'], ['cip', $acc['ifIndex'], $acc['mac']]))) {
                     $peer['graph'] = 1;
                     $graph_array['id'] = $acc['ma_id'];
                     $graph_array['type'] = $vars['graph'];
@@ -358,10 +366,10 @@ if (! Auth::user()->hasGlobalRead()) {
             $peer['graph'] = 1;
         }
 
-        if ($peer['graph']) {
+        if (isset($peer['graph']) && $peer['graph']) {
             $graph_array['height'] = '100';
             $graph_array['width'] = '218';
-            $graph_array['to'] = \LibreNMS\Config::get('time.now');
+            $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
             echo '<tr></tr><tr class="bgp"><td colspan="9">';
 
             include 'includes/html/print-graphrow.inc.php';

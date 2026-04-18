@@ -13,27 +13,27 @@ $transparency = 15;
 
 $rrd_filename = Rrd::name($device['hostname'], ['app', $name, $app->app_id, $vars['disk']]);
 
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Completed',
-        'ds'       => 'completed',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Completed',
+        'ds' => 'completed',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Interrupted',
-        'ds'       => 'interrupted',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Interrupted',
+        'ds' => 'interrupted',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Read Failure',
-        'ds'       => 'readfailure',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Read Failure',
+        'ds' => 'readfailure',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Unknown Failure',
-        'ds'       => 'unknownfail',
-    ];
-}
+        'descr' => 'Unknown Failure',
+        'ds' => 'unknownfail',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line_exact_numbers.inc.php';

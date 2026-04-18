@@ -10,7 +10,7 @@ $temp_oid = 'sub10UnitLclMWUTemperature.0';
 $alarm_oid = 'sub10UnitMgmtAlarmName';
 $alarms = snmp_walk($device, $alarm_oid, '-OsqU', 'SUB10SYSTEMS-MIB');
 $indexes = [];
-foreach (explode("\n", $alarms) as $alarm) {
+foreach (explode("\n", (string) $alarms) as $alarm) {
     if (preg_match('/^\w+\.(\d) MWU Temperature (.*)$/', $alarm, $matches)) {
         $indexes[strtolower($matches[2])] = $matches[1];
     }
@@ -19,10 +19,10 @@ foreach (explode("\n", $alarms) as $alarm) {
 $thresh_oid = 'sub10UnitMgmtAlarmRaiseThresh';
 $threshes = snmp_walk($device, $thresh_oid, '-OsqU', 'SUB10SYSTEMS-MIB');
 $thresholds = [];
-foreach (explode("\n", $threshes) as $thresh) {
+foreach (explode("\n", (string) $threshes) as $thresh) {
     preg_match('/^\w+\.(\d) (.*)$/', $thresh, $matches);
     $thresholds[$matches[1]] = $matches[2];
 }
 
 // Create Sensor
-discover_sensor($valid['sensor'], 'temperature', $device, $oid, $oid, 'sub10', 'Modem', '1', '1', $thresholds[$indexes['low']], null, null, $thresholds[$indexes['high']], $current);
+discover_sensor(null, 'temperature', $device, $oid, $oid, 'sub10', 'Modem', '1', '1', $thresholds[$indexes['low']], null, null, $thresholds[$indexes['high']], $current);

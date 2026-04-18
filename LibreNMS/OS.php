@@ -1,4 +1,5 @@
 <?php
+
 /**
  * OS.php
  *
@@ -25,17 +26,23 @@
 
 namespace LibreNMS;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use App\Models\DeviceGraph;
 use DeviceCache;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use LibreNMS\Device\WirelessSensor;
 use LibreNMS\Device\YamlDiscovery;
+use LibreNMS\Interfaces\Discovery\EntityPhysicalDiscovery;
 use LibreNMS\Interfaces\Discovery\MempoolsDiscovery;
 use LibreNMS\Interfaces\Discovery\OSDiscovery;
 use LibreNMS\Interfaces\Discovery\ProcessorDiscovery;
+use LibreNMS\Interfaces\Discovery\StorageDiscovery;
 use LibreNMS\Interfaces\Discovery\StpInstanceDiscovery;
 use LibreNMS\Interfaces\Discovery\StpPortDiscovery;
+use LibreNMS\Interfaces\Discovery\VlanDiscovery;
+use LibreNMS\Interfaces\Discovery\VlanPortDiscovery;
 use LibreNMS\Interfaces\Polling\Netstats\IcmpNetstatsPolling;
 use LibreNMS\Interfaces\Polling\Netstats\IpForwardNetstatsPolling;
 use LibreNMS\Interfaces\Polling\Netstats\IpNetstatsPolling;
@@ -46,12 +53,14 @@ use LibreNMS\Interfaces\Polling\StpInstancePolling;
 use LibreNMS\Interfaces\Polling\StpPortPolling;
 use LibreNMS\OS\Generic;
 use LibreNMS\OS\Traits\BridgeMib;
+use LibreNMS\OS\Traits\EntityMib;
 use LibreNMS\OS\Traits\HostResources;
 use LibreNMS\OS\Traits\NetstatsPolling;
-use LibreNMS\OS\Traits\ResolvesPortIds;
+use LibreNMS\OS\Traits\QBridgeMib;
 use LibreNMS\OS\Traits\UcdResources;
 use LibreNMS\OS\Traits\YamlMempoolsDiscovery;
 use LibreNMS\OS\Traits\YamlOSDiscovery;
+use LibreNMS\OS\Traits\YamlStorageDiscovery;
 use LibreNMS\Util\StringHelpers;
 
 class OS implements
@@ -60,28 +69,36 @@ class OS implements
     MempoolsDiscovery,
     StpInstanceDiscovery,
     StpPortDiscovery,
+    EntityPhysicalDiscovery,
     IcmpNetstatsPolling,
     IpNetstatsPolling,
     IpForwardNetstatsPolling,
     SnmpNetstatsPolling,
+    StorageDiscovery,
     StpInstancePolling,
     StpPortPolling,
     TcpNetstatsPolling,
-    UdpNetstatsPolling
+    UdpNetstatsPolling,
+    VlanDiscovery,
+    VlanPortDiscovery
 {
     use HostResources {
         HostResources::discoverProcessors as discoverHrProcessors;
         HostResources::discoverMempools as discoverHrMempools;
+        HostResources::discoverStorage as discoverHrStorage;
     }
     use UcdResources {
         UcdResources::discoverProcessors as discoverUcdProcessors;
         UcdResources::discoverMempools as discoverUcdMempools;
+        UcdResources::discoverStorage as discoverUcdStorage;
     }
     use YamlOSDiscovery;
     use YamlMempoolsDiscovery;
+    use YamlStorageDiscovery;
     use NetstatsPolling;
-    use ResolvesPortIds;
     use BridgeMib;
+    use EntityMib;
+    use QBridgeMib;
 
     /**
      * @var float|null
@@ -92,12 +109,12 @@ class OS implements
     private $cache; // data cache
     private $pre_cache; // pre-fetch data cache
 
+    protected ?string $entityVendorTypeMib = null;
+
     /**
      * OS constructor. Not allowed to be created directly.  Use OS::make()
-     *
-     * @param  array  $device
      */
-    protected function __construct(&$device)
+    protected function __construct(array &$device)
     {
         $this->device = &$device;
         $this->graphs = [];
@@ -143,17 +160,18 @@ class OS implements
         $this->graphs[$name] = true;
     }
 
-    public function persistGraphs(): void
+    public function persistGraphs(bool $cleanup = true): void
     {
         $device = $this->getDevice();
         $graphs = collect(array_keys($this->graphs));
 
-        // delete extra graphs
-        $device->graphs->keyBy('graph')->collect()->except($graphs)->each->delete();
+        if ($cleanup) {
+            // delete extra graphs
+            $device->graphs->keyBy('graph')->collect()->except($graphs)->each->delete();
+        }
+
         // create missing graphs
-        $device->graphs()->saveMany($graphs->diff($device->graphs->pluck('graph'))->map(function ($graph) {
-            return new DeviceGraph(['graph' => $graph]);
-        }));
+        $device->graphs()->saveMany($graphs->diff($device->graphs->pluck('graph'))->map(fn ($graph) => new DeviceGraph(['graph' => $graph])));
     }
 
     public function preCache()
@@ -185,7 +203,7 @@ class OS implements
 
         if (! isset($this->cache['cache_oid'][$oid])) {
             $data = snmpwalk_cache_oid($this->getDeviceArray(), $oid, [], $mib, null, $snmpflags);
-            $this->cache['cache_oid'][$oid] = array_map('current', $data);
+            $this->cache['cache_oid'][$oid] = array_map(current(...), $data);
         }
 
         return $this->cache['cache_oid'][$oid];
@@ -231,16 +249,12 @@ class OS implements
      * OS Factory, returns an instance of the OS for this device
      * If no specific OS is found, Try the OS group.
      * Otherwise, returns Generic
-     *
-     * @param  array  $device  device array, must have os set
-     * @return OS
      */
-    public static function make(&$device)
+    public static function make(array &$device): OS
     {
         if (isset($device['os'])) {
-            // load os definition and populate os_group
-            \LibreNMS\Util\OS::loadDefinition($device['os']);
-            $device['os_group'] = Config::get("os.{$device['os']}.group");
+            // Populate os_group
+            $device['os_group'] = LibrenmsConfig::get("os.{$device['os']}.group");
 
             $class = StringHelpers::toClass($device['os'], 'LibreNMS\\OS\\');
             d_echo('Attempting to initialize OS: ' . $device['os'] . PHP_EOL);
@@ -251,7 +265,7 @@ class OS implements
             }
 
             // If not a specific OS, check for a group one.
-            if ($os_group = Config::get("os.{$device['os']}.group")) {
+            if ($os_group = LibrenmsConfig::get("os.{$device['os']}.group")) {
                 $class = StringHelpers::toClass($os_group, 'LibreNMS\\OS\\Shared\\');
                 d_echo("Attempting to initialize Group OS: $os_group\n");
                 if (class_exists($class)) {
@@ -262,7 +276,7 @@ class OS implements
             }
         }
 
-        d_echo("OS initialized as Generic\n");
+        d_echo("OS initialized as Generic ({$device['os']})\n");
 
         return new Generic($device);
     }
@@ -277,7 +291,7 @@ class OS implements
         $name = $rf->getShortName();
         preg_match_all('/[A-Z][a-z]*/', $name, $segments);
 
-        return implode('-', array_map('strtolower', $segments[0]));
+        return implode('-', array_map(strtolower(...), $segments[0]));
     }
 
     /**
@@ -302,13 +316,15 @@ class OS implements
 
         $data = [];
         foreach ($oids as $id => $oid) {
-            if (isset($callback)) {
-                $channel = call_user_func($callback, $snmp_data[$oid]);
-            } else {
-                $channel = $snmp_data[$oid];
-            }
+            if (isset($snmp_data[$oid])) {
+                if (isset($callback)) {
+                    $channel = call_user_func($callback, $snmp_data[$oid]);
+                } else {
+                    $channel = $snmp_data[$oid];
+                }
 
-            $data[$id] = WirelessSensor::channelToFrequency($channel);
+                $data[$id] = WirelessSensor::channelToFrequency($channel);
+            }
         }
 
         return $data;
@@ -345,10 +361,27 @@ class OS implements
         return $this->discoverUcdMempools();
     }
 
+    public function discoverStorage(): Collection
+    {
+        if ($this->hasYamlDiscovery('storage')) {
+            $storage = $this->discoverYamlStorage();
+            if ($storage->isNotEmpty()) {
+                return $storage;
+            }
+        }
+
+        $storage = $this->discoverHrStorage();
+        if ($storage->isNotEmpty()) {
+            return $storage;
+        }
+
+        return $this->discoverUcdStorage();
+    }
+
     public function getDiscovery($module = null)
     {
         if (! array_key_exists('dynamic_discovery', $this->device)) {
-            $file = base_path('/includes/definitions/discovery/' . $this->getName() . '.yaml');
+            $file = resource_path('definitions/os_discovery/' . $this->getName() . '.yaml');
             if (file_exists($file)) {
                 $this->device['dynamic_discovery'] = \Symfony\Component\Yaml\Yaml::parse(file_get_contents($file));
             }
@@ -361,8 +394,34 @@ class OS implements
         return $this->device['dynamic_discovery'] ?? [];
     }
 
-    public function hasYamlDiscovery(string $module = null)
+    public function hasYamlDiscovery(?string $module = null): bool
     {
         return $module ? isset($this->getDiscovery()['modules'][$module]) : ! empty($this->getDiscovery());
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function discoverVlans(): Collection
+    {
+        $vlans = $this->discoverIetfQBridgeMibVlans();
+        if ($vlans->isNotEmpty()) {
+            return $vlans;
+        }
+
+        return $this->discoverIeeeQBridgeMibVlans();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function discoverVlanPorts(Collection $vlans): Collection
+    {
+        $vlans = $this->discoverIetfQBridgeMibPorts();
+        if ($vlans->isNotEmpty()) {
+            return $vlans;
+        }
+
+        return $this->discoverIeeeQBridgeMibPorts();
     }
 }

@@ -1,19 +1,19 @@
 <?php
 
 $graphs = [
-    'freeradius_access'       => 'FreeRADIUS - Access',
-    'freeradius_auth'         => 'FreeRADIUS - Auth',
-    'freeradius_acct'         => 'FreeRADIUS - Acct',
+    'freeradius_access' => 'FreeRADIUS - Access',
+    'freeradius_auth' => 'FreeRADIUS - Auth',
+    'freeradius_acct' => 'FreeRADIUS - Acct',
     'freeradius_proxy_access' => 'FreeRADIUS - Proxy Access',
-    'freeradius_proxy_auth'   => 'FreeRADIUS - Proxy Auth',
-    'freeradius_proxy_acct'   => 'FreeRADIUS - Proxy Acct',
-    'freeradius_queue'        => 'FreeRADIUS - Queue',
+    'freeradius_proxy_auth' => 'FreeRADIUS - Proxy Auth',
+    'freeradius_proxy_acct' => 'FreeRADIUS - Proxy Acct',
+    'freeradius_queue' => 'FreeRADIUS - Queue',
 ];
 foreach ($graphs as $key => $text) {
     $graph_type = $key;
     $graph_array['height'] = '100';
     $graph_array['width'] = '215';
-    $graph_array['to'] = \LibreNMS\Config::get('time.now');
+    $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
     $graph_array['id'] = $app['app_id'];
     $graph_array['type'] = 'application_' . $key;
     echo '<div class="panel panel-default">

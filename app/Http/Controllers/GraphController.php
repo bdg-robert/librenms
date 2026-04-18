@@ -13,7 +13,7 @@ use LibreNMS\Util\Url;
 class GraphController extends Controller
 {
     /**
-     * @throws \LibreNMS\Exceptions\RrdGraphException
+     * @throws RrdGraphException
      */
     public function __invoke(Request $request, string $path = ''): Response
     {
@@ -35,7 +35,7 @@ class GraphController extends Controller
                 'Content-type' => $graph->contentType(),
             ];
 
-            if ($request->get('output') == 'base64') {
+            if ($request->input('output') == 'base64') {
                 return response($graph->base64(), 200, $headers);
             }
 
@@ -45,7 +45,7 @@ class GraphController extends Controller
                 throw $e;
             }
 
-            return response($e->generateErrorImage(), 500, ['Content-type' => ImageFormat::forGraph()->contentType()]);
+            return response($e->generateErrorImage(), 500, ['Content-type' => ImageFormat::forGraph($vars['graph_type'] ?? null)->contentType()]);
         }
     }
 }

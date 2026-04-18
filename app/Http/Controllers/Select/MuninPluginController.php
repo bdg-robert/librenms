@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MuninPluginController.php
  *
@@ -38,10 +39,10 @@ class MuninPluginController extends SelectController
     protected function baseQuery($request)
     {
         return MuninPlugin::hasAccess($request->user())
-            ->with(['device' => function ($query) {
-                $query->select('device_id', 'hostname', 'sysName');
+            ->with(['device' => function ($query): void {
+                $query->select('device_id', 'hostname', 'sysName', 'display');
             }])
-            ->select('mplug_id', 'mplug_type', 'device_id');
+            ->select(['mplug_id', 'mplug_type', 'device_id']);
     }
 
     /**

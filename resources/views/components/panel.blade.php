@@ -1,16 +1,16 @@
 <div {{ $attributes->merge(['class' => 'panel panel-default']) }}>
 @if (isset($heading))
-  <div class="panel-heading">
+  <div {{ $heading->attributes->class('panel-heading') }}>
     {{ $heading }}
   </div>
-@elseif (isset($title))
+@elseif ($title)
   <div class="panel-heading">
     <h3 class="panel-title">{{ $title }}</h3>
   </div>
 @endif
 
 @if (isset($slot) && !empty($slot->toHtml()))
-  <div class="panel-body {{ $body_class }}">
+  <div class="panel-body {{ $bodyClass }}">
     {{ $slot }}
   </div>
 @endif
@@ -20,7 +20,7 @@
 @endisset
 
 @isset($footer)
-  <div class="panel-footer {{ $footer_class }}">
+  <div {{ $footer->attributes->class('panel-footer') }}>
     {{ $footer }}
   </div>
 @endisset

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Clean.php
  *
@@ -25,9 +26,7 @@
 
 namespace LibreNMS\Util;
 
-use HTMLPurifier;
-use HTMLPurifier_Config;
-use LibreNMS\Config;
+use Mews\Purifier\Facades\Purifier;
 
 class Clean
 {
@@ -40,7 +39,7 @@ class Clean
      */
     public static function fileName($file)
     {
-        return preg_replace('/[^a-zA-Z0-9\-._]/', '', $file);
+        return preg_replace('/[^a-zA-Z0-9\-._]/', '', $file ?? '');
     }
 
     /**
@@ -58,13 +57,15 @@ class Clean
      * Clean a string for display in an html page.
      * For use in non-blade pages
      *
-     * @param  string  $value
-     * @param  array  $purifier_config  (key, value pair)
+     * @param  string|null  $value
+     * @param  array<string, mixed>  $purifier_config
      * @return string
      */
-    public static function html($value, $purifier_config = [])
+    public static function html(?string $value, array $purifier_config = []): string
     {
-        static $purifier;
+        if (empty($value)) {
+            return '';
+        }
 
         // If $purifier_config is non-empty then we don't want
         // to convert html tags and allow these to be controlled
@@ -73,16 +74,6 @@ class Clean
             $value = htmlentities($value);
         }
 
-        if (! $purifier instanceof HTMLPurifier) {
-            // initialize HTML Purifier here since this is the only user
-            $p_config = HTMLPurifier_Config::createDefault();
-            $p_config->set('Cache.SerializerPath', Config::get('temp_dir', '/tmp'));
-            foreach ($purifier_config as $k => $v) {
-                $p_config->set($k, $v);
-            }
-            $purifier = new HTMLPurifier($p_config);
-        }
-
-        return $purifier->purify(stripslashes($value));
+        return Purifier::clean(stripslashes($value), $purifier_config);
     }
 }

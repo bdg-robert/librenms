@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LibreNMS\Interfaces\Models\Keyable;
 
-class MplsSdpBind extends Model implements Keyable
+class MplsSdpBind extends DeviceRelatedModel implements Keyable
 {
     protected $primaryKey = 'bind_id';
     public $timestamps = false;
@@ -33,23 +32,27 @@ class MplsSdpBind extends Model implements Keyable
 
     /**
      * Get a string that can identify a unique instance of this model
-     *
-     * @return string
      */
-    public function getCompositeKey()
+    public function getCompositeKey(): string
     {
         return $this->sdp_oid . '-' . $this->svc_oid;
     }
 
     // ---- Define Relationships ----
 
+    /**
+     * @return BelongsTo<MplsSdp, $this>
+     */
     public function sdp(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MplsSdp::class, 'sdp_id');
+        return $this->belongsTo(MplsSdp::class, 'sdp_id');
     }
 
+    /**
+     * @return BelongsTo<MplsService, $this>
+     */
     public function service(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MplsService::class, 'svc_id');
+        return $this->belongsTo(MplsService::class, 'svc_id');
     }
 }

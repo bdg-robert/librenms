@@ -13,7 +13,7 @@
  * the source code distribution for details.
  */
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\ValidationResult;
 use LibreNMS\Validator;
 
@@ -51,7 +51,7 @@ if (isset($options['h'])) {
         Example: ./validate.php -g mail.
 
         ";
-    exit;
+    exit(1);
 }
 
 if (function_exists('posix_getuid') && posix_getuid() === 0) {
@@ -62,7 +62,7 @@ if (function_exists('posix_getuid') && posix_getuid() === 0) {
 // Check autoload
 if (! file_exists('vendor/autoload.php')) {
     print_fail('Composer has not been run, dependencies are missing', './scripts/composer_wrapper.php install --no-dev');
-    exit;
+    exit(1);
 }
 
 require_once 'vendor/autoload.php';
@@ -88,19 +88,19 @@ $pre_checks_failed = false;
 
 // config.php checks
 if (file_exists('config.php')) {
-    $syntax_check = `php -ln config.php`;
+    $syntax_check = (string) shell_exec('php -ln config.php');
     if (strpos($syntax_check, 'No syntax errors detected') === false) {
         print_fail('Syntax error in config.php');
         echo $syntax_check;
         $pre_checks_failed = true;
     }
 
-    $first_line = rtrim(`head -n1 config.php`);
+    $first_line = rtrim((string) shell_exec('head -n1 config.php'));
     if (! strpos($first_line, '<?php') === 0) {
         print_fail("config.php doesn't start with a <?php - please fix this ($first_line)");
         $pre_checks_failed = true;
     }
-    if (strpos(`tail config.php`, '?>') !== false) {
+    if (strpos((string) shell_exec('tail config.php'), '?>') !== false) {
         print_fail('Remove the ?> at the end of config.php');
         $pre_checks_failed = true;
     }
@@ -114,23 +114,17 @@ if ($validator->getGroupStatus('dependencies') == ValidationResult::FAILURE) {
 }
 
 if ($pre_checks_failed) {
-    exit;
+    exit(1);
 }
 
-$init_modules = [];
+$init_modules = ['nodb'];
 require 'includes/init.php';
 
 // make sure install_dir is set correctly, or the next includes will fail
-if (! file_exists(Config::get('install_dir') . '/.env')) {
+if (! file_exists(LibrenmsConfig::get('install_dir') . '/.env')) {
     $suggested = realpath(__DIR__);
     print_fail('\'install_dir\' config setting is not set correctly.', "It should probably be set to: $suggested");
-    exit;
-}
-
-if (\LibreNMS\DB\Eloquent::isConnected()) {
-    $validator->ok('Database connection successful', null, 'database');
-} else {
-    $validator->fail('Error connecting to your database.', null, 'database');
+    exit(1);
 }
 
 $precheck_complete = true; // disable shutdown function
@@ -144,13 +138,24 @@ if (isset($options['g'])) {
     $modules = []; // all modules
 }
 
+// the code below may not show the database check above, always print it
+if (! in_array('database', $modules)) {
+    $validator->printResults('database');
+}
+
 // run checks
 $validator->validate($modules, isset($options['s']) || ! empty($modules));
 
-function print_header()
+exit($validator->getStatus() ? 0 : 1);
+
+function print_header(): void
 {
-    $output = ob_get_clean();
-    @ob_end_clean();
+    $output = '';
+
+    if (ob_get_level() > 0) {
+        $output = ob_get_contents();
+        ob_end_clean();
+    }
 
     echo \LibreNMS\Util\Version::get()->header() . PHP_EOL;
     echo $output;

@@ -1,4 +1,7 @@
 <?php
+
+use LibreNMS\Util\Rewrite;
+
 /*
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,7 +33,7 @@ if ($vars['string']) {
     $param[] = '%' . $vars['string'] . '%';
 }
 
-if (Auth::user()->hasGlobalRead()) {
+if (Gate::allows('viewAll', \App\Models\Device::class)) {
     $sql = " FROM `eventlog` AS E LEFT JOIN `devices` AS `D` ON `E`.`device_id`=`D`.`device_id` WHERE $where";
 } else {
     $sql = " FROM `eventlog` AS E, devices_perms AS P WHERE $where AND E.device_id = P.device_id AND P.user_id = ?";
@@ -68,13 +71,13 @@ if ($rowCount != -1) {
     $sql .= " LIMIT $limit_low,$limit_high";
 }
 
-$sql = "SELECT `E`.*,DATE_FORMAT(datetime, '" . \LibreNMS\Config::get('dateformat.mysql.compact') . "') as humandate,severity $sql";
+$sql = "SELECT `E`.*,DATE_FORMAT(datetime, '" . \App\Facades\LibrenmsConfig::get('dateformat.mysql.compact') . "') as humandate,severity $sql";
 
 foreach (dbFetchRows($sql, $param) as $eventlog) {
     $dev = device_by_id_cache($eventlog['device_id']);
     if ($eventlog['type'] == 'interface') {
-        $this_if = cleanPort(getifbyid($eventlog['reference']));
-        $type = '<b>' . generate_port_link($this_if, makeshortif(strtolower($this_if['label']))) . '</b>';
+        $this_if = cleanPort(get_port_by_id($eventlog['reference']));
+        $type = '<b>' . generate_port_link($this_if, Rewrite::shortenIfName(strtolower((string) $this_if['label']))) . '</b>';
     } else {
         $type = $eventlog['type'];
     }
@@ -85,10 +88,10 @@ foreach (dbFetchRows($sql, $param) as $eventlog) {
     }
 
     $response[] = [
-        'datetime' => "<span class='alert-status " . eventlog_severity($severity_colour) . " eventlog-status'></span><span style='display:inline;'>" . $eventlog['humandate'] . '</span>',
+        'datetime' => "<span class='alert-status " . eventlog_severity($severity_colour) . " eventlog-status'></span>" . $eventlog['humandate'],
         'hostname' => generate_device_link($dev, shorthost($dev['hostname'])),
         'type' => $type,
-        'message' => htmlspecialchars($eventlog['message']),
+        'message' => htmlspecialchars((string) $eventlog['message']),
         'username' => $eventlog['username'],
     ];
 }

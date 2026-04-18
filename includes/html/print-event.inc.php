@@ -1,4 +1,8 @@
 <?php
+
+use App\Facades\DeviceCache;
+use LibreNMS\Util\Rewrite;
+
 /*
  * LibreNMS
  *
@@ -15,7 +19,7 @@
  * @author     LibreNMS Contributors
 */
 
-$hostname = gethostbyid($entry['device_id']);
+$hostname = DeviceCache::get((int) $entry['device_id'])->hostname;
 
 unset($icon);
 
@@ -32,13 +36,13 @@ if (! isset($vars['device'])) {
 }
 
 if ($entry['type'] == 'interface') {
-    $this_if = cleanPort(getifbyid($entry['reference']));
-    $entry['link'] = '<b>' . generate_port_link($this_if, makeshortif(strtolower($this_if['label']))) . '</b>';
+    $this_if = cleanPort(get_port_by_id($entry['reference']));
+    $entry['link'] = '<b>' . generate_port_link($this_if, Rewrite::shortenIfName(strtolower((string) $this_if['label']))) . '</b>';
 } else {
     $entry['link'] = 'System';
 }
 
 echo '<td style="vertical-align: middle;">' . $entry['link'] . '</td>';
 
-echo '<td style="vertical-align: middle;">' . htmlspecialchars($entry['message']) . '</td>';
+echo '<td style="vertical-align: middle;">' . htmlspecialchars((string) $entry['message']) . '</td>';
 echo '</tr>';

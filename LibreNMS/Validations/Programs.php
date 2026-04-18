@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Programs.php
  *
@@ -25,8 +26,8 @@
 
 namespace LibreNMS\Validations;
 
+use App\Facades\LibrenmsConfig;
 use Illuminate\Support\Str;
-use LibreNMS\Config;
 use LibreNMS\Validator;
 
 class Programs extends BaseValidation
@@ -79,7 +80,7 @@ class Programs extends BaseValidation
             return;
         }
 
-        if (substr($fping6, -6) == 'fping6') {
+        if (str_ends_with((string) $fping6, 'fping6')) {
             $this->failFping($validator, $fping6, $output);
         }
     }
@@ -105,9 +106,9 @@ class Programs extends BaseValidation
 
         if ($getcap = $this->findExecutable('getcap')) {
             $getcap_out = shell_exec("$getcap $cmd");
-            preg_match("#^$cmd = (.*)$#", $getcap_out, $matches);
+            preg_match("#^$cmd (.*)$#", $getcap_out, $matches);
 
-            if (empty($matches) || ! Str::contains($matches[1], 'cap_net_raw+ep')) {
+            if (empty($matches) || ! Str::contains($matches[1], ['cap_net_raw+ep', 'cap_net_raw=ep'])) {
                 $validator->fail(
                     "$cmd should have CAP_NET_RAW!",
                     "setcap cap_net_raw+ep $cmd"
@@ -120,11 +121,11 @@ class Programs extends BaseValidation
 
     public function findExecutable($bin)
     {
-        if (is_executable(Config::get($bin))) {
-            return Config::get($bin);
+        if (is_executable(LibrenmsConfig::get($bin))) {
+            return LibrenmsConfig::get($bin);
         }
 
-        $located = Config::locateBinary($bin);
+        $located = LibrenmsConfig::locateBinary($bin);
         if (is_executable($located)) {
             return $located;
         }

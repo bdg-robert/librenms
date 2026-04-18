@@ -10,25 +10,22 @@ $transparency = 15;
 
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'bind', $app->app_id, 'cache']);
 
-$rrd_list = [];
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Total',
-        'ds'       => 'ctmt',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Total',
+        'ds' => 'ctmt',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'In Use',
-        'ds'       => 'ctmiu',
-    ];
-    $rrd_list[] = [
+        'descr' => 'In Use',
+        'ds' => 'ctmiu',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Highest In Use',
-        'ds'       => 'cthmiu',
-    ];
-} else {
-    d_echo('RRD "' . $rrd_filename . '" not found');
-}
+        'descr' => 'Highest In Use',
+        'ds' => 'cthmiu',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

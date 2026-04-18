@@ -35,6 +35,22 @@ continue to function as normal.
     lnms config:set prometheus.prefix 'librenms'
     ```
 
+If your pushgateway uses basic authentication, configure the following:
+
+!!! setting "poller/prometheus"
+    ```bash
+    lnms config:set prometheus.user username
+    lnms config:set prometheus.password password
+    ```
+
+Additional settings
+
+!!! setting "poller/prometheus"
+    ```bash
+    lnms config:set prometheus.attach_sysname true
+    ```
+
+
 ## Prefix
 
 Setting the 'prefix' option will cause all metric names to begin with 

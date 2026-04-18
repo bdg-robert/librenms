@@ -1,4 +1,5 @@
 <?php
+
 /**
  * LocationsController.php
  *
@@ -35,8 +36,6 @@ class LocationController extends TableController
      *
      * @param  \Illuminate\Http\Request  $request
      * @return array
-     *
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function searchFields($request)
     {
@@ -45,7 +44,11 @@ class LocationController extends TableController
 
     protected function sortFields($request)
     {
-        return ['location', 'devices', 'down'];
+        return [
+            'location',
+            'devices' => 'devices_count',
+            'down' => 'down_count',
+        ];
     }
 
     /**
@@ -56,24 +59,15 @@ class LocationController extends TableController
      */
     public function baseQuery($request)
     {
-        // joins are needed for device count sorts
-        $sort = $request->get('sort');
-        $key = key($sort);
-        $join = $this->getJoinQuery($key);
-
-        if ($join) {
-            return Location::hasAccess($request->user())
-                ->select(['id', 'location', 'lat', 'lng', \DB::raw("COUNT(device_id) AS `$key`")])
-                ->leftJoin('devices', $join)
-                ->groupBy(['id', 'location', 'lat', 'lng']);
-        }
-
-        return Location::hasAccess($request->user());
+        return Location::hasAccess($request->user())->withCount([
+            'devices',
+            'devices as down_count' => fn ($q) => (new Device)->scopeIsDown($q),
+        ]);
     }
 
     /**
      * @param  Location  $location
-     * @return array|\Illuminate\Database\Eloquent\Model|\Illuminate\Support\Collection
+     * @return array|\Illuminate\Database\Eloquent\Model|\Illuminate\Support\Collection<string, mixed>
      */
     public function formatItem($location)
     {
@@ -82,25 +76,9 @@ class LocationController extends TableController
             'location' => $location->location,
             'lat' => $location->lat,
             'lng' => $location->lng,
-            'down' => $location->devices()->isDown()->count(),
-            'devices' => $location->devices()->count(),
+            'devices' => $location->devices_count,
+            /** @phpstan-ignore property.notFound (dynamic property from withCount) */
+            'down' => $location->down_count,
         ];
-    }
-
-    private function getJoinQuery($field)
-    {
-        switch ($field) {
-            case 'devices':
-                return function ($query) {
-                    $query->on('devices.location_id', 'locations.id');
-                };
-            case 'down':
-                return function ($query) {
-                    $query->on('devices.location_id', 'locations.id');
-                    (new Device)->scopeIsDown($query);
-                };
-            default:
-                return null;
-        }
     }
 }

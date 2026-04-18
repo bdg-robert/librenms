@@ -1,4 +1,5 @@
 <?php
+
 /*
  * LibreNMS Telco Systems Temperature Sensor Discovery module
  *
@@ -11,7 +12,7 @@
  * the source code distribution for details.
  */
 
-if (strpos($device['sysObjectID'], '.1.3.6.1.4.1.738.1.5.100') !== false) {
+if (str_contains((string) $device['sysObjectID'], '.1.3.6.1.4.1.738.1.5.100')) {
     echo 'Telco Systems:';
 
     // CPU temperature
@@ -22,10 +23,10 @@ if (strpos($device['sysObjectID'], '.1.3.6.1.4.1.738.1.5.100') !== false) {
 
     $descr = 'CPU Temperature';
     $valueoid = '.1.3.6.1.4.1.738.1.5.100.3.2.3.0'; // PRVT-SWITCH-MIB::reportsHardwareTemperature.0
-    $value = snmp_get($device, $valueoid, '-Oqv');
+    $value = SnmpQuery::get($valueoid)->value();
     $value = str_replace('"', '', $value);
 
     if (is_numeric($value)) {
-        discover_sensor($valid['sensor'], 'temperature', $device, $valueoid, 1, 'binos', $descr, '1', '1', $low_limit, $low_warn_limit, $high_warn_limit, $high_limit, $value);
+        discover_sensor(null, 'temperature', $device, $valueoid, 1, 'binos', $descr, '1', '1', $low_limit, $low_warn_limit, $high_warn_limit, $high_limit, $value);
     }
 }

@@ -5,91 +5,73 @@ namespace App\Policies;
 use App\Facades\Permissions;
 use App\Models\Port;
 use App\Models\User;
-use Illuminate\Auth\Access\HandlesAuthorization;
 
 class PortPolicy
 {
-    use HandlesAuthorization;
+    use ChecksGlobalPermissions;
 
     /**
      * Determine whether the user can view any ports.
-     *
-     * @param  \App\Models\User  $user
-     * @return mixed
      */
-    public function viewAny(User $user)
+    public function viewAny(User $user): bool
     {
-        return $user->hasGlobalRead();
+        return $this->hasGlobalPermission($user, 'view')
+            || $this->hasGlobalPermission($user, 'viewAll')
+            || $this->hasGlobalPermission($user, 'update')
+            || $this->hasGlobalPermission($user, 'delete');
+    }
+
+    /**
+     * Determine whether the user can view all models.
+     */
+    public function viewAll(User $user): bool
+    {
+        return $this->hasGlobalPermission($user, 'viewAll');
     }
 
     /**
      * Determine whether the user can view the port.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Port  $port
-     * @return mixed
      */
-    public function view(User $user, Port $port)
+    public function view(User $user, Port $port): bool
     {
-        return $this->viewAny($user) || Permissions::canAccessDevice($port->device_id, $user) || Permissions::canAccessPort($port, $user);
-    }
+        if ($this->hasGlobalPermission($user, 'viewAll')) {
+            return true;
+        }
 
-    /**
-     * Determine whether the user can create ports.
-     *
-     * @param  \App\Models\User  $user
-     * @return mixed
-     */
-    public function create(User $user)
-    {
-        return false;
+        return $this->hasGlobalPermission($user, 'view')
+            && (Permissions::canAccessDevice($port->device_id, $user)
+            || Permissions::canAccessPort($port, $user));
     }
 
     /**
      * Determine whether the user can update the port.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Port  $port
-     * @return mixed
      */
-    public function update(User $user, Port $port)
+    public function update(User $user): bool
     {
-        return $user->hasGlobalAdmin();
+        return $this->hasGlobalPermission($user, 'update');
     }
 
     /**
      * Determine whether the user can delete the port.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Port  $port
-     * @return mixed
      */
-    public function delete(User $user, Port $port)
+    public function delete(User $user): bool
     {
-        return $user->hasGlobalAdmin();
+        return $this->hasGlobalPermission($user, 'delete');
     }
 
     /**
      * Determine whether the user can restore the port.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Port  $port
-     * @return mixed
      */
-    public function restore(User $user, Port $port)
+    public function restore(User $user): bool
     {
-        return $user->hasGlobalAdmin();
+        return $this->hasGlobalPermission($user, 'restore');
     }
 
     /**
      * Determine whether the user can permanently delete the port.
-     *
-     * @param  \App\Models\User  $user
-     * @param  \App\Models\Port  $port
-     * @return mixed
      */
-    public function forceDelete(User $user, Port $port)
+    public function forceDelete(User $user): bool
     {
-        return $user->hasGlobalAdmin();
+        return $this->hasGlobalPermission($user, 'forceDelete');
     }
 }

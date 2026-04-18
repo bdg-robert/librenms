@@ -10,20 +10,17 @@ $transparency = 15;
 
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'bind', $app->app_id, 'sockets']);
 
-$rrd_list = [];
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'TCP/IPv4',
-        'ds'       => 'ti4ca',
-    ];
-    $rrd_list[] = [
+        'descr' => 'TCP/IPv4',
+        'ds' => 'ti4ca',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'TCP/IPv6',
-        'ds'       => 'ti6ca',
-    ];
-} else {
-    d_echo('RRD "' . $rrd_filename . '" not found');
-}
+        'descr' => 'TCP/IPv6',
+        'ds' => 'ti6ca',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

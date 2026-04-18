@@ -16,6 +16,9 @@ return [
     'component-status' => [
         'title' => '元件狀態',
     ],
+    'custom-map' => [
+        'title' => '自訂地圖',
+    ],
     'device-summary-horiz' => [
         'title' => '橫式裝置概觀',
     ],
@@ -43,6 +46,9 @@ return [
     'notes' => [
         'title' => '備註',
     ],
+    'placeholder' => [
+        'title' => '提示文字',
+    ],
     'server-stats' => [
         'title' => '伺服器統計數據',
     ],
@@ -58,7 +64,7 @@ return [
     'top-interfaces' => [
         'title' => '網路介面排行榜',
     ],
-    'worldmap' => [
+    'world-map' => [
         'title' => '世界地圖',
     ],
 ];

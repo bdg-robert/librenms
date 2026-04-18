@@ -22,6 +22,7 @@ if (isset($searchPhrase) && ! empty($searchPhrase)) {
     $param[] = "%$searchPhrase%";
     $param[] = "%$searchPhrase%";
     $param[] = "%$searchPhrase%";
+    $param[] = "%$searchPhrase%";
 }
 
 $count_sql = "SELECT COUNT(`bgpPeer_id`) $sql";
@@ -57,5 +58,5 @@ foreach (dbFetchRows($sql, $param) as $routing) {
         'bgpPeerDescr' => $routing['bgpPeerDescr'], ];
 }
 
-$output = ['current'=>$current, 'rowCount'=>$rowCount, 'rows'=>$response, 'total'=>$total];
+$output = ['current' => $current, 'rowCount' => $rowCount, 'rows' => $response, 'total' => $total];
 echo json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

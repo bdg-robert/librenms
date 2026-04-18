@@ -3,6 +3,9 @@ includes:
     - phpstan-baseline-deprecated.neon
 
 parameters:
+    phpVersion:
+        min: 80200
+        max: 80499
 
     customRulesetUsed: true
     reportUnmatchedIgnoredErrors: false
@@ -14,7 +17,6 @@ parameters:
         - cache
         - config
         - database
-        - doc
         - html
         - includes
         - LibreNMS
@@ -22,6 +24,5 @@ parameters:
         - misc
         - resources
         - routes
-        - sql-schema
         - storage
         - tests

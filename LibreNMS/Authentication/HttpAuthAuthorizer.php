@@ -2,7 +2,7 @@
 
 namespace LibreNMS\Authentication;
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Exceptions\AuthenticationException;
 
 class HttpAuthAuthorizer extends MysqlAuthorizer
@@ -27,26 +27,11 @@ class HttpAuthAuthorizer extends MysqlAuthorizer
             return true;
         }
 
-        if (Config::has('http_auth_guest') && parent::userExists(Config::get('http_auth_guest'))) {
+        if (LibrenmsConfig::get('http_auth_guest') && parent::userExists(LibrenmsConfig::get('http_auth_guest'))) {
             return true;
         }
 
         return false;
-    }
-
-    public function getUserlevel($username)
-    {
-        $user_level = parent::getUserlevel($username);
-
-        if ($user_level) {
-            return $user_level;
-        }
-
-        if (Config::has('http_auth_guest')) {
-            return parent::getUserlevel(Config::get('http_auth_guest'));
-        }
-
-        return 0;
     }
 
     public function getUserid($username)
@@ -57,8 +42,8 @@ class HttpAuthAuthorizer extends MysqlAuthorizer
             return $user_id;
         }
 
-        if (Config::has('http_auth_guest')) {
-            return parent::getUserid(Config::get('http_auth_guest'));
+        if (LibrenmsConfig::get('http_auth_guest')) {
+            return parent::getUserid(LibrenmsConfig::get('http_auth_guest'));
         }
 
         return -1;

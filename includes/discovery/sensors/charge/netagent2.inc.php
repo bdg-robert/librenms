@@ -1,4 +1,5 @@
 <?php
+
 /**
  * netagent2.inc.php
  *
@@ -23,19 +24,19 @@
  * @author     Tony Murray <murraytony@gmail.com>
  */
 $charge_oid = '.1.3.6.1.4.1.935.1.1.1.2.2.1.0';
-$charge = snmp_get($device, $charge_oid, '-Osqnv');
+$charge = SnmpQuery::get($charge_oid)->value();
 
 if (! empty($charge)) {
     $type = 'netagent2';
     $index = 0;
-    $limit = 100;
+    $limit = null;
     $lowlimit = 0;
     $lowwarnlimit = 10;
     $divisor = 1;
     $descr = 'Battery Charge';
 
     discover_sensor(
-        $valid['sensor'],
+        null,
         'charge',
         $device,
         $charge_oid,

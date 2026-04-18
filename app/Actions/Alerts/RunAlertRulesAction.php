@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RunAlertRulesAction.php
  *
@@ -30,19 +31,8 @@ use LibreNMS\Alert\AlertRules;
 
 class RunAlertRulesAction
 {
-    /**
-     * @var \LibreNMS\Alert\AlertRules
-     */
-    private $rules;
-    /**
-     * @var \App\Models\Device
-     */
-    private $device;
-
-    public function __construct(Device $device, AlertRules $rules)
+    public function __construct(private readonly Device $device, private readonly AlertRules $rules)
     {
-        $this->rules = $rules;
-        $this->device = $device;
     }
 
     public function execute(): void

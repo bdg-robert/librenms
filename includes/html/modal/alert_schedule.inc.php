@@ -12,7 +12,10 @@
  * the source code distribution for details.
  */
 
-if (\Auth::user()->hasGlobalAdmin()) {
+use App\Facades\LibrenmsConfig;
+use LibreNMS\Enum\MaintenanceBehavior;
+
+$default_behavior = MaintenanceBehavior::tryFrom((int) LibrenmsConfig::get('alert.scheduled_maintenance_default_behavior'));
     ?>
 
 <div class="modal fade bs-example-modal-sm" id="schedule-maintenance" tabindex="-1" role="dialog" aria-labelledby="Create" aria-hidden="true">
@@ -51,7 +54,7 @@ if (\Auth::user()->hasGlobalAdmin()) {
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="recurring" class="col-sm-4 control-label">Recurring <strong class="text-danger">*</strong> </label>
+                        <label for="recurring" class="col-sm-4 control-label">Recurring </label>
                         <div class="col-sm-8">
                             <input type="checkbox" id="recurring" name="recurring" data-size="small" data-on-text="Yes" data-off-text="No" onChange="recurring_switch();" value=0 />
                         </div>
@@ -106,6 +109,22 @@ if (\Auth::user()->hasGlobalAdmin()) {
                                 <div style="float: left;padding-left: 20px;"><label><input type="checkbox" style="width: 20px;" class="form-control" name="recurring_day[]" value="6" />Sa</label></div>
                                 <div style="float: left;padding-left: 20px;"><label><input type="checkbox" style="width: 20px;" class="form-control" name="recurring_day[]" value="7" />Su</label></div>
                             </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for='behavior' class='col-sm-4 control-label'>Behavior <exp>*</exp> </label>
+                        <div class="col-sm-8">
+                            <select id="behavior" name="behavior" class="form-control">
+                                <option value='<?= MaintenanceBehavior::SkipAlerts->value; ?>' <?= $default_behavior === MaintenanceBehavior::SkipAlerts ? 'selected' : '' ?>>
+                                    <?= __('alerting.maintenance.behavior.options.skip_alerts') ?>
+                                </option>
+                                <option value='<?= MaintenanceBehavior::MuteAlerts->value; ?>' <?= $default_behavior === MaintenanceBehavior::MuteAlerts ? 'selected' : '' ?>>
+                                    <?= __('alerting.maintenance.behavior.options.mute_alerts') ?>
+                                </option>
+                                <option value='<?= MaintenanceBehavior::RunAlerts->value; ?>' <?= $default_behavior === MaintenanceBehavior::RunAlerts ? 'selected' : '' ?>>
+                                    <?= __('alerting.maintenance.behavior.options.run_alerts') ?>
+                                </option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group">
@@ -176,12 +195,9 @@ $('#schedule-maintenance').on('show.bs.modal', function (event) {
 
                 $('#title').val(output['title']);
                 $('#notes').val(output['notes']);
+                $('#behavior').find('option[value="'+output['behavior']+'"]').prop('selected', true);
                 if (output['recurring'] == 0){
-                    var start = $('#start').data("DateTimePicker");
-                    if (output['start']) {
-                        start.minDate(moment(output['start']));
-                    }
-                    start.date(moment(output['start']));
+                    $('#start').data("DateTimePicker").date(moment(output['start']));
                     $('#end').data("DateTimePicker").date(moment(output['end']));
 
                     $('#norecurringgroup').show();
@@ -286,14 +302,8 @@ $("#maps").select2({
     width: '100%',
     placeholder: "Devices, Groups or Locations",
     ajax: {
-        url: 'ajax_list.php',
-        delay: 250,
-        data: function (params) {
-            return {
-                type: 'devices_groups_locations',
-                search: params.term
-            };
-        }
+        url: '<?php echo route('ajax.select.devices-groups-locations'); ?>',
+        delay: 150
     }
 });
 
@@ -412,5 +422,3 @@ $(function () {
 
 $("[name='recurring']").bootstrapSwitch();
 </script>
-    <?php
-}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Proc.php
  *
@@ -55,7 +56,7 @@ class Proc
      *
      * @param  string  $cmd  the command to execute
      * @param  array  $descriptorspec  the definition of pipes to initialize
-     * @param  null  $cwd  working directory to change to
+     * @param  string|null  $cwd  working directory to change to
      * @param  array|null  $env  array of environment variables to set
      * @param  bool  $blocking  set the output pipes to blocking (default: false)
      *
@@ -182,7 +183,7 @@ class Proc
                 if (is_resource($this->_pipes[0])) {
                     $this->sendInput($this->checkAddEOL($command));
                 }
-            } catch (\ErrorException $e) {
+            } catch (\ErrorException) {
                 // might have closed already
             }
         }

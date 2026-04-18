@@ -1,15 +1,15 @@
 <?php
 
 $link_array = [
-    'page'   => 'device',
+    'page' => 'device',
     'device' => $device['device_id'],
-    'tab'    => 'apps',
-    'app'    => 'sagan',
+    'tab' => 'apps',
+    'app' => 'sagan',
 ];
 
 print_optionbar_start();
 
-echo generate_link('Totals', $link_array);
+echo generate_link('Totals', $link_array) . ' | Instances: ';
 
 $sagan_instances = $app->data['instances'] ?? [];
 sort($sagan_instances);
@@ -28,28 +28,28 @@ foreach ($sagan_instances as $index => $sinstance) {
 print_optionbar_end();
 
 $graphs = [
-    'sagan_bytes'=>'Bytes',
-    'sagan_eps'=>'Events Per Second',
-    'sagan_total'=>'Recieved Log Entries',
-    'sagan_drop'=>'Drop',
-    'sagan_drop_percent'=>'Drop Percent',
-    'sagan_f_total'=>'Flows Total',
-    'sagan_f_dropped'=>'Flows Dropped',
-    'sagan_f_drop_percent'=>'Flows Dropped Percent',
-    'sagan_ignore'=>'Ignore',
-    'sagan_bytes_ignored'=>'Bytes Ignored',
-    'sagan_match'=>'Match',
-    'sagan_max_bytes_log_line'=>'Max Bytes Log Line',
-    'sagan_threshold'=>'Threshold',
-    'sagan_uptime'=>'Uptime',
-    'sagan_alert'=>'Alert: 0=OK, 1=WARNING, 2=CRITICAL, 3+UNKNOWN',
+    'sagan_bytes' => 'Bytes',
+    'sagan_eps' => 'Events Per Second',
+    'sagan_total' => 'Recieved Log Entries',
+    'sagan_drop' => 'Drop',
+    'sagan_drop_percent' => 'Drop Percent',
+    'sagan_f_total' => 'Flows Total',
+    'sagan_f_dropped' => 'Flows Dropped',
+    'sagan_f_drop_percent' => 'Flows Dropped Percent',
+    'sagan_ignore' => 'Ignore',
+    'sagan_bytes_ignored' => 'Bytes Ignored',
+    'sagan_match' => 'Match',
+    'sagan_max_bytes_log_line' => 'Max Bytes Log Line',
+    'sagan_threshold' => 'Threshold',
+    'sagan_uptime' => 'Uptime',
+    'sagan_alert' => 'Alert: 0=OK, 1=WARNING, 2=CRITICAL, 3+UNKNOWN',
 ];
 
 foreach ($graphs as $key => $text) {
     $graph_type = $key;
     $graph_array['height'] = '100';
     $graph_array['width'] = '215';
-    $graph_array['to'] = \LibreNMS\Config::get('time.now');
+    $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
     $graph_array['id'] = $app['app_id'];
     $graph_array['type'] = 'application_' . $key;
 

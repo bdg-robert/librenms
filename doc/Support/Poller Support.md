@@ -1,45 +1,31 @@
-# poller.php
+# Poller Support
 
-This document will explain how to use poller.php to debug issues or
+This document will explain how to use `lnms device:poll` to debug issues or
 manually running to process data.
 
 ## Command options
 
 ```bash
-    LibreNMS 2014.master Poller
+Description:
+  Poll data from device(s) as defined by discovery
 
--h <device id> | <device hostname wildcard>  Poll single device
--h odd                                       Poll odd numbered devices  (same as -i 2 -n 0)
--h even                                      Poll even numbered devices (same as -i 2 -n 1)
--h all                                       Poll all devices
+Usage:
+  device:poll [options] [--] <device spec>
 
--i <instances> -n <number>                   Poll as instance <number> of <instances>
-                                             Instances start at 0. 0-3 for -n 4
+Arguments:
+  device spec            Device spec to poll: device_id, hostname, wildcard (*), odd, even, all
 
-Debugging and testing options:
--r                                           Do not create or update RRDs
--f                                           Do not insert data into InfluxDB
--d                                           Enable debugging output
--v                                           Enable verbose debugging output
--m                                           Specify module(s) to be run. Comma separate modules, submodules may be added with /
+Options:
+  -m, --modules=MODULES  Specify single module to be run. Comma separate modules, submodules may be added with /
+  -x, --no-data          Do not update datastores (RRD, InfluxDB, etc)
+  -h, --help             Display help for the given command. When no command is given display help for the list command
+  -q, --quiet            Do not output any message
+  -V, --version          Display this application version
+      --ansi|--no-ansi   Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction   Do not ask any interactive question
+      --env[=ENV]        The environment the command should run under
+  -v|vv|vvv, --verbose   Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
 ```
-
-`-h` Use this to specify a device via either id or hostname (including
-wildcard using *). You can also specify odd and even. all will run
-poller against all devices.
-
-`-i` This can be used to stagger the poller process.
-
-`-r` This option will suppress the creation or update of RRD files.
-
-`-d` Enables debugging output (verbose output but with most sensitive
-data masked) so that you can see what is happening during a poller
-run. This includes things like rrd updates, SQL queries and response
-from snmp.
-
-`-v` Enables verbose debugging output with all data in tact.
-
-`-m` This enables you to specify the module you want to run for poller.
 
 ## Poller Wrapper
 
@@ -54,7 +40,7 @@ cron.
 ## Poller config
 
 These are the default poller config items. You can globally disable a
-module by setting it to 0. If you just want to
+module by setting it to `false`. If you just want to
 disable it for one device then you can do this within the WebUI Device
 -> Edit -> Modules.
 
@@ -79,16 +65,15 @@ disable it for one device then you can do this within the WebUI Device
     lnms config:set poller_modules.ucd-diskio true
     lnms config:set poller_modules.wireless true
     lnms config:set poller_modules.ospf true
+    lnms config:set poller_modules.ospfv3 true
     lnms config:set poller_modules.cisco-ipsec-flow-monitor false
     lnms config:set poller_modules.cisco-remote-access-monitor false
     lnms config:set poller_modules.cisco-cef false
     lnms config:set poller_modules.slas false
-    lnms config:set poller_modules.cisco-mac-accounting false
+    lnms config:set poller_modules.mac-accounting true
     lnms config:set poller_modules.cipsec-tunnels false
     lnms config:set poller_modules.cisco-ace-loadbalancer false
     lnms config:set poller_modules.cisco-ace-serverfarms false
-    lnms config:set poller_modules.cisco-asa-firewall false
-    lnms config:set poller_modules.cisco-voice false
     lnms config:set poller_modules.cisco-cbqos false
     lnms config:set poller_modules.cisco-otv false
     lnms config:set poller_modules.cisco-vpdn false
@@ -99,6 +84,7 @@ disable it for one device then you can do this within the WebUI Device
     lnms config:set poller_modules.applications true
     lnms config:set poller_modules.availability true
     lnms config:set poller_modules.stp true
+    lnms config:set poller_modules.vminfo false
     lnms config:set poller_modules.ntp true
     lnms config:set poller_modules.services true
     lnms config:set poller_modules.loadbalancers false
@@ -108,11 +94,12 @@ disable it for one device then you can do this within the WebUI Device
 
 ## OS based Poller config
 
-You can enable or disable modules for a specific OS by add
-corresponding line in `config.php` OS based settings have preference
-over global. Device based settings have preference over all others
+You can enable or disable modules for a specific OS by using
+`lnms config:set os.<poller_module> false` OS based settings
+have preference over global. Device based settings have preference
+over all others.
 
-Poller performance improvement can be achieved by deactivating all
+Negligible Poller performance improvements can be achieved by deactivating all
 modules that are not supported by specific OS.
 
 E.g. to deactivate spanning tree but activate unix-agent module for linux OS
@@ -168,6 +155,8 @@ configured to be ignored by config options.
 
 `ospf`: OSPF Support.
 
+`ospfv3`: OSPFv3 Support.
+
 `cisco-ipsec-flow-monitor`: IPSec statistics support.
 
 `cisco-remote-access-monitor`: Cisco remote access support.
@@ -176,7 +165,7 @@ configured to be ignored by config options.
 
 `slas`: SLA detection and support.
 
-`cisco-mac-accounting`: MAC Address account support.
+`mac-accounting`: MAC Address account support.
 
 `cipsec-tunnels`: IPSec tunnel support.
 
@@ -194,43 +183,41 @@ configured to be ignored by config options.
 
 `availability`: Device Availability Calculation.
 
-`cisco-asa-firewall`: Cisco ASA firewall support.
-
 ## Running
 
 Here are some examples of running poller from within your install directory.
 
 ```bash
-./poller.php -h localhost
+lnms device:poll localhost
 
-./poller.php -h localhost -m ports
+lnms device:poll localhost -m ports
 ```
 
 ## Debugging
 
 To provide debugging output you will need to run the poller process
-with the `-d` flag. You can do this either against
+with the `-vv` flag. You can do this either against
 all modules, single or multiple modules:
 
 All Modules
 
 ```bash
-./poller.php -h localhost -d
+lnms device:poll localhost -vv
 ```
 
 Single Module
 
 ```bash
-./poller.php -h localhost -m ports -d
+lnms device:poll localhost -m ports -vv
 ```
 
 Multiple Modules
 
 ```bash
-./poller.php -h localhost -m ports,entity-physical -d
+lnms device:poll localhost -m ports,entity-physical -vv
 ```
 
-Using `-d` shouldn't output much sensitive information, `-v` will so
+Using `-vv` shouldn't output much sensitive information, `-vvv` will, so
 it is then advisable to sanitise the output before pasting it
 somewhere as the debug output will contain snmp details amongst other
 items including port descriptions.

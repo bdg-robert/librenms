@@ -24,7 +24,8 @@
  * @author     PipoCanaja
  */
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
+use App\Models\BgpPeerCbgp;
 use LibreNMS\Util\IP;
 
 $bgpPeersCache = snmpwalk_cache_oid($device, 'hwBgpPeerRemoteAs', [], 'HUAWEI-BGP-VPN-MIB');
@@ -37,6 +38,9 @@ if (count($bgpPeersCache) == 0) {
 
 // So if we have HUAWEI BGP entries or if we don't have anything from HUAWEI nor BGP4-MIB
 if (count($bgpPeersCache) > 0 || count($bgpPeersCache_ietf) == 0) {
+    $map_vrf = [];
+    $bgpPeers ??= [];
+
     $vrfs = DeviceCache::getPrimary()->vrfs()->select('vrf_id', 'vrf_name')->get();
     foreach ($vrfs as $vrf) {
         $map_vrf['byId'][$vrf['vrf_id']]['vrf_name'] = $vrf['vrf_name'];
@@ -51,7 +55,7 @@ if (count($bgpPeersCache) > 0 || count($bgpPeersCache_ietf) == 0) {
     $bgpPeersDesc = snmpwalk_cache_oid($device, 'hwBgpPeerSessionExtDescription', [], 'HUAWEI-BGP-VPN-MIB');
 
     foreach ($bgpPeersCache as $key => $value) {
-        $oid = explode('.', $key);
+        $oid = explode('.', (string) $key);
         $vrfInstance = $value['hwBgpPeerVrfName'];
         if ($oid[0] == 0) {
             $vrfInstance = '';
@@ -72,18 +76,23 @@ if (count($bgpPeersCache) > 0 || count($bgpPeersCache_ietf) == 0) {
         $bgpPeers[$vrfInstance][$address]['afi'] = $oid[1];
         $bgpPeers[$vrfInstance][$address]['safi'] = $oid[2];
         $bgpPeers[$vrfInstance][$address]['typePeer'] = $oid[3];
-        $bgpPeers[$vrfInstance][$address]['bgpPeerDescr'] = '';
         if (array_key_exists('0.' . $oid[3] . '.' . $oid_address, $bgpPeersDesc)) {
             // We may have a description
             $bgpPeers[$vrfInstance][$address]['bgpPeerDescr'] = $bgpPeersDesc['0.' . $oid[3] . '.' . $oid_address]['hwBgpPeerSessionExtDescription'];
         }
     }
 
+    $vrp_bgp_peer_count = 0;
+    $seenPeerID = [];
+
     foreach ($bgpPeers as $vrfName => $vrf) {
-        $vrfId = $map_vrf['byName'][$vrfName]['vrf_id'];
+        $vrfId = null;
+        if (isset($map_vrf['byName'][$vrfName]['vrf_id'])) {
+            $vrfId = $map_vrf['byName'][$vrfName]['vrf_id'];
+        }
 
         foreach ($vrf as $address => $value) {
-            $astext = get_astext($value['hwBgpPeerRemoteAs']);
+            $astext = \LibreNMS\Util\AutonomousSystem::get($value['hwBgpPeerRemoteAs'])->name();
             if (! DeviceCache::getPrimary()->bgppeers()->where('bgpPeerIdentifier', $address)->where('vrf_id', $vrfId)->exists()) {
                 $peers = [
                     'device_id' => $device['device_id'],
@@ -100,15 +109,17 @@ if (count($bgpPeersCache) > 0 || count($bgpPeersCache_ietf) == 0) {
                     'bgpPeerOutTotalMessages' => 0,
                     'bgpPeerFsmEstablishedTime' => $value['hwBgpPeerFsmEstablishedTime'],
                     'bgpPeerInUpdateElapsedTime' => 0,
-                    'bgpPeerDescr' => $value['bgpPeerDescr'] ?? '',
                     'astext' => $astext,
                 ];
+                if (array_key_exists('bgpPeerDescr', $value)) {
+                    $peers['bgpPeerDescr'] = $value['bgpPeerDescr'];
+                }
                 if (empty($vrfId)) {
                     unset($peers['vrf_id']);
                 }
                 $seenPeerID[] = DeviceCache::getPrimary()->bgppeers()->create($peers)->bgpPeer_id;
 
-                if (Config::get('autodiscovery.bgp')) {
+                if (LibrenmsConfig::get('autodiscovery.bgp')) {
                     $name = gethostbyaddr($address);
                     discover_new_device($name, $device, 'BGP');
                 }
@@ -118,8 +129,10 @@ if (count($bgpPeersCache) > 0 || count($bgpPeersCache_ietf) == 0) {
                 $peers = [
                     'bgpPeerRemoteAs' => $value['hwBgpPeerRemoteAs'],
                     'astext' => $astext,
-                    'bgpPeerDescr' => $value['bgpPeerDescr'] ?? '',
                 ];
+                if (array_key_exists('bgpPeerDescr', $value)) {
+                    $peers['bgpPeerDescr'] = $value['bgpPeerDescr'];
+                }
                 $affected = DeviceCache::getPrimary()->bgppeers()->where('bgpPeerIdentifier', $address)->where('vrf_id', $vrfId)->update($peers);
                 $seenPeerID[] = DeviceCache::getPrimary()->bgppeers()->where('bgpPeerIdentifier', $address)->where('vrf_id', $vrfId)->select('bgpPeer_id')->orderBy('bgpPeer_id', 'ASC')->first()->bgpPeer_id;
 
@@ -139,13 +152,13 @@ if (count($bgpPeersCache) > 0 || count($bgpPeersCache_ietf) == 0) {
     }
     // clean up peers
 
-    if (! is_null($seenPeerID)) {
+    if (! empty($seenPeerID)) {
         $deleted = DeviceCache::getPrimary()->bgppeers()->whereNotIn('bgpPeer_id', $seenPeerID)->delete();
         echo str_repeat('-', $deleted);
     }
 
     $af_query = 'SELECT bgpPeerIdentifier, afi, safi FROM bgpPeers_cbgp WHERE `device_id`=? AND bgpPeerIdentifier=?';
-    foreach (dbFetchRows($af_query, [$device['device_id'], $peer['ip']]) as $entry) {
+    foreach (dbFetchRows($af_query, [$device['device_id'], $peer['ip'] ?? null]) as $entry) {
         $afi = $entry['afi'];
         $safi = $entry['safi'];
         $vrfName = $entry['context_name'];
@@ -153,11 +166,12 @@ if (count($bgpPeersCache) > 0 || count($bgpPeersCache_ietf) == 0) {
                 ! isset($bgpPeersCache[$vrfName][$entry['bgpPeerIdentifier']]) ||
                 $bgpPeersCache[$vrfName][$entry['bgpPeerIdentifier']][$entry['afi']] != $afi ||
                 $bgpPeersCache[$vrfName][$entry['bgpPeerIdentifier']][$entry['safi']] != $safi) {
-            dbDelete(
-                'bgpPeers_cbgp',
-                '`device_id`=? AND `bgpPeerIdentifier`=? AND context_name=? AND afi=? AND safi=?',
-                [$device['device_id'], $address, $vrfName, $afi, $safi]
-            );
+            BgpPeerCbgp::where('device_id', $device['device_id'])
+                ->where('bgpPeerIdentifier', $address)
+                ->where('context_name', $vrfName)
+                ->where('afi', $afi)
+                ->where('safi', $safi)
+                ->delete();
         }
     }
 

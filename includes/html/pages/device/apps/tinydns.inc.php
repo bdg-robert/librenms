@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Copyright (C) 2015 Daniel Preussker <f0o@devilcode.org>
  * This program is free software: you can redistribute it and/or modify
@@ -26,16 +27,16 @@
 
 $graphs = [
     'tinydns_queries' => 'Queries',
-    'tinydns_errors'  => 'Errors',
-    'tinydns_dnssec'  => 'DNSSec',
-    'tinydns_other'   => 'Other',
+    'tinydns_errors' => 'Errors',
+    'tinydns_dnssec' => 'DNSSec',
+    'tinydns_other' => 'Other',
 ];
 
 foreach ($graphs as $key => $text) {
     $graph_type = $key;
     $graph_array['height'] = '100';
     $graph_array['width'] = '215';
-    $graph_array['to'] = \LibreNMS\Config::get('time.now');
+    $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
     $graph_array['id'] = $app['app_id'];
     $graph_array['type'] = 'application_' . $key;
 

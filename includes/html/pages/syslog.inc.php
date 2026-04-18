@@ -13,15 +13,16 @@
  * @author     LibreNMS Contributors
 */
 
+use App\Facades\LibrenmsConfig;
 use Carbon\Carbon;
-use LibreNMS\Config;
+use Illuminate\Support\Facades\Gate;
 
 $no_refresh = true;
 $param = [];
-$device_id = (int) $vars['device'];
+$device_id = isset($vars['device']) ? (int) $vars['device'] : null;
 
-if (isset($vars['action']) && $vars['action'] == 'expunge' && \Auth::user()->hasGlobalAdmin()) {
-    dbQuery('TRUNCATE TABLE `syslog`');
+if (isset($vars['action']) && $vars['action'] == 'expunge' && Gate::allows('syslog.delete')) {
+    \App\Models\Syslog::truncate();
     print_message('syslog truncated');
 }
 
@@ -50,7 +51,7 @@ $pagetitle[] = 'Syslog';
         '<option value="">All Devices&nbsp;&nbsp;</option>' +
             <?php
             if ($device_id) {
-                echo "'<option value=$device_id>" . format_hostname(device_by_id_cache($device_id)) . "</option>' +";
+                echo "'<option value=$device_id>" . str_replace(['"', '\''], '', htmlentities(format_hostname(device_by_id_cache($device_id)))) . "</option>' +";
             } ?>
         '</select>' +
             <?php
@@ -64,7 +65,7 @@ $pagetitle[] = 'Syslog';
         '<option value="">All Programs&nbsp;&nbsp;</option>' +
         <?php
         if (! empty($vars['program'])) {
-            $js_program = addcslashes(htmlentities($vars['program']), "'");
+            $js_program = addcslashes(htmlentities((string) $vars['program']), "'");
             echo "'<option value=\"$js_program\">$js_program</option>' +";
         }
         ?>
@@ -75,17 +76,17 @@ $pagetitle[] = 'Syslog';
         '<option value="">All Priorities</option>' +
         <?php
         if (! empty($vars['priority'])) {
-            $js_priority = addcslashes(htmlentities($vars['priority']), "'");
+            $js_priority = addcslashes(htmlentities((string) $vars['priority']), "'");
             echo "'<option value=\"$js_priority\">$js_priority</option>' +";
         }
         ?>
         '</select>' +
         '</div>' +
         '&nbsp;&nbsp;<div class="form-group">' +
-        '<input name="from" type="text" class="form-control" id="dtpickerfrom" maxlength="16" value="<?php echo $vars['from'] ?? ''; ?>" placeholder="From" data-date-format="YYYY-MM-DD HH:mm">' +
+        '<input name="from" type="text" class="form-control" id="dtpickerfrom" maxlength="16" value="<?php echo htmlspecialchars($vars['from'] ?? ''); ?>" placeholder="From" data-date-format="YYYY-MM-DD HH:mm">' +
         '</div>' +
         '<div class="form-group">' +
-        '&nbsp;&nbsp;<input name="to" type="text" class="form-control" id="dtpickerto" maxlength="16" value="<?php echo $vars['to'] ?? ''; ?>" placeholder="To" data-date-format="YYYY-MM-DD HH:mm">' +
+        '&nbsp;&nbsp;<input name="to" type="text" class="form-control" id="dtpickerto" maxlength="16" value="<?php echo htmlspecialchars($vars['to'] ?? ''); ?>" placeholder="To" data-date-format="YYYY-MM-DD HH:mm">' +
         '</div>' +
         '&nbsp;&nbsp;<button type="submit" class="btn btn-default">Filter</button>' +
         '</form>' +
@@ -108,7 +109,7 @@ $pagetitle[] = 'Syslog';
                 clear: 'fa fa-trash-o',
                 close: 'fa fa-close'
             },
-            defaultDate: '<?php echo Carbon::now()->subDay()->format(Config::get('dateformat.byminute', 'Y-m-d H:i')); ?>'
+            defaultDate: '<?php echo Carbon::now()->subDay()->format(LibrenmsConfig::get('dateformat.byminute', 'Y-m-d H:i')); ?>'
         });
         $("#dtpickerfrom").on("dp.change", function (e) {
             $("#dtpickerto").data("DateTimePicker").minDate(e.date);
@@ -135,7 +136,7 @@ $pagetitle[] = 'Syslog';
         if ($("#dtpickerto").val() != "") {
             $("#dtpickerfrom").data("DateTimePicker").maxDate($("#dtpickerto").val());
         } else {
-            $("#dtpickerto").data("DateTimePicker").maxDate('<?php echo Carbon::now()->format(Config::get('dateformat.byminute', 'Y-m-d H:i')); ?>');
+            $("#dtpickerto").data("DateTimePicker").maxDate('<?php echo Carbon::now()->format(LibrenmsConfig::get('dateformat.byminute', 'Y-m-d H:i')); ?>');
         }
     });
 
@@ -147,7 +148,7 @@ $pagetitle[] = 'Syslog';
         allowClear: true,
         placeholder: "All Devices",
         ajax: {
-            url: '<?php echo url('/ajax/select/device'); ?>',
+            url: '<?php echo route('ajax.select.device') ?>',
             delay: 200
         }
     })<?php echo $device_id ? ".val($device_id).trigger('change');" : ''; ?>;
@@ -160,7 +161,7 @@ $pagetitle[] = 'Syslog';
         allowClear: true,
         placeholder: "All Programs",
         ajax: {
-            url: '<?php echo url('/ajax/select/syslog'); ?>',
+            url: '<?php echo route('ajax.select.syslog'); ?>',
             delay: 200,
             data: function(params) {
                 return {
@@ -171,7 +172,7 @@ $pagetitle[] = 'Syslog';
                 }
             }
         }
-    })<?php echo isset($vars['program']) ? ".val('" . addcslashes($vars['program'], "'") . "').trigger('change');" : ''; ?>;
+    })<?php echo isset($vars['program']) ? ".val('" . htmlspecialchars($vars['program']) . "').trigger('change');" : ''; ?>;
 
     $("#priority").select2({
         theme: "bootstrap",
@@ -180,7 +181,7 @@ $pagetitle[] = 'Syslog';
         allowClear: true,
         placeholder: "All Priorities",
         ajax: {
-            url: '<?php echo url('/ajax/select/syslog'); ?>',
+            url: '<?php echo route('ajax.select.syslog'); ?>',
             delay: 200,
             data: function(params) {
                 return {
@@ -191,6 +192,6 @@ $pagetitle[] = 'Syslog';
                 }
             }
         }
-    })<?php echo isset($vars['priority']) ? ".val('" . addcslashes($vars['priority'], "'") . "').trigger('change');" : ''; ?>;
+    })<?php echo isset($vars['priority']) ? ".val('" . htmlspecialchars($vars['priority']) . "').trigger('change');" : ''; ?>;
 </script>
 

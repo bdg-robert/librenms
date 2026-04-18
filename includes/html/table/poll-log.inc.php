@@ -1,33 +1,37 @@
 <?php
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
+use App\Models\Device;
+use Illuminate\Support\Facades\Gate;
+use LibreNMS\Util\Time;
 
 $param = [];
 $sql = ' FROM `devices` AS D ';
 
-if (! Auth::user()->hasGlobalAdmin()) {
+if (Gate::denies('viewAll', Device::class)) {
     $sql .= ', devices_perms AS P ';
 }
 
 $sql .= ' LEFT JOIN `locations` as L ON `D`.`location_id`=`L`.`id`';
 $sql .= ' LEFT JOIN `poller_groups` ON `D`.`poller_group`=`poller_groups`.`id`';
 
-if (! Auth::user()->hasGlobalAdmin()) {
+if (Gate::denies('viewAll', Device::class)) {
     $sql .= " WHERE D.device_id = P.device_id AND P.user_id = '" . Auth::id() . "' AND D.ignore = '0'";
 } else {
     $sql .= ' WHERE 1';
 }
 
 if (isset($searchPhrase) && ! empty($searchPhrase)) {
-    $sql .= ' AND (hostname LIKE ? OR sysName LIKE ? OR last_polled LIKE ? OR last_polled_timetaken LIKE ?)';
+    $sql .= ' AND (hostname LIKE ? OR sysName LIKE ? OR IFNULL(CONVERT_TZ(last_polled, @@global.time_zone, ?),last_polled) LIKE ? OR last_polled_timetaken LIKE ?)';
     $param[] = "%$searchPhrase%";
     $param[] = "%$searchPhrase%";
+    $param[] = session('preferences.timezone');
     $param[] = "%$searchPhrase%";
     $param[] = "%$searchPhrase%";
 }
 
 if ($vars['type'] == 'unpolled') {
-    $overdue = (int) (Config::get('rrd.step', 300) * 1.2);
+    $overdue = (int) (LibrenmsConfig::get('rrd.step', 300) * 1.2);
     $sql .= " AND `last_polled` <= DATE_ADD(NOW(), INTERVAL - $overdue SECOND)";
 }
 
@@ -62,18 +66,18 @@ foreach (dbFetchRows($sql, $param) as $device) {
         $device['group_name'] = 'General';
     }
     $response[] = [
-        'hostname'              => generate_device_link($device, null, ['tab' => 'graphs', 'group' => 'poller']),
-        'last_polled'           => $device['last_polled'],
-        'poller_group'          => $device['group_name'],
-        'location'              => $device['location'],
+        'hostname' => generate_device_link($device, null, ['tab' => 'graphs', 'group' => 'poller']),
+        'last_polled' => Time::format($device['last_polled'], 'compact'),
+        'poller_group' => $device['group_name'],
+        'location' => $device['location'],
         'last_polled_timetaken' => round($device['last_polled_timetaken'], 2),
     ];
 }
 
 $output = [
-    'current'  => $current,
+    'current' => $current,
     'rowCount' => $rowCount,
-    'rows'     => $response,
-    'total'    => $total,
+    'rows' => $response,
+    'total' => $total,
 ];
 echo json_encode($output);

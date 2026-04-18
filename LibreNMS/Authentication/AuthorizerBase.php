@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AuthorizerBase.php
  *
@@ -25,7 +26,7 @@
 
 namespace LibreNMS\Authentication;
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Interfaces\Authentication\Authorizer;
 
 abstract class AuthorizerBase implements Authorizer
@@ -45,27 +46,9 @@ abstract class AuthorizerBase implements Authorizer
         return static::$HAS_AUTH_USERMANAGEMENT;
     }
 
-    public function addUser($username, $password, $level = 0, $email = '', $realname = '', $can_modify_passwd = 0, $description = '')
-    {
-        //not supported by default
-        return false;
-    }
-
-    public function deleteUser($user_id)
-    {
-        //not supported by default
-        return false;
-    }
-
     public function canUpdateUsers()
     {
         return static::$CAN_UPDATE_USER;
-    }
-
-    public function updateUser($user_id, $realname, $level, $can_modify_passwd, $email)
-    {
-        //not supported by default
-        return false;
     }
 
     public function authIsExternal()
@@ -75,6 +58,11 @@ abstract class AuthorizerBase implements Authorizer
 
     public function getExternalUsername()
     {
-        return $_SERVER[Config::get('http_auth_header')] ?? $_SERVER['PHP_AUTH_USER'] ?? null;
+        return $_SERVER[LibrenmsConfig::get('http_auth_header')] ?? $_SERVER['PHP_AUTH_USER'] ?? null;
+    }
+
+    public function getRoles(string $username): array|false
+    {
+        return false; // return false don't update roles by default
     }
 }

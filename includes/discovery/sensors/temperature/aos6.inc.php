@@ -1,6 +1,6 @@
 <?php
 
-$aos6_temp_oids = snmpwalk_cache_multi_oid($device, 'chasChassisEntry', [], 'ALCATEL-IND1-CHASSIS-MIB', 'aos6', '-OQUse');
+$aos6_temp_oids = snmpwalk_cache_multi_oid($device, 'chasChassisEntry', [], 'ALCATEL-IND1-CHASSIS-MIB', 'nokia/aos6', '-OQUse');
 
 foreach ($aos6_temp_oids as $index => $entry) {
     if (is_numeric($entry['chasHardwareBoardTemp']) && $entry['chasHardwareBoardTemp'] != 0) {
@@ -12,6 +12,6 @@ foreach ($aos6_temp_oids as $index => $entry) {
         $warn_limit_low = '5';
         $descr = 'Chassis-' . ($index - 568) . ' Temperature';
 
-        discover_sensor($valid['sensor'], 'temperature', $device, $oid, $index, 'aos6', $descr, 1, 1, $limit_low, $warn_limit_low, $warn_limit, $limit, $value, 'snmp');
+        discover_sensor(null, 'temperature', $device, $oid, $index, 'aos6', $descr, 1, 1, $limit_low, $warn_limit_low, $warn_limit, $limit, $value, 'snmp');
     }
 }

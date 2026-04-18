@@ -11,9 +11,11 @@
  * the source code distribution for details.
  */
 
-if (Auth::user()->hasGlobalAdmin()) {
+$stype = '';
+$device_id = (int) ($device['device_id'] ?? 0);
+
     // Build the types list.
-    $dir = \LibreNMS\Config::get('nagios_plugins');
+    $dir = \App\Facades\LibrenmsConfig::get('nagios_plugins');
     if (file_exists($dir) && is_dir($dir)) {
         $files = scandir($dir);
         $dir .= DIRECTORY_SEPARATOR;
@@ -32,14 +34,14 @@ if (Auth::user()->hasGlobalAdmin()) {
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h2 class="modal-title" id="Create">Add / Edit Service</h2>
             </div>
-            <div class='alert alert-info'>Service will modified for the specified Device.</div>
+            <div class='alert alert-info'>Service will be modified for the specified Device.</div>
             <div class='well well-lg'>
                 <div class="modal-body">
                     <form method="post" role="form" id="service" class="form-horizontal service-form">
                         <?php echo csrf_field() ?>
                         <input type="hidden" name="service_id" id="service_id" value="">
                         <input type="hidden" name="service_template_id" id="service_template_id" value="">
-                        <input type="hidden" name="device_id" id="device_id" value="<?php echo $device['device_id']?>">
+                        <input type="hidden" name="device_id" id="device_id" value="<?php echo $device_id ?>">
                         <input type="hidden" name="type" id="type" value="create-service">
                         <div class="form-group">
                             <div class="col-sm-12">
@@ -199,5 +201,3 @@ $('#service-submit').on("click", function(e) {
 });
 
 </script>
-    <?php
-}

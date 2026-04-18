@@ -184,10 +184,6 @@ return [
             'description' => 'Autoriser l\'accès aux graphes pour les réseaux suivants sans login',
             'help' => '(ne s\'applique pas si l\'accès sans login est déjà permis)',
         ],
-        'api_demo' => [
-            'description' => 'Ceci est la démo',
-            'help' => 'Démo',
-        ],
         'apps' => [
             'powerdns-recursor' => [
                 'api-key' => [
@@ -367,10 +363,6 @@ return [
             'description' => 'Journaux de connexions plus anciens que',
             'help' => 'Nettoyage effectué par daily.sh',
         ],
-        'device_perf_purge' => [
-            'description' => 'Stats de performances plus anciennes que',
-            'help' => 'Statistiques de performances des équipements. Le nettoyage effectué par daily.sh',
-        ],
         'discovery_modules' => [
             'arp-table' => [
                 'description' => 'Table ARP',
@@ -381,14 +373,11 @@ return [
             'bgp-peers' => [
                 'description' => 'Adjacences BGP',
             ],
-            'cisco-cbqos' => [
-                'description' => 'Cisco CBQOS',
-            ],
             'cisco-cef' => [
                 'description' => 'Cisco CEF',
             ],
-            'cisco-mac-accounting' => [
-                'description' => 'Cisco MAC Accounting',
+            'mac-accounting' => [
+                'description' => 'MAC Accounting',
             ],
             'cisco-otv' => [
                 'description' => 'Cisco OTV',
@@ -431,9 +420,6 @@ return [
             ],
             'junose-atm-vp' => [
                 'description' => 'Junose ATM VP',
-            ],
-            'libvirt-vminfo' => [
-                'description' => 'Libvirt VMInfo',
             ],
             'loadbalancers' => [
                 'description' => 'Loadbalancers',
@@ -489,8 +475,8 @@ return [
             'vlans' => [
                 'description' => 'VLans',
             ],
-            'vmware-vminfo' => [
-                'description' => 'VMWare VMInfo',
+            'vminfo' => [
+                'description' => 'Hypervisor VM Info',
             ],
             'vrf' => [
                 'description' => 'VRF',
@@ -713,7 +699,7 @@ return [
         'nfsen_top_default' => [
             'description' => 'Défaut Top N',
         ],
-        'nfsen_stat_default' => [
+        'nfsen_stats_default' => [
             'description' => 'Défaut Stat',
         ],
         'nfsen_order_default' => [
@@ -732,9 +718,6 @@ return [
         'nfsen_suffix' => [
             'description' => 'Suffixe de nom de fichier',
             'help' => 'This is a very important bit as device names in NfSen are limited to 21 characters. This means full domain names for devices can be very problematic to squeeze in, so therefor this chunk is usually removed.',
-        ],
-        'nmap' => [
-            'description' => 'Chemin vers `nmap`',
         ],
         'own_hostname' => [
             'description' => 'Nom d\'hôte LibreNMS',
@@ -776,9 +759,6 @@ return [
                     'description' => 'Activer les permissions par groupes d\'équipements dynamiques',
                 ],
             ],
-        ],
-        'ping' => [
-            'description' => 'Chemin vers `ping`',
         ],
         'poller_modules' => [
             'unix-agent' => [
@@ -826,14 +806,14 @@ return [
             'ucd-diskio' => [
                 'description' => 'UCD DiskIO',
             ],
-            'wifi' => [
-                'description' => 'Wifi',
-            ],
             'wireless' => [
                 'description' => 'Wireless',
             ],
             'ospf' => [
                 'description' => 'OSPF',
+            ],
+            'ospfv3' => [
+                'description' => 'OSPFv3',
             ],
             'isis' => [
                 'description' => 'ISIS',
@@ -850,23 +830,14 @@ return [
             'slas' => [
                 'description' => 'Service Level Agreement Tracking',
             ],
-            'cisco-mac-accounting' => [
-                'description' => 'Cisco MAC Accounting',
+            'mac-accounting' => [
+                'description' => 'MAC Accounting',
             ],
             'cipsec-tunnels' => [
                 'description' => 'Ipsec Tunnels',
             ],
             'cisco-ace-serverfarms' => [
                 'description' => 'Cisco ACE Serverfarms',
-            ],
-            'cisco-asa-firewall' => [
-                'description' => 'Cisco ASA Firewall',
-            ],
-            'cisco-voice' => [
-                'description' => 'Cisco Voice',
-            ],
-            'cisco-cbqos' => [
-                'description' => 'Cisco CBQOS',
             ],
             'cisco-otv' => [
                 'description' => 'Cisco OTV',
@@ -901,6 +872,9 @@ return [
             'stp' => [
                 'description' => 'STP',
             ],
+            'vminfo' => [
+                'description' => 'Hypervisor VM Info',
+            ],
             'ntp' => [
                 'description' => 'NTP',
             ],
@@ -922,6 +896,10 @@ return [
         ],
         'ports_fdb_purge' => [
             'description' => 'Table port FDB, entrées plus anciennes que',
+            'help' => 'Nettoyage effectué par daily.sh',
+        ],
+        'ports_nac_purge' => [
+            'description' => 'Table port NAC, entrées plus anciennes que',
             'help' => 'Nettoyage effectué par daily.sh',
         ],
         'ports_purge' => [
@@ -966,9 +944,6 @@ return [
         'rrdtool_tune' => [
             'description' => 'Configurer tous les RRDs d\'interfaces pour utiliser la valuer `max`',
             'help' => 'Auto tune maximum value for rrd port files',
-        ],
-        'sfdp' => [
-            'description' => 'Chemin vers `sfdp`',
         ],
         'site_style' => [
             'description' => 'Changer la feuille de style',
@@ -1133,9 +1108,6 @@ return [
                 'description' => 'Configurer la hauteur minimale',
                 'help' => 'Hauteur minimale des graphes (défaut: 300)',
             ],
-        ],
-        'whois' => [
-            'description' => 'Chemin vers `whois`',
         ],
     ],
     'twofactor' => [

@@ -4,8 +4,7 @@ namespace App\Console\Commands;
 
 use App\Console\Commands\Traits\CompletesConfigArgument;
 use App\Console\LnmsCommand;
-use LibreNMS\Config;
-use LibreNMS\Util\OS;
+use App\Facades\LibrenmsConfig;
 use Symfony\Component\Console\Input\InputArgument;
 
 class GetConfigCommand extends LnmsCommand
@@ -27,23 +26,12 @@ class GetConfigCommand extends LnmsCommand
         $this->addOption('dump');
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return mixed
-     */
-    public function handle()
+    public function handle(): int
     {
         $setting = $this->argument('setting');
 
-        // load os definition if requested, and remove special definition_loaded key
-        if (preg_match('/^os\.(?<os>[^.]+)/', $setting, $matches)) {
-            OS::loadDefinition($matches['os']);
-            Config::forget("os.{$matches['os']}.definition_loaded");
-        }
-
         if ($this->option('dump')) {
-            $this->line($setting ? json_encode(Config::get($setting)) : Config::toJson());
+            $this->line($setting ? json_encode(LibrenmsConfig::get($setting)) : LibrenmsConfig::toJson());
 
             return 0;
         }
@@ -52,8 +40,8 @@ class GetConfigCommand extends LnmsCommand
             throw new \RuntimeException('Not enough arguments (missing: "setting").');
         }
 
-        if (Config::has($setting)) {
-            $output = Config::get($setting);
+        if (LibrenmsConfig::has($setting)) {
+            $output = LibrenmsConfig::get($setting);
             if (! is_string($output)) {
                 $output = json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             }

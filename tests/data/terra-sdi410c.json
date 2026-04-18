@@ -179,7 +179,7 @@
                     "sensor_multiplier": 1,
                     "sensor_current": 58,
                     "sensor_limit": 100,
-                    "sensor_limit_warn": null,
+                    "sensor_limit_warn": 50,
                     "sensor_limit_low": null,
                     "sensor_limit_low_warn": null,
                     "sensor_alert": 1,
@@ -296,14 +296,12 @@
                 {
                     "state_name": "TERRA-sdi410C-MIB::alarmInpsig",
                     "state_descr": "OK",
-                    "state_draw_graph": 1,
                     "state_value": 0,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "TERRA-sdi410C-MIB::alarmInpsig",
                     "state_descr": "Error",
-                    "state_draw_graph": 1,
                     "state_value": 1,
                     "state_generic_value": 3
                 }

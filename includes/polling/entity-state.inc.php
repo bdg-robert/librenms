@@ -1,4 +1,5 @@
 <?php
+
 /**
  * entity-state.inc.php
  *
@@ -39,7 +40,7 @@ if (! empty($entityStatesIndexes)) {
     foreach (current($entLC) as $index => $changed) {
         if ($changed) { // skip empty entries
             try {
-                [$date, $time, $tz] = explode(',', $changed);
+                [$date, $time, $tz] = explode(',', (string) $changed);
                 $lastChanged = new DateTime("$date $time", new DateTimeZone($tz));
                 $dbLastChanged = new DateTime($entityStatesIndexes[$index]['entStateLastChanged']);
                 if ($lastChanged != $dbLastChanged) {

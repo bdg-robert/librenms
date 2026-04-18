@@ -10,50 +10,47 @@ $transparency = 15;
 
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'bind', $app->app_id, 'server']);
 
-$rrd_list = [];
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Successful',
-        'ds'       => 'qrisa',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Successful',
+        'ds' => 'qrisa',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Authoritative',
-        'ds'       => 'qriaa',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Authoritative',
+        'ds' => 'qriaa',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Non Authoritative',
-        'ds'       => 'qrinaa',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Non Authoritative',
+        'ds' => 'qrinaa',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'NX RR Set',
-        'ds'       => 'qrin',
-    ];
-    $rrd_list[] = [
+        'descr' => 'NX RR Set',
+        'ds' => 'qrin',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'SERVFAIL',
-        'ds'       => 'qris',
-    ];
-    $rrd_list[] = [
+        'descr' => 'SERVFAIL',
+        'ds' => 'qris',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'NXDOMAIN',
-        'ds'       => 'qrind',
-    ];
-    $rrd_list[] = [
+        'descr' => 'NXDOMAIN',
+        'ds' => 'qrind',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'With EDNS(0)',
-        'ds'       => 'rwes',
-    ];
-    $rrd_list[] = [
+        'descr' => 'With EDNS(0)',
+        'ds' => 'rwes',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Caused Rec',
-        'ds'       => 'qcr',
-    ];
-} else {
-    d_echo('RRD "' . $rrd_filename . '" not found');
-}
+        'descr' => 'Caused Rec',
+        'ds' => 'qcr',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

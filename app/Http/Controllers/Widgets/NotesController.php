@@ -1,4 +1,5 @@
 <?php
+
 /**
  * NotesController.php
  *
@@ -26,16 +27,17 @@
 namespace App\Http\Controllers\Widgets;
 
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class NotesController extends WidgetController
 {
-    protected $title = 'Notes';
+    protected string $name = 'notes';
     protected $defaults = [
         'title' => null,
         'notes' => null,
     ];
 
-    public function getView(Request $request)
+    public function getView(Request $request): string|View
     {
         $settings = $this->getSettings();
 
@@ -44,18 +46,13 @@ class NotesController extends WidgetController
         }
 
         $purifier_config = [
-            'HTML.Allowed'    => 'b,iframe[frameborder|src|width|height],i,ul,ol,li,h1,h2,h3,h4,br,p,pre',
-            'HTML.Trusted'    => true,
+            'HTML.Allowed' => 'b,iframe[frameborder|src|width|height],i,ul,ol,li,h1,h2,h3,h4,br,p,pre',
+            'HTML.Trusted' => true,
             'HTML.SafeIframe' => true,
             'URI.SafeIframeRegexp' => '%^(https?:)?//%',
         ];
         $output = \LibreNMS\Util\Clean::html(nl2br($settings['notes']), $purifier_config);
 
         return $output;
-    }
-
-    public function getSettingsView(Request $request)
-    {
-        return view('widgets.settings.notes', $this->getSettings(true));
     }
 }

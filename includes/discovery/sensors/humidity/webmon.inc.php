@@ -1,4 +1,5 @@
 <?php
+
 /*
  * LibreNMS Dantel Webmon humidity sensor
  *
@@ -30,6 +31,9 @@ foreach ($prefixes as $prefix => $numOidPrefix) {
     $walk = snmpwalk_cache_oid($device, $prefix . 'Table', [], 'WEBMON-EDGE-MATRIX-MIB');
 
     foreach ($walk as $index => $oid) {
+        if (! isset($oid[$prefix . 'SensorType'])) {
+            continue;
+        }
         if ($oid[$prefix . 'Configured'] != '0' && ($oid[$prefix . 'SensorType'] == '2' || $oid[$prefix . 'SensorType'] == 'humidity') && $oid[$prefix . 'LiveRaw']) {
             $num_oid = $numOidPrefix . $index;
             $descr = $oid[$prefix . 'Description'];
@@ -39,7 +43,7 @@ foreach ($prefixes as $prefix => $numOidPrefix) {
             $lowWarnLimit = $oid[$prefix . 'Thresh3'];
             $highLimit = $oid[$prefix . 'Thresh1'];
             $highWarnLimit = $oid[$prefix . 'Thresh2'];
-            discover_sensor($valid['sensor'], 'humidity', $device, $num_oid, $prefix . 'LiveRaw.' . $index, 'webmon', $descr, '1', '1', $lowLimit, $lowWarnLimit, $highWarnLimit, $highLimit, $value, 'snmp', null, null, null, $group);
+            discover_sensor(null, 'humidity', $device, $num_oid, $prefix . 'LiveRaw.' . $index, 'webmon', $descr, '1', '1', $lowLimit, $lowWarnLimit, $highWarnLimit, $highLimit, $value, 'snmp', null, null, null, $group);
         }
     }
 }

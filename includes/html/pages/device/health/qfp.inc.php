@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,8 +25,8 @@ $components = $components[$device['device_id']];
 
 foreach ($components as $component_id => $tmp_component) {
     $default_graph_array = [
-        'from' => \LibreNMS\Config::get('time.day'),
-        'to' => \LibreNMS\Config::get('time.now'),
+        'from' => \App\Facades\LibrenmsConfig::get('time.day'),
+        'to' => \App\Facades\LibrenmsConfig::get('time.now'),
         'id' => $component_id,
         'page' => 'graphs',
     ];
@@ -34,37 +35,19 @@ foreach ($components as $component_id => $tmp_component) {
      * Main container for QFP component
      * Header with system data
      */
-    switch ($tmp_component['system_state']) {
-        case 'active':
-        case 'activeSolo':
-        case 'standby':
-        case 'hotStandby':
-            $state_label = 'label-success';
-            break;
-        case 'reset':
-            $state_label = 'label-danger';
-            break;
-        case 'init':
-            $state_label = 'label-warning';
-            break;
-        default:
-            $state_label = 'label-default';
-    }
+    $state_label = match ($tmp_component['system_state']) {
+        'active', 'activeSolo', 'standby', 'hotStandby' => 'label-success',
+        'reset' => 'label-danger',
+        'init' => 'label-warning',
+        default => 'label-default',
+    };
 
-    switch ($tmp_component['traffic_direction']) {
-        case 'none':
-            $direction_label = 'label-danger';
-            break;
-        case 'ingress':
-        case 'egress':
-            $direction_label = 'label-wanring';
-            break;
-        case 'both':
-            $direction_label = 'label-success';
-            break;
-        default:
-            $direction_label = 'label-default';
-    }
+    $direction_label = match ($tmp_component['traffic_direction']) {
+        'none' => 'label-danger',
+        'ingress', 'egress' => 'label-wanring',
+        'both' => 'label-success',
+        default => 'label-default',
+    };
 
     $text_descr = $tmp_component['name'];
     echo "<div class='panel panel-default'>
@@ -136,7 +119,7 @@ foreach ($components as $component_id => $tmp_component) {
                 <h3 class='panel-title'>
                     $text_descr
                     <div class='pull-right'>
-                        <span class='label {$packets_label}'>" . Number::formatBi($tmp_component['packets'], 2, 3, 'pps') . '</span>
+                        <span class='label {$packets_label}'>" . Number::formatBi($tmp_component['packets'], 2, 0, 'pps') . '</span>
                     </div>
                 </h3>
             </div>';
@@ -156,7 +139,7 @@ foreach ($components as $component_id => $tmp_component) {
                 <h3 class='panel-title'>
                     $text_descr
                     <div class='pull-right'>
-                        <span class='label {$throughput_label}'>" . Number::formatBi($tmp_component['throughput'], 2, 3, 'bps') . '</span>
+                        <span class='label {$throughput_label}'>" . Number::formatBi($tmp_component['throughput'], 2, 0, 'bps') . '</span>
                     </div>
                 </h3>
             </div>';
@@ -199,7 +182,7 @@ foreach ($components as $component_id => $tmp_component) {
     $graph_array = $default_graph_array;
     $graph_array['type'] = 'qfp_memory';
     $text_descr = 'QFP Memory';
-    $label_text = sprintf('%sB / %sB', Number::formatBi($tmp_component['memory_used'], 2, 3, ''), Number::formatBi($tmp_component['memory_total'], 2, 3, ''));
+    $label_text = sprintf('%sB / %sB', Number::formatBi($tmp_component['memory_used'], 2, 0, ''), Number::formatBi($tmp_component['memory_total'], 2, 0, ''));
     echo "<div class='panel panel-default'>
             <div class='panel-heading'>
                 <h3 class='panel-title'>

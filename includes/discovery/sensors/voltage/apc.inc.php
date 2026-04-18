@@ -21,7 +21,7 @@ if ($oids) {
     [$oid,$current] = explode(' ', $oids);
     $type = 'apc';
     $descr = 'Battery Bus';
-    discover_sensor($valid['sensor'], 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current / $divisor);
+    discover_sensor(null, 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current / $divisor);
 }
 unset($oids);
 
@@ -31,17 +31,17 @@ $phasecount = $pre_cache['apcups_phase_count'];
 d_echo($phasecount);
 d_echo($pre_cache['apcups_phase_count']);
 // Check for three phase UPS devices - else skip to normal discovery
-if ($phasecount > 1) {
+if ($phasecount > 2) {
     $oids = snmpwalk_cache_oid($device, 'upsPhaseOutputVoltage', $oids, 'PowerNet-MIB');
     $in_oids = snmpwalk_cache_oid($device, 'upsPhaseInputVoltage', $in_oids, 'PowerNet-MIB');
     foreach ($oids as $index => $data) {
         $type = 'apcUPS';
-        $descr = 'Phase ' . substr($index, -1) . ' Output';
+        $descr = 'Phase ' . substr((string) $index, -1) . ' Output';
         $voltage_oid = '.1.3.6.1.4.1.318.1.1.1.9.3.3.1.3.' . $index;
         $divisor = 1;
         $voltage = $data['upsPhaseOutputVoltage'] / $divisor;
         if ($voltage >= 0) {
-            discover_sensor($valid['sensor'], 'voltage', $device, $voltage_oid, $index, $type, $descr, $divisor, 1, null, null, null, null, $voltage);
+            discover_sensor(null, 'voltage', $device, $voltage_oid, $index, $type, $descr, $divisor, 1, null, null, null, null, $voltage);
         }
     }
     unset($index);
@@ -52,12 +52,12 @@ if ($phasecount > 1) {
         $divisor = 1;
         $voltage = $data['upsPhaseInputVoltage'] / $divisor;
         $in_index = '3.1.3.' . $index;
-        if (substr($index, 0, 1) == 2 && $data['upsPhaseInputVoltage'] != -1) {
-            $descr = 'Phase ' . substr($index, -1) . ' Bypass Input';
-            discover_sensor($valid['sensor'], 'voltage', $device, $voltage_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $voltage);
-        } elseif (substr($index, 0, 1) == 1) {
-            $descr = 'Phase ' . substr($index, -1) . ' Input';
-            discover_sensor($valid['sensor'], 'voltage', $device, $voltage_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $voltage);
+        if (substr((string) $index, 0, 1) == 2 && $data['upsPhaseInputVoltage'] != -1) {
+            $descr = 'Phase ' . substr((string) $index, -1) . ' Bypass Input';
+            discover_sensor(null, 'voltage', $device, $voltage_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $voltage);
+        } elseif (substr((string) $index, 0, 1) == 1) {
+            $descr = 'Phase ' . substr((string) $index, -1) . ' Input';
+            discover_sensor(null, 'voltage', $device, $voltage_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $voltage);
         }
     }
 } else {
@@ -67,7 +67,7 @@ if ($phasecount > 1) {
         echo 'APC In ';
         $divisor = 1;
         $type = 'apc';
-        foreach (explode("\n", $oids) as $data) {
+        foreach (explode("\n", (string) $oids) as $data) {
             $data = trim($data);
             if ($data) {
                 [$oid, $current] = explode(' ', $data, 2);
@@ -75,7 +75,7 @@ if ($phasecount > 1) {
                 $index = $split_oid[count($split_oid) - 3];
                 $oid = '.1.3.6.1.4.1.318.1.1.8.5.3.3.1.3.' . $index . '.1.1';
                 $descr = 'Input Feed ' . chr(64 + $index);
-                discover_sensor($valid['sensor'], 'voltage', $device, $oid, "3.3.1.3.$index", $type, $descr, $divisor, '1', null, null, null, null, $current);
+                discover_sensor(null, 'voltage', $device, $oid, "3.3.1.3.$index", $type, $descr, $divisor, '1', null, null, null, null, $current);
             }
         }
     }
@@ -85,7 +85,7 @@ if ($phasecount > 1) {
         echo ' APC Out ';
         $divisor = 1;
         $type = 'apc';
-        foreach (explode("\n", $oids) as $data) {
+        foreach (explode("\n", (string) $oids) as $data) {
             $data = trim($data);
             if ($data) {
                 [$oid, $current] = explode(' ', $data, 2);
@@ -93,10 +93,10 @@ if ($phasecount > 1) {
                 $index = $split_oid[count($split_oid) - 3];
                 $oid = '.1.3.6.1.4.1.318.1.1.8.5.4.3.1.3.' . $index . '.1.1';
                 $descr = 'Output Feed';
-                if (count(explode("\n", $oids)) > 1) {
+                if (count(explode("\n", (string) $oids)) > 1) {
                     $descr .= " $index";
                 }
-                discover_sensor($valid['sensor'], 'voltage', $device, $oid, "4.3.1.3.$index", $type, $descr, $divisor, '1', null, null, null, null, $current);
+                discover_sensor(null, 'voltage', $device, $oid, "4.3.1.3.$index", $type, $descr, $divisor, '1', null, null, null, null, $current);
             }
         }
     }
@@ -117,7 +117,7 @@ if ($phasecount > 1) {
         [$oid,$current] = explode(' ', $oids);
         $type = 'apc';
         $descr = 'Input';
-        discover_sensor($valid['sensor'], 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current / $divisor);
+        discover_sensor(null, 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current / $divisor);
     }
     // upsHighPrecOutputVoltage
     $oids = snmp_get($device, '.1.3.6.1.4.1.318.1.1.1.4.3.1.0', '-OsqnU');
@@ -136,7 +136,7 @@ if ($phasecount > 1) {
         [$oid,$current] = explode(' ', $oids);
         $type = 'apc';
         $descr = 'Output';
-        discover_sensor($valid['sensor'], 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current / $divisor);
+        discover_sensor(null, 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current / $divisor);
     }
     // rPDUIdentDeviceLinetoLineVoltage
     $oids = snmp_get($device, '.1.3.6.1.4.1.318.1.1.12.1.15.0', '-OsqnU');
@@ -149,7 +149,7 @@ if ($phasecount > 1) {
             $type = 'apc';
             $index = '1';
             $descr = 'Input';
-            discover_sensor($valid['sensor'], 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current);
+            discover_sensor(null, 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current);
         }
     }
     // rPDU2PhaseStatusVoltage
@@ -157,11 +157,13 @@ if ($phasecount > 1) {
     d_echo($oids . "\n");
     if ($oids) {
         echo ' Voltage In ';
-        [$oid,$current] = explode(' ', $oids);
-        $divisor = 1;
-        $type = 'apc';
-        $index = '1';
-        $descr = 'Input';
-        discover_sensor($valid['sensor'], 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current);
+        [$oid,$current] = explode(' ', (string) $oids);
+        if ($current >= 0) { // Some units using rPDU2 can return rPDU2PhaseStatusVoltage.1; Value (Integer): -1 hence this check. Example : AP7900B
+            $divisor = 1;
+            $type = 'apc';
+            $index = '1';
+            $descr = 'Input';
+            discover_sensor(null, 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current);
+        }
     }
 }

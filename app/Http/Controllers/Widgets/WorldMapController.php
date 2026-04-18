@@ -1,4 +1,5 @@
 <?php
+
 /**
  * WorldMapController.php
  *
@@ -25,78 +26,44 @@
 
 namespace App\Http\Controllers\Widgets;
 
-use App\Models\Device;
+use App\Facades\LibrenmsConfig;
 use Illuminate\Http\Request;
-use LibreNMS\Config;
+use Illuminate\View\View;
 
 class WorldMapController extends WidgetController
 {
-    protected $title = 'World Map';
+    protected string $name = 'world-map';
 
     public function __construct()
     {
         $this->defaults = [
             'title' => null,
-            'title_url' => Config::get('leaflet.tile_url', '{s}.tile.openstreetmap.org'),
-            'init_lat' => Config::get('leaflet.default_lat', 51.4800),
-            'init_lng' => Config::get('leaflet.default_lng', 0),
-            'init_zoom' => Config::get('leaflet.default_zoom', 2),
-            'group_radius' => Config::get('leaflet.group_radius', 80),
+            'init_lat' => LibrenmsConfig::get('leaflet.default_lat'),
+            'init_lng' => LibrenmsConfig::get('leaflet.default_lng'),
+            'init_zoom' => LibrenmsConfig::get('leaflet.default_zoom'),
+            'init_layer' => LibrenmsConfig::get('geoloc.layer'),
+            'group_radius' => LibrenmsConfig::get('leaflet.group_radius'),
             'status' => '0,1',
             'device_group' => null,
         ];
     }
 
-    public function getView(Request $request)
+    public function getView(Request $request): string|View
     {
         $settings = $this->getSettings();
-        $status = explode(',', $settings['status']);
+        $settings['dimensions'] = $request->input('dimensions');
+        $settings['status'] = array_map(intval(...), explode(',', (string) $settings['status']));
+        $settings['disabled_alerts'] = LibrenmsConfig::get('network_map_worldmap_show_disabled_alerts') ? null : 0; // null to include 1 shows only notify disabled
+        $settings['map_config'] = [
+            'engine' => LibrenmsConfig::get('geoloc.engine'),
+            'api_key' => LibrenmsConfig::get('geoloc.api_key'),
+            'tile_url' => LibrenmsConfig::get('leaflet.tile_url'),
+            'lat' => $settings['init_lat'],
+            'lng' => $settings['init_lng'],
+            'zoom' => $settings['init_zoom'],
+            'layer' => $settings['init_layer'],
+        ];
 
-        $settings['dimensions'] = $request->get('dimensions');
-
-        $devices = Device::hasAccess($request->user())
-            ->with('location')
-            ->isActive()
-            ->whereIn('status', $status)
-            ->when($settings['device_group'], function ($query) use ($settings) {
-                $query->inDeviceGroup($settings['device_group']);
-            })
-            ->get()
-            ->filter(function ($device) use ($status) {
-                /** @var Device $device */
-                if (! ($device->location_id && $device->location && $device->location->coordinatesValid())) {
-                    return false;
-                }
-
-                // add extra data
-                /** @phpstan-ignore-next-line */
-                $device->markerIcon = 'greenMarker';
-                /** @phpstan-ignore-next-line */
-                $device->zOffset = 0;
-
-                if ($device->status == 0) {
-                    $device->markerIcon = 'redMarker';
-                    $device->zOffset = 10000;
-
-                    if ($device->isUnderMaintenance()) {
-                        if (in_array(0, $status)) {
-                            return false;
-                        }
-                        $device->markerIcon = 'blueMarker';
-                        $device->zOffset = 5000;
-                    }
-                }
-
-                return true;
-            });
-
-        $settings['devices'] = $devices;
-
-        return view('widgets.worldmap', $settings);
-    }
-
-    public function getSettingsView(Request $request)
-    {
-        return view('widgets.settings.worldmap', $this->getSettings(true));
+        return view('widgets.world-map', $settings);
     }
 }

@@ -2237,8 +2237,8 @@
                     "ifName": "vif0(tag=1:ports=1-5)",
                     "portName": null,
                     "ifIndex": 206,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -2337,8 +2337,8 @@
                     "ifName": "vif6(tag=6:ports=6:IPv6)",
                     "portName": null,
                     "ifIndex": 212,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "up",
                     "ifOperStatus_prev": "up",
@@ -2437,8 +2437,8 @@
                     "ifName": "vif7(tag=7:ports=7:IPv6)",
                     "portName": null,
                     "ifIndex": 213,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "up",
                     "ifOperStatus_prev": "up",
@@ -2537,8 +2537,8 @@
                     "ifName": "vif8(tag=8:ports=8:IPv6)",
                     "portName": null,
                     "ifIndex": 214,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "up",
                     "ifOperStatus_prev": "up",
@@ -2637,8 +2637,8 @@
                     "ifName": "vif4095:agFPGA(tag=4095)",
                     "portName": null,
                     "ifIndex": 4301,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -2737,8 +2737,8 @@
                     "ifName": "dummy1",
                     "portName": null,
                     "ifIndex": 4305,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "up",
                     "ifOperStatus_prev": "up",
@@ -2878,70 +2878,6 @@
                     "mempool_class": "buffers",
                     "mempool_precision": 1024,
                     "mempool_descr": "Memory buffers",
-                    "mempool_perc": 100,
-                    "mempool_perc_oid": null,
-                    "mempool_used": 1044496384,
-                    "mempool_used_oid": ".1.3.6.1.4.1.2021.4.14.0",
-                    "mempool_free": 0,
-                    "mempool_free_oid": null,
-                    "mempool_total": 1044496384,
-                    "mempool_total_oid": null,
-                    "mempool_largestfree": null,
-                    "mempool_lowestfree": null,
-                    "mempool_deleted": 0,
-                    "mempool_perc_warn": null
-                },
-                {
-                    "mempool_index": "4",
-                    "entPhysicalIndex": null,
-                    "mempool_type": "ucd",
-                    "mempool_class": "cached",
-                    "mempool_precision": 1024,
-                    "mempool_descr": "Cached memory",
-                    "mempool_perc": 82,
-                    "mempool_perc_oid": null,
-                    "mempool_used": 857792512,
-                    "mempool_used_oid": ".1.3.6.1.4.1.2021.4.15.0",
-                    "mempool_free": 186703872,
-                    "mempool_free_oid": null,
-                    "mempool_total": 1044496384,
-                    "mempool_total_oid": null,
-                    "mempool_largestfree": null,
-                    "mempool_lowestfree": null,
-                    "mempool_deleted": 0,
-                    "mempool_perc_warn": null
-                }
-            ]
-        },
-        "poller": {
-            "mempools": [
-                {
-                    "mempool_index": "1",
-                    "entPhysicalIndex": null,
-                    "mempool_type": "ucd",
-                    "mempool_class": "system",
-                    "mempool_precision": 1024,
-                    "mempool_descr": "Physical memory",
-                    "mempool_perc": 14,
-                    "mempool_perc_oid": null,
-                    "mempool_used": 147693568,
-                    "mempool_used_oid": null,
-                    "mempool_free": 896802816,
-                    "mempool_free_oid": ".1.3.6.1.4.1.2021.4.6.0",
-                    "mempool_total": 1044496384,
-                    "mempool_total_oid": null,
-                    "mempool_largestfree": null,
-                    "mempool_lowestfree": null,
-                    "mempool_deleted": 0,
-                    "mempool_perc_warn": null
-                },
-                {
-                    "mempool_index": "3",
-                    "entPhysicalIndex": null,
-                    "mempool_type": "ucd",
-                    "mempool_class": "buffers",
-                    "mempool_precision": 1024,
-                    "mempool_descr": "Memory buffers",
                     "mempool_perc": 0,
                     "mempool_perc_oid": null,
                     "mempool_used": 0,
@@ -2976,7 +2912,8 @@
                     "mempool_perc_warn": null
                 }
             ]
-        }
+        },
+        "poller": "matches discovery"
     },
     "sensors": {
         "discovery": {
@@ -3409,5 +3346,32 @@
             ]
         },
         "poller": "matches discovery"
+    },
+    "ipv4-addresses": {
+        "discovery": {
+            "ipv4_addresses": [
+                {
+                    "ipv4_address": "10.0.210.10",
+                    "ipv4_prefixlen": 30,
+                    "context_name": "",
+                    "ipv4_network": "10.0.210.8/30",
+                    "ifIndex": 214
+                },
+                {
+                    "ipv4_address": "10.0.210.14",
+                    "ipv4_prefixlen": 30,
+                    "context_name": "",
+                    "ipv4_network": "10.0.210.12/30",
+                    "ifIndex": 213
+                },
+                {
+                    "ipv4_address": "10.0.217.126",
+                    "ipv4_prefixlen": 29,
+                    "context_name": "",
+                    "ipv4_network": "10.0.217.120/29",
+                    "ifIndex": 212
+                }
+            ]
+        }
     }
 }

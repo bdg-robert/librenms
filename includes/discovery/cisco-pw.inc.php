@@ -1,8 +1,8 @@
 <?php
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 
-if (Config::get('enable_pseudowires') && $device['os_group'] == 'cisco') {
+if (LibrenmsConfig::get('enable_pseudowires') && $device['os_group'] == 'cisco') {
     $pws_db = [];
     // Pre-cache the existing state of pseudowires for this device from the database
     $pws_db_raw = dbFetchRows('SELECT * FROM `pseudowires` WHERE `device_id` = ?', [$device['device_id']]);
@@ -24,10 +24,16 @@ if (Config::get('enable_pseudowires') && $device['os_group'] == 'cisco') {
         // To correct Interface names that use escaped '/' e.g. GigabitEthernet0_4_0_12
         // and translate the underscore back to a slash - e.g. GigabitEthernet0/4/0/12
         // Thank you @murrant
-        $pw['cpwVcName'] = preg_replace('/(?<=\d)_(?=\d)/', '/', $pw['cpwVcName']);
+        $pw['cpwVcName'] = preg_replace('/(?<=\d)_(?=\d)/', '/', (string) $pw['cpwVcName']);
         // END
 
-        [$cpw_remote_id] = explode(':', $pw['cpwVcMplsPeerLdpID']);
+        [$cpw_remote_id] = explode(':', (string) $pw['cpwVcMplsPeerLdpID']);
+
+        if (\LibreNMS\Util\IPv4::isValid($cpw_remote_id)) {
+            //If cpwVcMplsPeerLdpID is in the IP form, then convert it to number to store it in DB to avoid failing
+            $cpw_remote_id = ip2long($cpw_remote_id);
+        }
+
         $cpw_remote_device = dbFetchCell('SELECT device_id from ipv4_addresses AS A, ports AS I WHERE A.ipv4_address=? AND A.port_id=I.port_id', [$cpw_remote_id]);
         $if_id = dbFetchCell('SELECT port_id from ports WHERE `ifDescr`=? AND `device_id`=?', [$pw['cpwVcName'], $device['device_id']]);
         if (! empty($pws_db[$pw['cpwVcID']])) {
@@ -36,15 +42,15 @@ if (Config::get('enable_pseudowires') && $device['os_group'] == 'cisco') {
         } else {
             $pseudowire_id = dbInsert(
                 [
-                    'device_id'      => $device['device_id'],
-                    'port_id'        => $if_id,
+                    'device_id' => $device['device_id'],
+                    'port_id' => $if_id,
                     'peer_device_id' => $cpw_remote_device,
-                    'peer_ldp_id'    => $cpw_remote_id,
-                    'cpwVcID'        => $pw['cpwVcID'],
-                    'cpwOid'         => $pw_id,
-                    'pw_type'        => $pw['cpwVcType'],
-                    'pw_descr'       => $pw['cpwVcDescr'],
-                    'pw_psntype'     => $pw['cpwVcPsnType'],
+                    'peer_ldp_id' => $cpw_remote_id,
+                    'cpwVcID' => $pw['cpwVcID'],
+                    'cpwOid' => $pw_id,
+                    'pw_type' => $pw['cpwVcType'],
+                    'pw_descr' => $pw['cpwVcDescr'],
+                    'pw_psntype' => $pw['cpwVcPsnType'],
                 ],
                 'pseudowires'
             );
@@ -57,7 +63,7 @@ if (Config::get('enable_pseudowires') && $device['os_group'] == 'cisco') {
     // Cycle the list of pseudowires we cached earlier and make sure we saw them again.
     foreach ($pws_db as $pw_id => $pseudowire_id) {
         if (empty($device['pws'][$pw_id])) {
-            dbDelete('pseudowires', '`pseudowire_id` = ?', [$pseudowire_id]);
+            \App\Models\Pseudowire::where('pseudowire_id', $pseudowire_id)->delete();
         }
     }
 

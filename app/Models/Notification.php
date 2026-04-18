@@ -42,7 +42,7 @@ class Notification extends Model
         parent::boot();
 
         // delete attribs for this notification
-        static::deleting(function (Notification $notification) {
+        static::deleting(function (Notification $notification): void {
             $notification->attribs()->delete();
         });
     }
@@ -97,7 +97,7 @@ class Notification extends Model
      */
     public function scopeIsUnread(Builder $query, User $user)
     {
-        return $query->whereNotExists(function ($query) use ($user) {
+        return $query->whereNotExists(function ($query) use ($user): void {
             $query->select(DB::raw(1))
             ->from('notifications_attribs')
             ->whereRaw('notifications.notifications_id = notifications_attribs.notifications_id')
@@ -135,9 +135,11 @@ class Notification extends Model
     }
 
     // ---- Define Relationships ----
-
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\NotificationAttrib, $this>
+     */
     public function attribs(): HasMany
     {
-        return $this->hasMany(\App\Models\NotificationAttrib::class, 'notifications_id', 'notifications_id');
+        return $this->hasMany(NotificationAttrib::class, 'notifications_id', 'notifications_id');
     }
 }

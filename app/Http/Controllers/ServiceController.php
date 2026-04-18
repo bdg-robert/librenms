@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Interfaces\ToastInterface;
 use App\Models\Service;
 use Illuminate\Http\Request;
 
@@ -10,12 +11,12 @@ class ServiceController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\View\View
      */
-    public function store(Request $request)
+    public function store(Request $request, ToastInterface $toast)
     {
-        $request = [
+        $this->validate($request, [
             'service_name' => 'required|string|unique:service',
             'device_id' => 'integer',
             'service_type' => 'string',
@@ -25,9 +26,9 @@ class ServiceController extends Controller
             'service_changed' => 'integer',
             'service_disabled' => 'integer',
             'service_ignore' => 'integer',
-        ];
+        ]);
 
-        $service = Service::make(
+        $service = new Service(
             $request->only(
                 [
                     'service_name',
@@ -44,7 +45,7 @@ class ServiceController extends Controller
         );
         $service->save();
 
-        flash()->addSuccess(__('Service :name created', ['name' => $service->service_name]));
+        $toast->success(__('Service :name created', ['name' => $service->service_name]));
 
         return redirect()->route('services.templates.index');
     }

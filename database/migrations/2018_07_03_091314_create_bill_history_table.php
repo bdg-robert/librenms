@@ -10,7 +10,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('bill_history', function (Blueprint $table) {
             $table->increments('bill_hist_id');
@@ -37,8 +37,8 @@ return new class extends Migration
             $table->unique(['bill_id', 'bill_datefrom', 'bill_dateto']);
         });
 
-        if (\LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
-            \DB::statement('ALTER TABLE `bill_history` CHANGE `pdf` `pdf` longblob NULL ;');
+        if (LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
+            DB::statement('ALTER TABLE `bill_history` CHANGE `pdf` `pdf` longblob NULL ;');
         }
     }
 
@@ -47,7 +47,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::drop('bill_history');
     }

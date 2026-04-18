@@ -8,12 +8,12 @@ $colours = 'mixed';
 $nototal = 0;
 $unit_text = 'Hits/Misses';
 $array = [
-    'get_hits'   => [
-        'descr'  => 'Hits',
+    'get_hits' => [
+        'descr' => 'Hits',
         'colour' => '555555',
     ],
     'get_misses' => [
-        'descr'  => 'Misses',
+        'descr' => 'Misses',
         'colour' => 'cc0000',
     ],
 ];
@@ -33,7 +33,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

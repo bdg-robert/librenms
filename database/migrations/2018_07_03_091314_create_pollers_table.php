@@ -10,14 +10,14 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('pollers', function (Blueprint $table) {
             $table->increments('id');
             $table->string('poller_name')->unique();
             $table->dateTime('last_polled');
             $table->unsignedInteger('devices');
-            $table->float('time_taken', 10, 0);
+            $table->double('time_taken');
         });
     }
 
@@ -26,7 +26,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::drop('pollers');
     }

@@ -4,12 +4,12 @@ $rrd_filename = Rrd::name($device['hostname'], 'netstats-ip');
 
 $stats = [
     'ipForwDatagrams' => [],
-    'ipInDelivers'    => [],
-    'ipInReceives'    => [],
-    'ipOutRequests'   => [],
-    'ipInDiscards'    => [],
-    'ipOutDiscards'   => [],
-    'ipOutNoRoutes'   => [],
+    'ipInDelivers' => [],
+    'ipInReceives' => [],
+    'ipOutRequests' => [],
+    'ipInDiscards' => [],
+    'ipOutDiscards' => [],
+    'ipOutNoRoutes' => [],
 ];
 
 $i = 0;
@@ -18,7 +18,7 @@ foreach ($stats as $stat => $array) {
     $rrd_list[$i]['filename'] = $rrd_filename;
     $rrd_list[$i]['descr'] = str_replace('ip', '', $stat);
     $rrd_list[$i]['ds'] = $stat;
-    if (strpos($stat, 'Out') !== false) {
+    if (str_contains($stat, 'Out')) {
         $rrd_list[$i]['invert'] = true;
     }
 }

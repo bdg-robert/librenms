@@ -12,35 +12,32 @@ $float_precision = 3;
 
 $rrd_filename = Rrd::name($device['hostname'], ['app', $name, $app['app_id']]);
 
-$rrd_list = [];
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'debug',
-        'ds'       => 'debug',
-    ];
-    $rrd_list[] = [
+        'descr' => 'debug',
+        'ds' => 'debug',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'info',
-        'ds'       => 'info',
-    ];
-    $rrd_list[] = [
+        'descr' => 'info',
+        'ds' => 'info',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'warning',
-        'ds'       => 'warning',
-    ];
-    $rrd_list[] = [
+        'descr' => 'warning',
+        'ds' => 'warning',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'error',
-        'ds'       => 'error',
-    ];
-    $rrd_list[] = [
+        'descr' => 'error',
+        'ds' => 'error',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'critical',
-        'ds'       => 'critical',
-    ];
-} else {
-    d_echo('RRD "' . $rrd_filename . '" not found');
-}
+        'descr' => 'critical',
+        'ds' => 'critical',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

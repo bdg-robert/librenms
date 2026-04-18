@@ -3,9 +3,9 @@
 print_optionbar_start();
 
 $link_array = [
-    'page'   => 'device',
+    'page' => 'device',
     'device' => $device['device_id'],
-    'tab'    => 'netflow',
+    'tab' => 'netflow',
 ];
 
 echo generate_link('General', $link_array, ['nfsen' => 'general']);
@@ -14,7 +14,7 @@ echo generate_link('Stats', $link_array, ['nfsen' => 'stats']);
 
 $printedChannel = false;
 $nfsen_hostname = nfsen_hostname($device['hostname']);
-foreach (\LibreNMS\Config::get('nfsen_rrds') as $nfsenDir) {
+foreach (\App\Facades\LibrenmsConfig::get('nfsen_rrds') as $nfsenDir) {
     $hostDir = $nfsenDir . '/' . $nfsen_hostname . '/';
     if (is_dir($hostDir)) {
         $nfsenRRDchannelGlob = $hostDir . '*.rrd';

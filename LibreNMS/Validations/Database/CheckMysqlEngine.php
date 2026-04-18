@@ -1,4 +1,5 @@
 <?php
+
 /*
  * CheckMysqlEngine.php
  *
@@ -25,9 +26,9 @@
 
 namespace LibreNMS\Validations\Database;
 
-use DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use LibreNMS\DB\Eloquent;
 use LibreNMS\Interfaces\Validation;
 use LibreNMS\Interfaces\ValidationFixer;
@@ -44,7 +45,7 @@ class CheckMysqlEngine implements Validation, ValidationFixer
 
         if ($tables->isNotEmpty()) {
             return ValidationResult::warn(trans('validation.validations.database.CheckMysqlEngine.fail'))
-                ->setFixer(__CLASS__)
+                ->setFixer(self::class)
                 ->setList(trans('validation.validations.database.CheckMysqlEngine.tables'), $tables->all());
         }
 
@@ -71,7 +72,7 @@ class CheckMysqlEngine implements Validation, ValidationFixer
             foreach ($tables as $table) {
                 DB::statement("ALTER TABLE $db.$table ENGINE=InnoDB;");
             }
-        } catch (QueryException $e) {
+        } catch (QueryException) {
             return false;
         }
 

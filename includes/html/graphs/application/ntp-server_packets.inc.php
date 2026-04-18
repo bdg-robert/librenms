@@ -7,12 +7,12 @@ $nototal = (($width < 224) ? 1 : 0);
 $unit_text = 'Packets';
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'ntp-server', $app->app_id]);
 $array = [
-    'packets_drop'   => [
-        'descr'  => 'Dropped',
+    'packets_drop' => [
+        'descr' => 'Dropped',
         'colour' => '880000FF',
     ],
     'packets_ignore' => [
-        'descr'  => 'Ignored',
+        'descr' => 'Ignored',
         'colour' => 'FF8800FF',
     ],
 ];
@@ -28,7 +28,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 require 'includes/html/graphs/generic_multi_simplex_seperated.inc.php';

@@ -59,13 +59,13 @@ return [
             'distributed' => ['name' => 'Розподілений опитувач'],
             'graphite' => ['name' => 'Сховище даних: Graphite'],
             'influxdb' => ['name' => 'Сховище даних: InfluxDB'],
+            'kafka' => ['name' => 'Сховище даних: Kafka'],
             'opentsdb' => ['name' => 'Сховище даних: OpenTSDB'],
             'ping' => ['name' => 'Ping'],
             'prometheus' => ['name' => 'Сховище даних: Prometheus'],
             'rrdtool' => ['name' => 'Сховище даних: RRDTool'],
             'snmp' => ['name' => 'SNMP'],
             'poller_modules' => ['name' => 'Модулі опитувача'],
-            'interface_types' => ['name' => 'Типи інтерфейсів за RFC 7224'],
         ],
         'system' => [
             'cleanup' => ['name' => 'Очистка'],
@@ -236,9 +236,6 @@ return [
                     'help' => 'Співпадає з джерелом запиту. Можуть бути використані вільні символи, наприклад *.mydomain.com',
                 ],
             ],
-        ],
-        'api_demo' => [
-            'description' => 'Це демо',
         ],
         'apps' => [
             'powerdns-recursor' => [
@@ -456,10 +453,6 @@ return [
             'description' => 'Чітко вказаний URL',
             'help' => 'Це налаштування має бути вказане *лише* якщо необхідно *примусити* до використання певного імені хоста та порта. У цьому разі веб інтерфейс буде недоступний з будь-якого іншого імені',
         ],
-        'device_perf_purge' => [
-            'description' => 'Дані про поведінку пристроїв старші за',
-            'help' => 'Очистка що виконується daily.sh',
-        ],
         'discovery_modules' => [
             'arp-table' => [
                 'description' => 'Таблиця ARP',
@@ -470,14 +463,11 @@ return [
             'bgp-peers' => [
                 'description' => 'BGP Peers',
             ],
-            'cisco-cbqos' => [
-                'description' => 'Cisco CBQOS',
-            ],
             'cisco-cef' => [
                 'description' => 'Cisco CEF',
             ],
-            'cisco-mac-accounting' => [
-                'description' => 'Cisco MAC Accounting',
+            'mac-accounting' => [
+                'description' => 'MAC Accounting',
             ],
             'cisco-otv' => [
                 'description' => 'Cisco OTV',
@@ -523,9 +513,6 @@ return [
             ],
             'junose-atm-vp' => [
                 'description' => 'Junose ATM VP',
-            ],
-            'libvirt-vminfo' => [
-                'description' => 'Libvirt VMInfo',
             ],
             'loadbalancers' => [
                 'description' => 'Loadbalancers',
@@ -582,8 +569,8 @@ return [
             'vlans' => [
                 'description' => 'VLans',
             ],
-            'vmware-vminfo' => [
-                'description' => 'VMWare VMInfo',
+            'vminfo' => [
+                'description' => 'Hypervisor VM Info',
             ],
             'vrf' => [
                 'description' => 'VRF',
@@ -863,9 +850,21 @@ return [
                 'description' => 'Користувач',
                 'help' => 'КОристувач для з\'єднання з сервером InfluxDB',
             ],
+            'batch_size' => [
+                'description' => 'Batch Size',
+                'help' => 'Number of metrics to send in a single batch, 0 means no batching',
+            ],
+            'measurements' => [
+                'description' => 'Measurements',
+                'help' => 'List of measurements to send to InfluxDB, leave empty to send all',
+            ],
             'verifySSL' => [
                 'description' => 'Перевіряти SSL',
                 'help' => 'Перевіряти чи сертифікат SSL валідний та довірений',
+            ],
+            'debug' => [
+                'description' => 'Debug',
+                'help' => 'To enable or disable verbose output to CLI',
             ],
         ],
         'ipmitool' => [
@@ -920,7 +919,7 @@ return [
         'nfsen_top_default' => [
             'description' => 'Default Top N',
         ],
-        'nfsen_stat_default' => [
+        'nfsen_stats_default' => [
             'description' => 'Default Stat',
         ],
         'nfsen_order_default' => [
@@ -939,9 +938,6 @@ return [
         'nfsen_suffix' => [
             'description' => 'Суфікс імені файлу',
             'help' => 'Важливе налаштування та як імена пристроїв в NfSen обмежені 21 символом. Це значить що повні доменні імена пристроїв можуть не вміщатися, тому дане налаштування зазвичай не використовується.',
-        ],
-        'nmap' => [
-            'description' => 'Шлях до nmap',
         ],
         'opentsdb' => [
             'enable' => [
@@ -1024,9 +1020,6 @@ return [
             'description' => 'Погані інтерфейси',
             'help' => 'Типи мережевих інтерфейсів щр мають бути проігноровані',
         ],
-        'ping' => [
-            'description' => 'Шлях до ping',
-        ],
         'ping_rrd_step' => [
             'description' => 'Частота Ping',
             'help' => 'Частота перевірок. Є значенням за замовчуванням для всіх пристроїв. Увага! При зміні цього значення необхідно ввести додаткоі зміни.  Зверніться до документації Fast Ping.',
@@ -1080,14 +1073,14 @@ return [
             'ucd-diskio' => [
                 'description' => 'UCD DiskIO',
             ],
-            'wifi' => [
-                'description' => 'Wifi',
-            ],
             'wireless' => [
                 'description' => 'Бездротові',
             ],
             'ospf' => [
                 'description' => 'OSPF',
+            ],
+            'ospfv3' => [
+                'description' => 'OSPFv3',
             ],
             'isis' => [
                 'description' => 'ISIS',
@@ -1104,8 +1097,8 @@ return [
             'slas' => [
                 'description' => 'Service Level Agreement Tracking',
             ],
-            'cisco-mac-accounting' => [
-                'description' => 'Cisco MAC Accounting',
+            'mac-accounting' => [
+                'description' => 'MAC Accounting',
             ],
             'cipsec-tunnels' => [
                 'description' => 'Тунелі Cipsec',
@@ -1115,15 +1108,6 @@ return [
             ],
             'cisco-ace-serverfarms' => [
                 'description' => 'Cisco ACE Serverfarms',
-            ],
-            'cisco-asa-firewall' => [
-                'description' => 'Cisco ASA Firewall',
-            ],
-            'cisco-voice' => [
-                'description' => 'Cisco Voice',
-            ],
-            'cisco-cbqos' => [
-                'description' => 'Cisco CBQOS',
             ],
             'cisco-otv' => [
                 'description' => 'Cisco OTV',
@@ -1157,6 +1141,9 @@ return [
             ],
             'stp' => [
                 'description' => 'STP',
+            ],
+            'vminfo' => [
+                'description' => 'Hypervisor VM Info',
             ],
             'ntp' => [
                 'description' => 'NTP',
@@ -1262,10 +1249,6 @@ return [
             'description' => 'Визначає версію rrdtool на вашому сервері',
             'help' => 'Версії вищі за 1.5.5 підтримують всі функції що використовує LibreNMS, не встановлюйте значення вищі за наявну версію',
         ],
-        'service_poller_enabled' => [
-            'description' => 'Увімкнути опитування',
-            'help' => 'Вмикає процеси опитування. Визначає значення за замовчуванням для всіх вузлів.',
-        ],
         'service_poller_workers' => [
             'description' => 'Процеси опитування',
             'help' => 'Кількість процесів опитування які буде створено. Визначає значення за замовчуванням для всіх вузлів.',
@@ -1278,10 +1261,6 @@ return [
             'description' => 'Повторна спроба для недоступних пристроїв',
             'help' => 'Якщо пристрій недоступний при опитуванні. Визначає час який необхідно зачекати перед повторною спробою. Визначає значення за замовчуванням для всіх вузлів.',
         ],
-        'service_discovery_enabled' => [
-            'description' => 'Увімкнути віднайдення',
-            'help' => 'Увімкнути процеси віднайдення. Визначає значення за замовчуванням для всіх вузлів.',
-        ],
         'service_discovery_workers' => [
             'description' => 'Кількість процесів віднайдення',
             'help' => 'Кількість запущених процесів віднайдення. Занадто велике значення може викликати перевантаження. Визначає значення за замовчуванням для всіх вузлів.',
@@ -1289,10 +1268,6 @@ return [
         'service_discovery_frequency' => [
             'description' => 'Частота віднайдення',
             'help' => 'Як часто виконувати віднайдення пристроїв. Визначає значення за замовчуванням для всіх вузлів. За замовчуванням 4 рази в день.',
-        ],
-        'service_services_enabled' => [
-            'description' => 'Увімкнути перевірки сервісів',
-            'help' => 'Увімкнути процеси перевірки сервісів. Визначає значення за замовчуванням для всіх вузлів.',
         ],
         'service_services_workers' => [
             'description' => 'Кількість процесів перевірки сервісів',
@@ -1302,10 +1277,6 @@ return [
             'description' => 'Частота перевірки сервісів',
             'help' => 'Як часто запускати перевірки сервісів. Має відповідати частоті опитування. Визначає значення за замовчуванням для всіх вузлів.',
         ],
-        'service_billing_enabled' => [
-            'description' => 'Білінг увімкнено',
-            'help' => 'Увімкнути процеси білінгу. Визначає значення за замовчуванням для всіх вузлів.',
-        ],
         'service_billing_frequency' => [
             'description' => 'Частота білінгу',
             'help' => 'Як часто необхідно збирати інформацію білінгу. Визначає значення за замовчуванням для всіх вузлів.',
@@ -1314,17 +1285,9 @@ return [
             'description' => 'Частота обчислень білінгу',
             'help' => 'Як часто обчислювати використання ресурсів. Визначає значення за замовчуванням для всіх вузлів.',
         ],
-        'service_alerting_enabled' => [
-            'description' => 'Сповіщення увімкнено',
-            'help' => 'Увімкнути процес сповіщення. Визначає значення за замовчуванням для всіх вузлів.',
-        ],
         'service_alerting_frequency' => [
             'description' => 'Частота перевірки сповіщень',
             'help' => 'Як часто перевіряються правила сповіщень. Дані оновлюються відповідно до частоти опитування. Визначає значення за замовчуванням для всіх вузлів.',
-        ],
-        'service_ping_enabled' => [
-            'description' => 'Fast Ping Увімкнено',
-            'help' => 'Fast Ping просто перевіряє пристрої на доступність. Визначає значення за замовчуванням для всіх вузлів.',
         ],
         'service_update_enabled' => [
             'description' => 'Щоденне обслуговування увімкнено',
@@ -1345,9 +1308,6 @@ return [
         'service_watchdog_log' => [
             'description' => 'Спостережуваний лог файл',
             'help' => 'За замовчуванням лог файл LibreNMS. Визначає значення за замовчуванням для всіх вузлів.',
-        ],
-        'sfdp' => [
-            'description' => 'Шлях до sfdp',
         ],
         'shorthost_target_length' => [
             'description' => 'Максимальний розмір скороченого імені хоста',
@@ -1552,9 +1512,6 @@ return [
         'device_location_map_open' => [
             'description' => 'Відкрита мапа місцезнаходження',
             'help' => 'Мапа місцезнаходження показана за замовчуванням',
-        ],
-        'whois' => [
-            'description' => 'Шлях до whois',
         ],
         'smokeping.integration' => [
             'description' => 'Увімкнути',

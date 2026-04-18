@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use LibreNMS\Util\DynamicConfig;
 
-class SettingsController extends Controller
+class SettingsController
 {
     /**
      * Display a listing of the resource.
@@ -16,14 +17,14 @@ class SettingsController extends Controller
      * @param  string  $section
      * @return \Illuminate\Http\Response|\Illuminate\View\View
      */
-    public function index(DynamicConfig $dynamicConfig, $tab = 'global', $section = '')
+    public function index(DynamicConfig $dynamicConfig, $tab = 'alerting', $section = '')
     {
+        Gate::authorize('settings.viewAny');
+
         $data = [
             'active_tab' => $tab,
             'active_section' => $section,
-            'groups' => $dynamicConfig->getGroups()->reject(function ($group) {
-                return $group == 'global';
-            })->values(),
+            'groups' => $dynamicConfig->getGroups()->reject(fn ($group) => $group == 'global')->values(),
         ];
 
         return view('settings.index', $data);
@@ -33,26 +34,28 @@ class SettingsController extends Controller
      * Update the specified resource in storage.
      *
      * @param  DynamicConfig  $config
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  string  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function update(DynamicConfig $config, Request $request, $id)
     {
-        $value = $request->get('value');
+        Gate::authorize('settings.update');
+
+        $value = $request->input('value');
 
         if (! $config->isValidSetting($id)) {
             return $this->jsonResponse($id, ':id is not a valid setting', null, 400);
         }
 
-        $current = \LibreNMS\Config::get($id);
+        $current = \App\Facades\LibrenmsConfig::get($id);
         $config_item = $config->get($id);
 
         if (! $config_item->checkValue($value)) {
             return $this->jsonResponse($id, $config_item->getValidationMessage($value), $current, 400);
         }
 
-        if (\LibreNMS\Config::persist($id, $value)) {
+        if (\App\Facades\LibrenmsConfig::persist($id, $value)) {
             return $this->jsonResponse($id, "Successfully set $id", $value);
         }
 
@@ -64,10 +67,12 @@ class SettingsController extends Controller
      *
      * @param  DynamicConfig  $config
      * @param  string  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function destroy(DynamicConfig $config, $id)
     {
+        Gate::authorize('settings.update');
+
         if (! $config->isValidSetting($id)) {
             return $this->jsonResponse($id, ':id is not a valid setting', null, 400);
         }
@@ -90,6 +95,8 @@ class SettingsController extends Controller
      */
     public function listAll(DynamicConfig $config)
     {
+        Gate::authorize('settings.viewAny');
+
         return response()->json($config->all()->filter->isValid());
     }
 
@@ -98,7 +105,7 @@ class SettingsController extends Controller
      * @param  string  $message
      * @param  mixed  $value
      * @param  int  $status
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     protected function jsonResponse($id, $message, $value = null, $status = 200)
     {

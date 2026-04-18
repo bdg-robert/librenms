@@ -9,9 +9,9 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        foreach (\App\Models\Sensor::getTypes() as $type) {
+        foreach (\LibreNMS\Enum\Sensor::values() as $type) {
             DB::table('eventlog')->where('type', ucfirst($type))->update(['type' => $type]);
         }
     }
@@ -21,9 +21,9 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
-        foreach (\App\Models\Sensor::getTypes() as $type) {
+        foreach (\LibreNMS\Enum\Sensor::values() as $type) {
             DB::table('eventlog')->where('type', $type)->update(['type' => ucfirst($type)]);
         }
     }

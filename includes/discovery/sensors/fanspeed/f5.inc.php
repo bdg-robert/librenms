@@ -9,7 +9,7 @@ if ($oids) {
     $divisor = 1;
     $type = 'f5';
 
-    foreach (explode("\n", $oids) as $data) {
+    foreach (explode("\n", (string) $oids) as $data) {
         $data = trim($data);
         if ($data) {
             [$oid, $fanspeed] = explode(' ', $data, 2);
@@ -18,9 +18,9 @@ if ($oids) {
             $index = $split_oid[$split_count];
             $descr = 'Fan Speed ' . $index;
             $oid = '.1.3.6.1.4.1.3375.2.1.3.2.1.2.1.3.' . $index;
-            $fanspeed = $fanspeed / $divisor;
+            $fanspeed /= $divisor;
             if ($fanspeed >= 0) {
-                discover_sensor($valid['sensor'], 'fanspeed', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $fanspeed);
+                discover_sensor(null, 'fanspeed', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $fanspeed);
             }
         }
     }

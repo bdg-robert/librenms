@@ -1,4 +1,5 @@
 <?php
+
 /**
  * OS.php
  *
@@ -26,9 +27,15 @@
 namespace LibreNMS\Modules;
 
 use App\Models\Device;
+use App\Models\Eventlog;
 use App\Models\Location;
+use App\Observers\DeviceObserver;
+use Illuminate\Support\Facades\Log;
+use LibreNMS\Enum\Severity;
+use LibreNMS\Interfaces\Data\DataStorageInterface;
 use LibreNMS\Interfaces\Module;
 use LibreNMS\Interfaces\Polling\OSPolling;
+use LibreNMS\Polling\ModuleStatus;
 use LibreNMS\Util\Url;
 
 class Os implements Module
@@ -41,13 +48,19 @@ class Os implements Module
         return [];
     }
 
+    public function shouldDiscover(\LibreNMS\OS $os, ModuleStatus $status): bool
+    {
+        return $status->isEnabledAndDeviceUp($os->getDevice());
+    }
+
     public function discover(\LibreNMS\OS $os): void
     {
         $this->updateLocation($os);
         $this->sysContact($os);
 
         // null out values in case they aren't filled.
-        $os->getDevice()->fill([
+        $device = $os->getDevice();
+        $device->fill([
             'hardware' => null,
             'version' => null,
             'features' => null,
@@ -55,42 +68,47 @@ class Os implements Module
             'icon' => null,
         ]);
 
-        $os->discoverOS($os->getDevice());
+        $os->discoverOS($device);
+
+        // reset type if user overrode it
+        if ($device->getAttrib('override_device_type') && $device->isDirty('type')) {
+            $device->type = $device->getOriginal('type');
+        }
+
         $this->handleChanges($os);
     }
 
-    public function poll(\LibreNMS\OS $os): void
+    public function shouldPoll(\LibreNMS\OS $os, ModuleStatus $status): bool
     {
-        $deviceModel = $os->getDevice(); /** @var \App\Models\Device $deviceModel */
+        return $status->isEnabledAndDeviceUp($os->getDevice());
+    }
+
+    public function poll(\LibreNMS\OS $os, DataStorageInterface $datastore): void
+    {
+        $deviceModel = $os->getDevice(); /** @var Device $deviceModel */
         if ($os instanceof OSPolling) {
-            $os->pollOS();
+            $os->pollOS($datastore);
         } else {
-            // legacy poller files
-            global $graphs, $device;
-
-            if (empty($device)) {
-                $device = $os->getDeviceArray();
-            }
-
+            $device = $os->getDeviceArray();
             $location = null;
 
             if (is_file(base_path('/includes/polling/os/' . $device['os'] . '.inc.php'))) {
                 // OS Specific
+                Eventlog::log("Warning: OS {$device['os']} using deprecated polling method", $deviceModel, 'poller', Severity::Error);
                 include base_path('/includes/polling/os/' . $device['os'] . '.inc.php');
             } elseif (! empty($device['os_group']) && is_file(base_path('/includes/polling/os/' . $device['os_group'] . '.inc.php'))) {
                 // OS Group Specific
+                Eventlog::log("Warning: OS {$device['os']} using deprecated polling method", $deviceModel, 'poller', Severity::Error);
                 include base_path('/includes/polling/os/' . $device['os_group'] . '.inc.php');
-            } else {
-                echo "Generic :(\n";
             }
 
             // handle legacy variables, sometimes they are false
-            $deviceModel->version = ($version ?? $deviceModel->version) ?: null;
-            $deviceModel->hardware = ($hardware ?? $deviceModel->hardware) ?: null;
-            $deviceModel->features = ($features ?? $deviceModel->features) ?: null;
-            $deviceModel->serial = ($serial ?? $deviceModel->serial) ?: null;
+            $deviceModel->version = ($version ?? $deviceModel->version) ?: null; // @phpstan-ignore nullCoalesce.variable (set by include)
+            $deviceModel->hardware = ($hardware ?? $deviceModel->hardware) ?: null; // @phpstan-ignore nullCoalesce.variable (set by include)
+            $deviceModel->features = ($features ?? $deviceModel->features) ?: null; // @phpstan-ignore nullCoalesce.variable (set by include)
+            $deviceModel->serial = ($serial ?? $deviceModel->serial) ?: null; // @phpstan-ignore nullCoalesce.variable (set by include)
 
-            if (! empty($location)) { // legacy support, remove when no longer needed
+            if (! empty($location)) { // legacy support, remove when no longer needed // @phpstan-ignore empty.variable (set by include)
                 $deviceModel->setLocation($location);
                 $deviceModel->location?->save();
             }
@@ -99,18 +117,23 @@ class Os implements Module
         $this->handleChanges($os);
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function cleanup(Device $device): void
+    public function dataExists(Device $device): bool
     {
-        // no cleanup needed
+        return false; // data part of device
     }
 
     /**
      * @inheritDoc
      */
-    public function dump(Device $device)
+    public function cleanup(Device $device): int
+    {
+        return 0; // no cleanup needed
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function dump(Device $device, string $type): ?array
     {
         // get data fresh from the database
         return [
@@ -127,12 +150,14 @@ class Os implements Module
 
         $device->icon = basename(Url::findOsImage($device->os, $device->features, null, 'images/os/'));
 
-        echo trans('device.attributes.location') . ': ' . $device->location?->display() . PHP_EOL;
+        Log::info(trans('device.attributes.location') . ': ' . $device->location?->display());
         foreach (['hardware', 'version', 'features', 'serial'] as $attribute) {
             if (isset($device->$attribute)) {
-                $device->$attribute = trim($device->$attribute);
+                $device->$attribute = trim(preg_replace('/^[\x00-\x1F\x7F-\xFF]+/', '', $device->$attribute));
             }
-            echo \App\Observers\DeviceObserver::attributeChangedMessage($attribute, $device->$attribute, $device->getOriginal($attribute)) . PHP_EOL;
+            if ($device->isDirty($attribute)) {
+                Log::info(DeviceObserver::attributeChangedMessage($attribute, $device->$attribute, $device->getOriginal($attribute)));
+            }
         }
 
         $device->save();

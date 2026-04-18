@@ -4,10 +4,8 @@
 !/.gitignore
 !/.git-blame-ignore-revs
 !/.editorconfig
-!/.scrutinizer.yml
 !/.php_cs
 !/.github/
-!/.codeclimate.yml
 !/.mention-bot
 !/.env.example
 
@@ -20,6 +18,7 @@ Thumbs.db
 config.php
 html/css/custom/*
 html/images/custom/*
+html/images/custommap/*
 includes/custom/*
 junk
 nbproject
@@ -46,3 +45,7 @@ bin/
 lib/
 lib64
 pyvenv.cfg
+
+/.phpunit.cache/storage/pail
+/.nova
+/database/testing.sqlite

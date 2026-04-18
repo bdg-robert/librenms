@@ -10,8 +10,12 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
+        if (LibreNMS\DB\Eloquent::getDriver() !== 'sqlite') {
+            DB::statement("SET TIME_ZONE='+00:00'"); // force UTC for default timestamp value
+        }
+
         Schema::create('notifications', function (Blueprint $table) {
             $table->increments('notifications_id');
             $table->string('title')->default('');
@@ -28,7 +32,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::drop('notifications');
     }

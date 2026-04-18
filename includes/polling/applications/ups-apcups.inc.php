@@ -1,4 +1,5 @@
 <?php
+
 /*
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -30,7 +31,7 @@ try {
     $json_return = json_app_get($device, $name);
 } catch (JsonAppParsingFailedException $e) {
     // Legacy script, build compatible array
-    $legacy = trim($e->getOutput());
+    $legacy = trim((string) $e->getOutput());
 
     // pull apart the legacy info and create the basic required hash with it
     [$line_volt, $load, $charge, $remaining, $bat_volt, $line_nominal, $bat_nominal] = explode("\n", $legacy);
@@ -52,7 +53,6 @@ try {
     return;
 }
 
-$rrd_name = ['app', $name, $app->app_id];
 $rrd_def = RrdDefinition::make()
     ->addDataset('charge', 'GAUGE', 0, 100)
     ->addDataset('time_remaining', 'GAUGE', 0)
@@ -72,6 +72,11 @@ $fields = [
     'load' => $json_return['data']['load'],
 ];
 
-$tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
-data_update($device, 'app', $tags, $fields);
+$tags = [
+    'name' => $name,
+    'app_id' => $app->app_id,
+    'rrd_name' => ['app', $name, $app->app_id],
+    'rrd_def' => $rrd_def,
+];
+app('Datastore')->put($device, 'app', $tags, $fields);
 update_application($app, 'OK', $fields);

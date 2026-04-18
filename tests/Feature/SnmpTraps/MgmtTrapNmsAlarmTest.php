@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MgmtTrapNmsAlarmTest.php
  *
@@ -30,7 +31,9 @@
 
 namespace LibreNMS\Tests\Feature\SnmpTraps;
 
-class MgmtTrapNmsAlarmTest extends SnmpTrapTestCase
+use LibreNMS\Enum\Severity;
+
+final class MgmtTrapNmsAlarmTest extends SnmpTrapTestCase
 {
     public function testAlarmClear(): void
     {
@@ -56,7 +59,7 @@ EKINOPS-MGNT2-NMS-MIB::mgnt2AlmLogNodeControllerIpAddress 0.0.0.0
 EKINOPS-MGNT2-NMS-MIB::mgnt2AlmLogChassisId {{ ip }}",
             "Alarm on slot {$alarm['slotNum']}, {$alarm['srcPm']} Issue: {$alarm['specific']} Possible Cause: Unknown",
             'Could not handle mgnt2TrapNMSAlarm trap CLEARED',
-            [1],
+            [Severity::Ok],
         );
     }
 
@@ -85,7 +88,7 @@ EKINOPS-MGNT2-NMS-MIB::mgnt2AlmLogNodeControllerIpAddress 0.0.0.0
 EKINOPS-MGNT2-NMS-MIB::mgnt2AlmLogChassisId {{ ip }}",
             "Alarm on slot {$alarm['slotNum']}, {$alarm['srcPm']} Issue: {$alarm['specific']} Additional info: {$alarm['addText']} Possible Cause: Unknown",
             'Could not handle mgnt2TrapNMSAlarm trap with additional text',
-            [1],
+            [Severity::Ok],
         );
     }
 
@@ -114,19 +117,19 @@ EKINOPS-MGNT2-NMS-MIB::mgnt2AlmLogNodeControllerIpAddress 0.0.0.0
 EKINOPS-MGNT2-NMS-MIB::mgnt2AlmLogChassisId {{ ip }}",
             "Alarm on slot {$alarm['slotNum']}, {$alarm['srcPm']} Port: {$alarm['portType']} {$alarm['portNum']} Issue: {$alarm['specific']} Possible Cause: {$alarm['probCause']}",
             'Could not handle mgnt2TrapNMSAlarm trap with additional text',
-            [5],
+            [Severity::Error],
         );
     }
 
     public static function genEkiAlarm(): array
     {
         return [
-            'slotNum' => rand(1, 32),
+            'slotNum' => random_int(1, 32),
             'srcPm' => str_shuffle('0123456789abcdefg'),
             'specific' => str_shuffle('0123456789abcdefg'),
             'portType' => str_shuffle('0123456789abcdefg'),
             'probCause' => str_shuffle('0123456789abcdefg'),
-            'portNum' => rand(1, 32),
+            'portNum' => random_int(1, 32),
             'addText' => str_shuffle('0123456789abcdefg'),
         ];
     }

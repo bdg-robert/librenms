@@ -1,4 +1,5 @@
 <?php
+
 /*
  * LibreNMS
  *
@@ -19,17 +20,17 @@ echo 'EATON-ATS ';
 $oids = snmpwalk_cache_oid($device, 'ats2InputFrequency', [], 'EATON-ATS2-MIB');
 foreach ($oids as $volt_id => $data) {
     $source_oid = 'EATON-ATS2-MIB::ats2InputIndex.' . $volt_id;
-    $num_id = snmp_get($device, $source_oid, '-Oqve');
+    $num_id = SnmpQuery::get($source_oid)->value();
     $volt_oid = '.1.3.6.1.4.1.534.10.2.2.2.1.3.' . $num_id;
     $index = '.1.3.6.1.4.1.534.10.2.2.2.1.1.' . $num_id;
     $descr = 'Input';
     if (count($oids) > 1) {
-        $source = snmp_get($device, $source_oid, '-Oqv');
+        $source = SnmpQuery::get($source_oid)->value();
         $descr .= " $source";
     }
     $type = 'eaton-ats';
     $divisor = 10;
     $current = $data['ats2InputFrequency'] / $divisor;
 
-    discover_sensor($valid['sensor'], 'frequency', $device, $volt_oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current);
+    discover_sensor(null, 'frequency', $device, $volt_oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $current);
 }

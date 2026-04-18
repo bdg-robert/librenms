@@ -5,10 +5,10 @@ use LibreNMS\Util\Number;
 print_optionbar_start();
 
 $link_array = [
-    'page'   => 'device',
+    'page' => 'device',
     'device' => $device['device_id'],
-    'tab'    => 'routing',
-    'proto'  => 'mpls',
+    'tab' => 'routing',
+    'proto' => 'mpls',
 ];
 
 if (! isset($vars['view'])) {
@@ -103,10 +103,10 @@ if ($vars['view'] == 'lsp') {
     $i = 0;
 
     foreach (dbFetchRows('SELECT *, `vrf_name` FROM `mpls_lsps` AS l, `vrfs` AS v WHERE `l`.`vrf_oid` = `v`.`vrf_oid` AND `l`.`device_id` = `v`.`device_id` AND `l`.`device_id` = ?  ORDER BY `l`.`mplsLspName`', [$device['device_id']]) as $lsp) {
-        if (! is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (! is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         $adminstate_status_color = $operstate_status_color = $path_status_color = 'default';
@@ -176,10 +176,10 @@ if ($vars['view'] == 'paths') {
     $i = 0;
 
     foreach (dbFetchRows('SELECT *, `mplsLspName` FROM `mpls_lsp_paths` AS `p`, `mpls_lsps` AS `l` WHERE `p`.`lsp_id` = `l`.`lsp_id` AND `p`.`device_id` = ?  ORDER BY `l`.`mplsLspName`', [$device['device_id']]) as $path) {
-        if (! is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (! is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         $adminstate_status_color = $operstate_status_color = 'default';
@@ -249,10 +249,10 @@ if ($vars['view'] == 'sdps') {
     $i = 0;
 
     foreach (dbFetchRows('SELECT * FROM `mpls_sdps` WHERE `device_id` = ? ORDER BY `sdp_oid`', [$device['device_id']]) as $sdp) {
-        if (! is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (! is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         $adminstate_status_color = $operstate_status_color = 'default';
@@ -292,7 +292,7 @@ if ($vars['view'] == 'sdps') {
 } // end sdps view
 
 if ($vars['view'] == 'sdpbinds') {
-    echo '<th><a title="The value of this object specifies the Service identifier. This value should be unique within the service domain.">Service Id</a></th>
+    echo '<th><a title="The value of this object specifies the Service identifier. This value should be unique within the service domain.">Service ID</a></th>
         <th><a title="SDP Binding identifier. SDP identifier : Service identifier">SDP Bind Id</a></th>
         <th><a title="This object specifies whether this Service SDP binding is a spoke or a mesh.">Bind Type</a></th>
         <th><a title="The value of VC Type is an enumerated integer that specifies the type of virtual circuit (VC) associated with the SDP binding">VC Type</a></th>
@@ -319,10 +319,10 @@ sapDown: The SAP associated with the service is down.">Oper State</a></th>
     $i = 0;
 
     foreach (dbFetchRows('SELECT b.*, s.svc_oid AS svcId FROM `mpls_sdp_binds` AS b LEFT JOIN `mpls_services` AS s ON `b`.`svc_id` = `s`.`svc_id` WHERE `b`.`device_id` = ? ORDER BY `sdp_oid`, `svc_oid`', [$device['device_id']]) as $sdpbind) {
-        if (! is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (! is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         $adminstate_status_color = $operstate_status_color = 'default';
@@ -358,7 +358,7 @@ sapDown: The SAP associated with the service is down.">Oper State</a></th>
 } // end sdpbinds view
 
 if ($vars['view'] == 'services') {
-    echo '<th><a title="The value of this object specifies the Service identifier. This value should be unique within the service domain.">Service Id</a></th>
+    echo '<th><a title="The value of this object specifies the Service identifier. This value should be unique within the service domain.">Service ID</a></th>
         <th><a title="The value of this object specifies the service type: e.g. epipe, tls, etc.">Type</a></th>
         <th><a title="The value of this object specifies the ID of the customer who owns this service.">Customer</a></th>
         <th><a title="The value of this object specifies the desired state of this service.">Admin Status</a></th>
@@ -384,10 +384,10 @@ vprn services are up when the service is administratively up however routing fun
     $i = 0;
 
     foreach (dbFetchRows('SELECT s.*, v.vrf_name FROM `mpls_services` AS s LEFT JOIN  `vrfs` AS v ON `s`.`svcVRouterId` = `v`.`vrf_oid` AND `s`.`device_id` = `v`.`device_id` WHERE `s`.`device_id` = ? ORDER BY `svc_oid`', [$device['device_id']]) as $svc) {
-        if (! is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (! is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         $adminstate_status_color = $operstate_status_color = 'default';
@@ -436,7 +436,7 @@ vprn services are up when the service is administratively up however routing fun
 } // end services view
 
 if ($vars['view'] == 'saps') {
-    echo '<th><a title="The value of this object specifies the Service identifier.">Service Id</a></th>
+    echo '<th><a title="The value of this object specifies the Service identifier.">Service ID</a></th>
         <th><a title="The ID of the access port where this SAP is defined.">SAP Port</a></th>
         <th><a title="The value of the label used to identify this SAP on the access port specified by sapPortId.">Encapsulation</a></th>
         <th><a title="This object indicates the type of service where this SAP is defined.">Type</a></th>
@@ -453,10 +453,10 @@ if ($vars['view'] == 'saps') {
         $port = dbFetchRow('SELECT * FROM `ports` WHERE `device_id` = ? AND `ifName` = ?', [$sap['device_id'], $sap['ifName']]);
         $port = cleanPort($port);
 
-        if (! is_integer($i / 2)) {
-            $bg_colour = \LibreNMS\Config::get('list_colour.even');
+        if (! is_int($i / 2)) {
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
         } else {
-            $bg_colour = \LibreNMS\Config::get('list_colour.odd');
+            $bg_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
         }
 
         $adminstate_status_color = $operstate_status_color = 'default';

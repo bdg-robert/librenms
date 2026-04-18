@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Search.php
  *
@@ -25,10 +26,10 @@
 
 namespace App\Http\Controllers\Ajax;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use LibreNMS\Config;
 use LibreNMS\Util\Color;
 
 class DeviceSearchController extends SearchController
@@ -84,7 +85,7 @@ class DeviceSearchController extends SearchController
     public function formatItem($device): array
     {
         $name = $device->displayName();
-        if (! request()->get('map') && $name !== $device->sysName) {
+        if (! request()->input('map') && $name !== $device->sysName) {
             $name .= " ($device->sysName)";
         }
 
@@ -96,7 +97,7 @@ class DeviceSearchController extends SearchController
             'device_ports' => $device->ports()->count(),
             'device_image' => $device->icon,
             'device_hardware' => $device->hardware,
-            'device_os' => Config::getOsSetting($device->os, 'text'),
+            'device_os' => LibrenmsConfig::getOsSetting($device->os, 'text'),
             'version' => $device->version,
             'location' => $device->location,
         ];

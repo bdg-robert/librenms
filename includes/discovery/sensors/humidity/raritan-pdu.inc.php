@@ -1,4 +1,5 @@
 <?php
+
 /**
  * raritan-pdu.inc.php
  *
@@ -25,26 +26,6 @@
 $descr = 'Processor Humidity';
 $divisor = 1;
 $multiplier = '1';
-d_echo('Humidity for Raritan PDU2');
-foreach ($pre_cache['raritan_extSensorConfig'] as $index => $data) {
-    // sensor type 10 for temperature
-    if ($data['externalSensorType'] == 'humidity') {
-        $descr = $data['externalSensorName'];
-        $oid = ".1.3.6.1.4.1.13742.6.5.5.3.1.4.$index";
-        $low_limit = $data['externalSensorLowerCriticalThreshold'];
-        $low_warn_limit = $data['externalSensorLowerWarningThreshold'];
-        $high_limit = $data['externalSensorUpperCriticalThreshold'];
-        $high_warn_limit = $data['externalSensorUpperWarningThreshold'];
-
-        $measure_data = $pre_cache['raritan_extSensorMeasure'][$index];
-        $current = ($measure_data['measurementsExternalSensorValue'] / $divisor);
-        $sensor_available = $measure_data['measurementsExternalSensorIsAvailable'];
-        $user_func = null;
-        if (is_numeric($current) && $current >= 0 && $sensor_available === 'true') {
-            discover_sensor($valid['sensor'], 'humidity', $device, $oid, 'measurementsExternalSensorValue.' . $index, 'raritan', $descr, $divisor, $multiplier, $low_limit, $low_warn_limit, $high_warn_limit, $high_limit, $current, 'snmp', null, null, $user_func);
-        }
-    }
-}
 
 d_echo('Humidity for Raritan PDU');
 $oids = snmpwalk_cache_multi_oid($device, 'externalSensorTable', [], 'PDU-MIB');
@@ -60,7 +41,7 @@ foreach ($oids as $index => $sensor) {
         $limit_low_warn = $sensor['externalSensorLowerCriticalThreshold'] / $divisor;
         $offset++;
         if (is_numeric($hum_current) && $hum_current >= 0) {
-            discover_sensor($valid['sensor'], 'humidity', $device, $oid, $offset, 'raritan', $descr, $divisor, $multiplier, $limit_low, $limit_low_warn, $limit_high_warn, $limit_high, $hum_current);
+            discover_sensor(null, 'humidity', $device, $oid, $offset, 'raritan', $descr, $divisor, $multiplier, $limit_low, $limit_low_warn, $limit_high_warn, $limit_high, $hum_current);
         }
     }
 }

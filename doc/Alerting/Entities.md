@@ -25,6 +25,21 @@ Entity | Description
 `devices.last_polled` | The the last polled datetime (yyyy-mm-dd hh:mm:ss)
 `devices.type` | The device type such as network, server, firewall, etc.
 
+## Device Stats
+
+Entity | Description
+---|---
+`device_stats.ping_loss_last` | Packet loss at last poll (percent)
+`device_stats.ping_loss_avg` | Average packet loss (percent)
+`device_stats.ping_rtt_last` | Ping RTT at last poll (ms)
+`device_stats.ping_rtt_avg` | Average ping RTT (ms)
+`device_stats.ping_rtt_diff_avg_last` | Difference between the RTT last and average ping (ms)
+`device_stats.ping_rtt_diff_avg_last` | Difference between the RTT of the ping from the last 2 polls (ms)
+
+Details on how the averages above are calculated can be found [here](../Support/Configuration.md#averaging-factor).
+
+The difference fields can be used to detect when ping times increase from their normal valuse.
+
 ## BGP Peers
 
 Entity | Description
@@ -47,7 +62,7 @@ Entity | Description
 ## Memory pools
 
 Entity | Description
-|---|---|
+---|---
 `mempools.mempool_type` | The memory pool type such as hrstorage, cmp and cemp
 `mempools.mempool_descr` | The description of the pool such as Physical memory, Virtual memory and System memory
 `mempools.mempool_perc` | The used percentage of the memory pool.

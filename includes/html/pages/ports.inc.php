@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,6 +16,7 @@
 
 use App\Models\Port;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Gate;
 
 $pagetitle[] = 'Ports';
 
@@ -61,7 +63,7 @@ foreach ($menu_options as $option => $text) {
 }
 
 $displayLists .= '<div style="float: right;">';
-$displayLists .= '<a href="' . \LibreNMS\Util\Url::generate($vars, ['format' => '', 'page' => 'csv.php', 'report' => 'ports']) . '" title="Export as CSV" target="_blank" rel="noopener">Export CSV</a> | <a href="' . \LibreNMS\Util\Url::generate($vars) . '" title="Update the browser URL to reflect the search criteria.">Update URL</a> | ';
+$displayLists .= '<a href="' . \LibreNMS\Util\Url::generate($vars) . '" title="Update the browser URL to reflect the search criteria.">Update URL</a> | ';
 
 if (isset($vars['searchbar']) && $vars['searchbar'] == 'hide') {
     $displayLists .= '<a href="' . \LibreNMS\Util\Url::generate($vars, ['searchbar' => '']) . '">Search</a>';
@@ -91,7 +93,7 @@ if ((isset($vars['searchbar']) && $vars['searchbar'] != 'hide') || ! isset($vars
     $output .= "<div class='form-group'>";
     $output .= "<select name='device_id' id='device_id' class='form-control input-sm'></select>&nbsp;";
 
-    $hasvalue = ! empty($vars['hostname']) ? "value='" . $vars['hostname'] . "'" : '';
+    $hasvalue = ! empty($vars['hostname']) ? "value='" . htmlspecialchars((string) $vars['hostname']) . "'" : '';
 
     $output .= "<input type='text' name='hostname' id='hostname' title='Hostname' class='form-control input-sm' " . $hasvalue . " placeholder='Hostname'>";
 
@@ -139,7 +141,7 @@ if ((isset($vars['searchbar']) && $vars['searchbar'] != 'hide') || ! isset($vars
     foreach ($ifSpeed as $data) {
         if ($data['ifSpeed']) {
             $speedselected = isset($vars['ifSpeed']) && $data['ifSpeed'] == $vars['ifSpeed'] ? 'selected' : '';
-            $output .= "<option value='" . $data['ifSpeed'] . "'" . $speedselected . '>' . \LibreNMS\Util\Number::formatSi($data['ifSpeed'], 2, 3, 'bps') . '</option>';
+            $output .= "<option value='" . $data['ifSpeed'] . "'" . $speedselected . '>' . \LibreNMS\Util\Number::formatSi($data['ifSpeed'], 2, 0, 'bps') . '</option>';
         }
     }
 
@@ -166,7 +168,7 @@ if ((isset($vars['searchbar']) && $vars['searchbar'] != 'hide') || ! isset($vars
     $output .= "<select name='port_descr_type' id='port_descr_type' class='form-control input-sm'>";
     $output .= "<option value=''>All Port Types</option>";
 
-    if (Auth::user()->hasGlobalRead()) {
+    if (Gate::allows('viewAll', Port::class)) {
         $sql = 'SELECT `port_descr_type` FROM `ports` GROUP BY `port_descr_type` ORDER BY `port_descr_type`';
     } else {
         $sql = 'SELECT `port_descr_type` FROM `ports` AS `I`, `devices` AS `D`, `devices_perms` AS `P`, `ports_perms` AS `PP` WHERE ((`P`.`user_id` = ? AND `P`.`device_id` = `D`.`device_id`) OR (`PP`.`user_id` = ? AND `PP`.`port_id` = `I`.`port_id` AND `I`.`device_id` = `D`.`device_id`)) AND `D`.`device_id` = `I`.`device_id` GROUP BY `port_descr_type` ORDER BY `port_descr_type`';
@@ -185,7 +187,7 @@ if ((isset($vars['searchbar']) && $vars['searchbar'] != 'hide') || ! isset($vars
             } else {
                 $portdescrib = '';
             }
-            $output .= "<option value='" . clean_bootgrid($data['port_descr_type']) . "' " . $portdescrib . '>' . ucfirst(clean_bootgrid($data['port_descr_type'])) . '</option>';
+            $output .= "<option value='" . clean_bootgrid($data['port_descr_type']) . "' " . $portdescrib . '>' . ucfirst((string) clean_bootgrid($data['port_descr_type'])) . '</option>';
         }
     }
 
@@ -193,7 +195,7 @@ if ((isset($vars['searchbar']) && $vars['searchbar'] != 'hide') || ! isset($vars
     $output .= '</div>';
     $output .= "<div class='form-group'>";
 
-    $ifaliasvalue = isset($vars['ifAlias']) ? "value='" . $vars['ifAlias'] . "'" : '';
+    $ifaliasvalue = isset($vars['ifAlias']) ? "value='" . htmlspecialchars($vars['ifAlias']) . "'" : '';
 
     $output .= '</div>';
 
@@ -234,9 +236,9 @@ if (! isset($vars['deleted'])) {
 
 if (isset($vars['purge'])) {
     if ($vars['purge'] === 'all') {
-        Port::hasAccess(Auth::user())->with(['device' => function ($query) {
+        Port::hasAccess(Auth::user())->with(['device' => function ($query): void {
             $query->select('device_id', 'hostname');
-        }])->isDeleted()->chunk(100, function ($ports) {
+        }])->isDeleted()->chunkById(100, function ($ports): void {
             foreach ($ports as $port) {
                 $port->delete();
             }
@@ -244,13 +246,13 @@ if (isset($vars['purge'])) {
     } else {
         try {
             Port::hasAccess(Auth::user())->where('port_id', $vars['purge'])->firstOrFail()->delete();
-        } catch (ModelNotFoundException $e) {
-            echo "<div class='alert alert-danger'>Port ID {$vars['purge']} not found! Could not purge port.</div>";
+        } catch (ModelNotFoundException) {
+            echo "<div class='alert alert-danger'>Port ID " . htmlspecialchars((string) $vars['purge']) . ' not found! Could not purge port.</div>';
         }
     }
 }
 
-[$format, $subformat] = explode('_', basename($vars['format']));
+[$format, $subformat] = explode('_', basename((string) $vars['format']));
 
 if (file_exists('includes/html/pages/ports/' . $format . '.inc.php')) {
     require 'includes/html/pages/ports/' . $format . '.inc.php';

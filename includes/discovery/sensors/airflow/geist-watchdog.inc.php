@@ -1,4 +1,5 @@
 <?php
+
 /**
  * geist-watchdog.inc.php
  *
@@ -22,9 +23,9 @@
  * @copyright  2017 Neil Lathwood
  * @author     Neil Lathwood <gh+n@laf.io>
  */
-$value = snmp_get($device, 'climateAirflow', '-Oqv', 'GEIST-MIB-V3');
+$value = SnmpQuery::get('GEIST-MIB-V3::climateAirflow')->value();
 $current_oid = '.1.3.6.1.4.1.21239.2.2.1.9.1';
 $descr = 'Airflow';
 if (is_numeric($value)) {
-    discover_sensor($valid['sensor'], 'airflow', $device, $current_oid, 'climateAirflow', 'geist-watchdog', $descr, 1, 1, null, null, null, null, $value);
+    discover_sensor(null, 'airflow', $device, $current_oid, 'climateAirflow', 'geist-watchdog', $descr, 1, 1, null, null, null, null, $value);
 }

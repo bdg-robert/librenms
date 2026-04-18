@@ -10,7 +10,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('ipv4_mac', function (Blueprint $table) {
             $table->id();
@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unsignedInteger('device_id')->nullable();
             $table->string('mac_address', 32)->index();
             $table->string('ipv4_address', 32);
-            $table->string('context_name', 128);
+            $table->string('context_name', 128)->nullable();
         });
     }
 
@@ -27,7 +27,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::drop('ipv4_mac');
     }

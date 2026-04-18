@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Component.php
  *
@@ -29,6 +30,7 @@ use App\Models\ComponentPref;
 use App\Models\ComponentStatusLog;
 use App\Models\Eventlog;
 use Illuminate\Support\Arr;
+use LibreNMS\Enum\Severity;
 use Log;
 
 class Component
@@ -49,9 +51,7 @@ class Component
 
     public function getComponentCount($device_id = null)
     {
-        $counts = \App\Models\Component::query()->when($device_id, function ($query, $device_id) {
-            return $query->where('device_id', $device_id);
-        })->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count', 'type');
+        $counts = \App\Models\Component::query()->when($device_id, fn ($query, $device_id) => $query->where('device_id', $device_id))->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count', 'type');
 
         return $counts->isEmpty() ? false : $counts->all();
     }
@@ -113,12 +113,8 @@ class Component
         }
 
         // get and format results as expected by receivers
-        return $query->get()->groupBy('device_id')->map(function ($group) {
-            return $group->keyBy('id')->map(function ($component) {
-                return $component->prefs->pluck('value', 'attribute')
-                    ->merge($component->only(array_keys($this->reserved)));
-            });
-        })->toArray();
+        return $query->get()->groupBy('device_id')->map(fn ($group) => $group->keyBy('id')->map(fn ($component) => $component->prefs->pluck('value', 'attribute')
+            ->merge($component->only(array_keys($this->reserved)))))->toArray();
     }
 
     public function getComponentStatus($device = null)
@@ -203,7 +199,7 @@ class Component
     {
         try {
             return ComponentStatusLog::create(['component_id' => $component_id, 'status' => $status, 'message' => $message])->id;
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             Log::debug('Failed to create component status log');
         }
 
@@ -222,7 +218,7 @@ class Component
         \App\Models\Component::whereIntegerInRaw('id', array_keys($updated))
             ->with('prefs')
             ->get()
-            ->each(function (\App\Models\Component $component) use ($device_id, $updated) {
+            ->each(function (\App\Models\Component $component) use ($device_id, $updated): void {
                 $update = $updated[$component->id];
                 unset($update['type']);  // can't change type
 
@@ -231,9 +227,7 @@ class Component
                 if ($component->isDirty()) {
                     // Log the update to the Eventlog.
                     $message = "Component $component->id has been modified: ";
-                    $message .= collect($component->getDirty())->map(function ($value, $key) {
-                        return "$key => $value";
-                    })->implode(',');
+                    $message .= collect($component->getDirty())->map(fn ($value, $key) => "$key => $value")->implode(',');
 
                     // If the Status has changed we need to add a log entry
                     if ($component->isDirty('status')) {
@@ -242,13 +236,11 @@ class Component
                     }
                     $component->save();
 
-                    Eventlog::log($message, $component->device_id, 'component', 3, $component->id);
+                    Eventlog::log($message, $component->device_id, 'component', Severity::Notice, $component->id);
                 }
 
                 // update preferences
-                $prefs = collect($updated[$component->id])->filter(function ($value, $attr) {
-                    return ! array_key_exists($attr, $this->reserved);
-                });
+                $prefs = collect($updated[$component->id])->filter(fn ($value, $attr) => ! array_key_exists($attr, $this->reserved));
 
                 $invalid = $component->prefs->keyBy('id');
 
@@ -258,18 +250,18 @@ class Component
                         $invalid->forget($existing->id);
                         $existing->fill(['value' => $value]);
                         if ($existing->isDirty()) {
-                            Eventlog::log("Component: $component->type($component->id). Attribute: $attribute, was modified from: " . $existing->getOriginal('value') . ", to: $value", $device_id, 'component', 3, $component->id);
+                            Eventlog::log("Component: $component->type($component->id). Attribute: $attribute, was modified from: " . $existing->getOriginal('value') . ", to: $value", $device_id, 'component', Severity::Notice, $component->id);
                             $existing->save();
                         }
                     } else {
                         $component->prefs()->save(new ComponentPref(['attribute' => $attribute, 'value' => $value]));
-                        Eventlog::log("Component: $component->type($component->id). Attribute: $attribute, was added with value: $value", $component->device_id, 'component', 3, $component->id);
+                        Eventlog::log("Component: $component->type($component->id). Attribute: $attribute, was added with value: $value", $component->device_id, 'component', Severity::Notice, $component->id);
                     }
                 }
 
                 foreach ($invalid as $pref) {
                     $pref->delete();
-                    Eventlog::log("Component: $component->type($component->id). Attribute: $pref->attribute, was deleted.", $component->device_id, 'component', 4);
+                    Eventlog::log("Component: $component->type($component->id). Attribute: $pref->attribute, was deleted.", $component->device_id, 'component', Severity::Warning);
                 }
             });
 

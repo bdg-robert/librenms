@@ -1,4 +1,5 @@
 <?php
+
 /*
  * LibreNMS
  *
@@ -16,8 +17,8 @@ $index = 0;
 $sensor_type = 'temperatureRadio';
 $descr = 'Internal Temp';
 $divisor = 1;
-$temperature = (float) snmp_get($device, $oid, '-Oqv', 'PT-MONITOR-MIB');
+$temperature = (float) SnmpQuery::get($oid)->value();
 
 if ($temperature != 0.0) {
-    discover_sensor($valid['sensor'], 'temperature', $device, $oid, $index, $sensor_type, $descr, $divisor, null, null, null, null, null, $temperature);
+    discover_sensor(null, 'temperature', $device, $oid, $index, $sensor_type, $descr, $divisor, 1, null, null, null, null, $temperature);
 }

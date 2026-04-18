@@ -4,7 +4,7 @@
 $oids = snmp_walk($device, 'rPDUStatusPhaseIndex', '-OsqnU', 'PowerNet-MIB');
 if (isset($oids) && $oids) {
     d_echo($oids . "\n");
-    $oids = trim($oids);
+    $oids = trim((string) $oids);
     if ($oids) {
         echo 'APC PowerNet-MIB Phase ';
     }
@@ -26,20 +26,20 @@ if (isset($oids) && $oids) {
             // rPDULoadPhaseConfigLowLoadThreshold
             $warnlimit_oid = '.1.3.6.1.4.1.318.1.1.12.2.2.1.1.3.' . $index;
             // rPDULoadPhaseConfigNearOverloadThreshold
-            $phase = snmp_get($device, $phase_oid, '-Oqv', '');
-            $current = (snmp_get($device, $current_oid, '-Oqv', '') / $precision);
-            $limit = snmp_get($device, $limit_oid, '-Oqv', '');
+            $phase = SnmpQuery::get($phase_oid)->value();
+            $current = (SnmpQuery::get($current_oid)->value() / $precision);
+            $limit = SnmpQuery::get($limit_oid)->value();
             // No / $precision here! Nice, APC!
-            $lowlimit = snmp_get($device, $lowlimit_oid, '-Oqv', '');
+            $lowlimit = SnmpQuery::get($lowlimit_oid)->value();
             // No / $precision here! Nice, APC!
-            $warnlimit = snmp_get($device, $warnlimit_oid, '-Oqv', '');
+            $warnlimit = SnmpQuery::get($warnlimit_oid)->value();
             // No / $precision here! Nice, APC!
             if (count(explode("\n", $oids)) != 1) {
                 $descr = "Phase $phase";
             } else {
                 $descr = 'Output';
             }
-            discover_sensor($valid['sensor'], 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
+            discover_sensor(null, 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
         }
     }
 }
@@ -47,7 +47,7 @@ unset($oids);
 $oids = snmp_walk($device, 'rPDULoadStatusPhaseNumber', '-OsqnU', 'PowerNet-MIB');
 if (isset($oids) && $oids) {
     d_echo($oids . "\n");
-    $oids = trim($oids);
+    $oids = trim((string) $oids);
     if ($oids) {
         echo 'APC PowerNet-MIB Phase ';
     }
@@ -73,26 +73,26 @@ if (isset($oids) && $oids) {
             // rPDULoadPhaseConfigLowLoadThreshold
             $warnlimit_oid = '.1.3.6.1.4.1.318.1.1.12.2.2.1.1.3.' . $phasenum;
             // rPDULoadPhaseConfigNearOverloadThreshold
-            $phase = snmp_get($device, $phase_oid, '-Oqv', '');
-            $current = (snmp_get($device, $current_oid, '-Oqv', '') / $precision);
-            $limit = snmp_get($device, $limit_oid, '-Oqv', '');
+            $phase = SnmpQuery::get($phase_oid)->value();
+            $current = (SnmpQuery::get($current_oid)->value() / $precision);
+            $limit = SnmpQuery::get($limit_oid)->value();
             // No / $precision here! Nice, APC!
-            $lowlimit = snmp_get($device, $lowlimit_oid, '-Oqv', '');
+            $lowlimit = SnmpQuery::get($lowlimit_oid)->value();
             // No / $precision here! Nice, APC!
-            $warnlimit = snmp_get($device, $warnlimit_oid, '-Oqv', '');
+            $warnlimit = SnmpQuery::get($warnlimit_oid)->value();
             // No / $precision here! Nice, APC!
             if (count(explode("\n", $oids)) != 1) {
                 $descr = "Phase $phase";
             } else {
                 $descr = 'Output';
             }
-            discover_sensor($valid['sensor'], 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
+            discover_sensor(null, 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
         }
     }
 }
 unset($oids);
 // v2 firmware- first bank is total, v3 firmware, 3rd bank is total
-$bank_count = snmp_get($device, 'rPDULoadDevNumBanks.0', '-Oqv', 'PowerNet-MIB');
+$bank_count = SnmpQuery::get('PowerNet-MIB::rPDULoadDevNumBanks.0')->value();
 if ($bank_count > 0) {
     $oids = snmp_walk($device, 'rPDULoadStatusBankNumber', '-OsqnU', 'PowerNet-MIB');
 }
@@ -100,7 +100,7 @@ if ($bank_count > 0) {
 if (isset($oids) && $oids) {
     echo 'APC PowerNet-MIB Banks ';
     d_echo($oids . "\n");
-    $oids = trim($oids);
+    $oids = trim((string) $oids);
     $type = 'apc';
     $precision = '10';
     foreach (explode("\n", $oids) as $data) {
@@ -124,13 +124,13 @@ if (isset($oids) && $oids) {
             // rPDULoadBankConfigLowLoadThreshold
             $warnlimit_oid = '.1.3.6.1.4.1.318.1.1.12.2.4.1.1.3.' . $banknum;
             // rPDULoadBankConfigNearOverloadThreshold
-            $bank = snmp_get($device, $bank_oid, '-Oqv', '');
-            $current = (snmp_get($device, $current_oid, '-Oqv', '') / $precision);
-            $limit = snmp_get($device, $limit_oid, '-Oqv', '');
-            $lowlimit = snmp_get($device, $lowlimit_oid, '-Oqv', '');
-            $warnlimit = snmp_get($device, $warnlimit_oid, '-Oqv', '');
+            $bank = SnmpQuery::get($bank_oid)->value();
+            $current = (SnmpQuery::get($current_oid)->value() / $precision);
+            $limit = SnmpQuery::get($limit_oid)->value();
+            $lowlimit = SnmpQuery::get($lowlimit_oid)->value();
+            $warnlimit = SnmpQuery::get($warnlimit_oid)->value();
             if ($limit != -1 && $lowlimit != -1 && $warnlimit != -1) {
-                discover_sensor($valid['sensor'], 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
+                discover_sensor(null, 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
             }
         }
     }
@@ -142,7 +142,7 @@ $oids = snmp_walk($device, '.1.3.6.1.4.1.318.1.1.26.9.4.3.1.1', '-t 30 -OsqnU', 
 if (isset($oids) && $oids) {
     echo 'APC PowerNet-MIB Outlets ';
     d_echo($oids . "\n");
-    $oids = trim($oids);
+    $oids = trim((string) $oids);
     $type = 'apc';
     $precision = '10';
     foreach (explode("\n", $oids) as $data) {
@@ -163,21 +163,21 @@ if (isset($oids) && $oids) {
             // rPDU2OutletMeteredConfigNearOverloadCurrentThreshold
             $name_oid = '.1.3.6.1.4.1.318.1.1.26.9.4.3.1.3.' . $index;
             // rPDU2OutletMeteredStatusName
-            $voltage = snmp_get($device, $voltage_oid, '-Oqv', '');
-            $current = (snmp_get($device, $current_oid, '-Oqv', '') / $precision);
+            $voltage = SnmpQuery::get($voltage_oid)->value();
+            $current = (SnmpQuery::get($current_oid)->value() / $precision);
 
             $limit = null;
             $lowlimit = null;
             $warnlimit = null;
 
             if ($voltage) {
-                $limit = (snmp_get($device, $limit_oid, '-Oqv', '') / $voltage);
-                $lowlimit = (snmp_get($device, $lowlimit_oid, '-Oqv', '') / $voltage);
-                $warnlimit = (snmp_get($device, $warnlimit_oid, '-Oqv', '') / $voltage);
+                $limit = (SnmpQuery::get($limit_oid)->value() / $voltage);
+                $lowlimit = (SnmpQuery::get($lowlimit_oid)->value() / $voltage);
+                $warnlimit = (SnmpQuery::get($warnlimit_oid)->value() / $voltage);
             }
 
-            $descr = 'Outlet ' . $index . ' - ' . snmp_get($device, $name_oid, '-Oqv', '');
-            discover_sensor($valid['sensor'], 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
+            $descr = 'Outlet ' . $index . ' - ' . SnmpQuery::get($name_oid)->value();
+            discover_sensor(null, 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
         }
     }
 }
@@ -188,7 +188,7 @@ if (isset($oids) && $oids) {
     $type = 'apc';
     $precision = '10';
     d_echo($oids . "\n");
-    $oids = trim($oids);
+    $oids = trim((string) $oids);
     if ($oids) {
         echo 'APC PowerNet-MIB ATS ';
     }
@@ -201,22 +201,22 @@ if (isset($oids) && $oids) {
     $warnlimit_oid = '.1.3.6.1.4.1.318.1.1.8.4.16.1.4.1';
     // atsConfigPhaseNearOverLoadThreshold
     $index = 1;
-    $current = (snmp_get($device, $current_oid, '-Oqv', '') / $precision);
-    $limit = snmp_get($device, $limit_oid, '-Oqv', '');
+    $current = (SnmpQuery::get($current_oid)->value() / $precision);
+    $limit = SnmpQuery::get($limit_oid)->value();
     // No / $precision here! Nice, APC!
-    $lowlimit = snmp_get($device, $lowlimit_oid, '-Oqv', '');
+    $lowlimit = SnmpQuery::get($lowlimit_oid)->value();
     // No / $precision here! Nice, APC!
-    $warnlimit = snmp_get($device, $warnlimit_oid, '-Oqv', '');
+    $warnlimit = SnmpQuery::get($warnlimit_oid)->value();
     // No / $precision here! Nice, APC!
     $descr = 'Output Feed';
-    discover_sensor($valid['sensor'], 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
+    discover_sensor(null, 'current', $device, $current_oid, $index, $type, $descr, '10', '1', $lowlimit, null, $warnlimit, $limit, $current);
 }
 unset($oids);
 
 // UPS
 
 $phasecount = $pre_cache['apcups_phase_count'];
-if ($phasecount > 1) {
+if ($phasecount > 2) {
     $oids = snmpwalk_cache_oid($device, 'upsPhaseOutputCurrent', [], 'PowerNet-MIB');
     $in_oids = snmpwalk_cache_oid($device, 'upsPhaseInputCurrent', $in_oids, 'PowerNet-MIB');
 } else {
@@ -229,12 +229,12 @@ if (isset($in_oids)) {
         $divisor = 10;
         $current = $data['upsPhaseInputCurrent'] / $divisor;
         $in_index = '3.1.4.' . $index;
-        if (substr($index, 0, 1) == 2 && $data['upsPhaseInputCurrent'] != -1) {
-            $descr = 'Phase ' . substr($index, -1) . ' Bypass Input';
-            discover_sensor($valid['sensor'], 'current', $device, $current_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $current);
-        } elseif (substr($index, 0, 1) == 1) {
-            $descr = 'Phase ' . substr($index, -1) . ' Input';
-            discover_sensor($valid['sensor'], 'current', $device, $current_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $current);
+        if (substr((string) $index, 0, 1) == 2 && $data['upsPhaseInputCurrent'] != -1) {
+            $descr = 'Phase ' . substr((string) $index, -1) . ' Bypass Input';
+            discover_sensor(null, 'current', $device, $current_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $current);
+        } elseif (substr((string) $index, 0, 1) == 1) {
+            $descr = 'Phase ' . substr((string) $index, -1) . ' Input';
+            discover_sensor(null, 'current', $device, $current_oid, $in_index, $type, $descr, $divisor, 0, null, null, null, null, $current);
         }
     }
 }
@@ -242,7 +242,7 @@ unset($index);
 unset($data);
 foreach ($oids as $index => $data) {
     $type = 'apcUPS';
-    $descr = 'Phase ' . substr($index, -1) . ' Output';
+    $descr = 'Phase ' . substr((string) $index, -1) . ' Output';
     if (isset($data['upsHighPrecOutputCurrent'])) {
         $current_oid = '.1.3.6.1.4.1.318.1.1.1.4.3.4.' . $index;
         $divisor = 10;
@@ -253,7 +253,7 @@ foreach ($oids as $index => $data) {
         $current = $data['upsPhaseOutputCurrent'] / $divisor;
     }
     if ($current >= -1) {
-        discover_sensor($valid['sensor'], 'current', $device, $current_oid, $index, $type, $descr, $divisor, 1, null, null, null, null, $current);
+        discover_sensor(null, 'current', $device, $current_oid, $index, $type, $descr, $divisor, 1, null, null, null, null, $current);
     }
 }
 unset($index);

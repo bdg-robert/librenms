@@ -1,11 +1,10 @@
 <?php
 
-$cefs = [];
-$cefs = snmpwalk_cache_threepart_oid($device, 'CISCO-CEF-MIB::cefSwitchingPath', $cefs);
+$cefs = SnmpQuery::hideMib()->walk('CISCO-CEF-MIB::cefSwitchingPath')->table(3);
 d_echo($cefs);
 
 if (is_array($cefs)) {
-    if (! is_array($entity_array)) {
+    if (! isset($entity_array) || ! is_array($entity_array)) {
         echo 'Caching OIDs: ';
         $entity_array = [];
         echo ' entPhysicalDescr';

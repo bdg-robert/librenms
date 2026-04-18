@@ -9,24 +9,21 @@ $unit_text = 'SIP Peers';
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'asterisk', 'stats', $app->app_id]);
 
 $astsip_access_array = [
-    'sippeers'        => 'Total Peers',
-    'sipmononline'    => 'Online (Monitored)',
-    'sipmonoffline'   => 'Offline (Monitored)',
-    'sipunmononline'  => 'Online (Unmonitored)',
+    'sippeers' => 'Total Peers',
+    'sipmononline' => 'Online (Monitored)',
+    'sipmonoffline' => 'Offline (Monitored)',
+    'sipunmononline' => 'Online (Unmonitored)',
     'sipunmonoffline' => 'Offline (Unmonitored)',
 ];
 
 $colours = 'mixed';
 $rrd_list = [];
 
-if (Rrd::checkRrdExists($rrd_filename)) {
-    foreach ($astsip_access_array as $ds => $descr) {
-        $rrd_list[$i]['filename'] = $rrd_filename;
-        $rrd_list[$i]['descr'] = $descr;
-        $rrd_list[$i]['ds'] = $ds;
-        $i++;
-    }
-} else {
-    echo "file missing: $rrd_filename";
+foreach ($astsip_access_array as $ds => $descr) {
+    $rrd_list[$i]['filename'] = $rrd_filename;
+    $rrd_list[$i]['descr'] = $descr;
+    $rrd_list[$i]['ds'] = $ds;
+    $i++;
 }
+
 require 'includes/html/graphs/generic_multi_line.inc.php';

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SchemaTest.php
  *
@@ -27,7 +28,7 @@ namespace LibreNMS\Tests;
 
 use LibreNMS\DB\Schema;
 
-class SchemaTest extends TestCase
+final class SchemaTest extends TestCase
 {
     private $mock_schema = [
         'bills' => [
@@ -112,18 +113,16 @@ class SchemaTest extends TestCase
     private function getSchemaMock()
     {
         // use a Mock so we don't have to rely on the schema being stable.
-
         $schema = $this->getMockBuilder(Schema::class)
             ->onlyMethods(['getSchema'])
             ->getMock();
 
         $schema->method('getSchema')->willReturn($this->mock_schema);
 
-        /** @var $schema Schema Mock of Schema */
         return $schema;
     }
 
-    public function testTableRelationships()
+    public function testTableRelationships(): void
     {
         // mock getSchema
         $schema = $this->getSchemaMock();
@@ -143,7 +142,7 @@ class SchemaTest extends TestCase
         $this->assertEquals($expected, $schema->getTableRelationships());
     }
 
-    public function testFindRelationshipPath()
+    public function testFindRelationshipPath(): void
     {
         $schema = $this->getSchemaMock();
 

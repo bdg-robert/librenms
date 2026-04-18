@@ -7,11 +7,11 @@ $rrd_filename = Rrd::name($device['hostname'], ['app', 'opensips', $app->app_id]
 
 $array = [
     'total_memory' => [
-        'descr'  => 'Total',
+        'descr' => 'Total',
         'colour' => '22FF22',
     ],
     'used_memory' => [
-        'descr'  => 'Used',
+        'descr' => 'Used',
         'colour' => '0022FF',
     ],
 ];
@@ -26,7 +26,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 $colours = 'mixed';

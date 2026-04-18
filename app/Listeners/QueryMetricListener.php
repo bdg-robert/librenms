@@ -21,10 +21,10 @@ class QueryMetricListener
     /**
      * Handle the event.
      *
-     * @param  \Illuminate\Database\Events\QueryExecuted  $event
+     * @param  QueryExecuted  $event
      * @return void
      */
-    public function handle(QueryExecuted $event)
+    public function handle(QueryExecuted $event): void
     {
         $type = strtolower(substr($event->sql, 0, strpos($event->sql, ' ')));
         app(MeasurementManager::class)->recordDb(Measurement::make($type, $event->time ? $event->time / 100 : 0));

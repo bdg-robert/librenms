@@ -1,4 +1,5 @@
 <?php
+
 /**
  * NominatimApi.php
  *
@@ -40,15 +41,13 @@ class NominatimApi extends BaseApi implements Geocoder
     protected function parseLatLng(array $data): array
     {
         return [
-            'lat' => isset($data[0]['lat']) ? $data[0]['lat'] : 0,
-            'lng' => isset($data[0]['lon']) ? $data[0]['lon'] : 0,
+            'lat' => $data[0]['lat'] ?? 0,
+            'lng' => $data[0]['lon'] ?? 0,
         ];
     }
 
     /**
-     * Build Guzzle request option array
-     *
-     * @throws \Exception you may throw an Exception if validation fails
+     * Build request option array
      */
     protected function buildGeocodingOptions(string $address): array
     {
@@ -60,7 +59,7 @@ class NominatimApi extends BaseApi implements Geocoder
             ],
             'headers' => [
                 'User-Agent' => 'LibreNMS',
-                'Accept'     => 'application/json',
+                'Accept' => 'application/json',
             ],
         ];
     }

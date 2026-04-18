@@ -26,15 +26,17 @@ class PortStp extends PortRelatedModel implements Keyable
         'forwardTransitions',
     ];
 
-    public function getCompositeKey()
+    public function getCompositeKey(): string
     {
         return "$this->vlan-$this->port_index";
     }
 
     // ---- Define Relationships ----
-
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Device, $this>
+     */
     public function device(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Device::class, 'device_id', 'device_id');
+        return $this->belongsTo(Device::class, 'device_id', 'device_id');
     }
 }

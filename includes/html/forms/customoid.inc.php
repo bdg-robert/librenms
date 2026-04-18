@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\Customoid;
+
 header('Content-type: application/json');
 
-if (! Auth::user()->hasGlobalAdmin()) {
+if (Gate::none(['customoid.create', 'customoid.update'])) {
     exit(json_encode([
-        'status'  => 'error',
+        'status' => 'error',
         'message' => 'Need to be admin',
     ]));
 }
@@ -15,27 +17,19 @@ $message = '';
 $device_id = $_POST['device_id'];
 $id = $_POST['ccustomoid_id'];
 $action = $_POST['action'];
-$name = strip_tags($_POST['name']);
-$oid = strip_tags($_POST['oid']);
-$datatype = strip_tags($_POST['datatype']);
-if (! empty($_POST['unit'])) {
-    $unit = $_POST['unit'];
-} else {
-    $unit = ['NULL'];
-}
-$limit = set_numeric($_POST['limit'], ['NULL']);
-$limit_warn = set_numeric($_POST['limit_warn'], ['NULL']);
-$limit_low = set_numeric($_POST['limit_low'], ['NULL']);
-$limit_low_warn = set_numeric($_POST['limit_low_warn'], ['NULL']);
+$name = strip_tags((string) $_POST['name']);
+$oid = strip_tags((string) $_POST['oid']);
+$datatype = strip_tags((string) $_POST['datatype']);
+$unit = strip_tags((string) $_POST['unit']);
+$limit = $_POST['limit'];
+$limit_warn = $_POST['limit_warn'];
+$limit_low = $_POST['limit_low'];
+$limit_low_warn = $_POST['limit_low_warn'];
 $alerts = ($_POST['alerts'] == 'on' ? 1 : 0);
 $passed = ($_POST['passed'] == 'on' ? 1 : 0);
 $divisor = set_numeric($_POST['divisor'], 1);
 $multiplier = set_numeric($_POST['multiplier'], 1);
-if (! empty($_POST['user_func'])) {
-    $user_func = $_POST['user_func'];
-} else {
-    $user_func = ['NULL'];
-}
+$user_func = $_POST['user_func'];
 
 if ($action == 'test') {
     $query = 'SELECT * FROM `devices` WHERE `device_id` = ? LIMIT 1';
@@ -47,7 +41,7 @@ if ($action == 'test') {
         $oid_value = $rawdata;
     } elseif (
         ! empty($_POST['unit']) &&
-        str_i_contains($rawdata, $unit) &&
+        Str::contains($rawdata, $unit, ignoreCase: true) &&
         is_numeric(trim(str_replace($unit, '', $rawdata)))
     ) {
         $oid_value = trim(str_replace($unit, '', $rawdata));
@@ -74,21 +68,22 @@ if ($action == 'test') {
     }
 } else {
     if (is_numeric($id) && $id > 0) {
+        Gate::authorize('customoid.update');
         if (dbUpdate(
             [
-                'customoid_descr'          => $name,
-                'customoid_oid'            => $oid,
-                'customoid_datatype'       => $datatype,
-                'customoid_unit'           => $unit,
-                'customoid_divisor'        => $divisor,
-                'customoid_multiplier'     => $multiplier,
-                'customoid_limit'          => $limit,
-                'customoid_limit_warn'     => $limit_warn,
-                'customoid_limit_low'      => $limit_low,
+                'customoid_descr' => $name,
+                'customoid_oid' => $oid,
+                'customoid_datatype' => $datatype,
+                'customoid_unit' => $unit,
+                'customoid_divisor' => $divisor,
+                'customoid_multiplier' => $multiplier,
+                'customoid_limit' => $limit,
+                'customoid_limit_warn' => $limit_warn,
+                'customoid_limit_low' => $limit_low,
                 'customoid_limit_low_warn' => $limit_low_warn,
-                'customoid_alert'          => $alerts,
-                'customoid_passed'         => $passed,
-                'user_func'                => $user_func,
+                'customoid_alert' => $alerts,
+                'customoid_passed' => $passed,
+                'user_func' => $user_func,
             ],
             'customoids',
             '`customoid_id` = ?',
@@ -101,25 +96,26 @@ if ($action == 'test') {
         }
     } elseif (empty($name)) {
         $message = 'No OID name provided';
-    } elseif (dbFetchCell('SELECT 1 FROM `customoids` WHERE `customoid_descr` = ? AND `device_id`=?', [$name, $device_id])) {
+    } elseif (Customoid::where('customoid_descr', $name)->where('device_id', $device_id)->exists()) {
         $message = "OID named <i>$name</i> on this device already exists";
     } else {
+        Gate::authorize('customoid.create');
         $id = dbInsert(
             [
-                'device_id'                => $device_id,
-                'customoid_descr'          => $name,
-                'customoid_oid'            => $oid,
-                'customoid_datatype'       => $datatype,
-                'customoid_unit'           => $unit,
-                'customoid_divisor'        => $divisor,
-                'customoid_multiplier'     => $multiplier,
-                'customoid_limit'          => $limit,
-                'customoid_limit_warn'     => $limit_warn,
-                'customoid_limit_low'      => $limit_low,
+                'device_id' => $device_id,
+                'customoid_descr' => $name,
+                'customoid_oid' => $oid,
+                'customoid_datatype' => $datatype,
+                'customoid_unit' => $unit,
+                'customoid_divisor' => $divisor,
+                'customoid_multiplier' => $multiplier,
+                'customoid_limit' => $limit,
+                'customoid_limit_warn' => $limit_warn,
+                'customoid_limit_low' => $limit_low,
                 'customoid_limit_low_warn' => $limit_low_warn,
-                'customoid_alert'          => $alerts,
-                'customoid_passed'         => $passed,
-                'user_func'                => $user_func,
+                'customoid_alert' => $alerts,
+                'customoid_passed' => $passed,
+                'user_func' => $user_func,
             ],
             'customoids'
         );
@@ -133,6 +129,6 @@ if ($action == 'test') {
 }
 
 exit(json_encode([
-    'status'       => $status,
-    'message'      => $message,
+    'status' => $status,
+    'message' => $message,
 ]));

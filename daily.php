@@ -6,16 +6,18 @@
  * (c) 2013 LibreNMS Contributors
  */
 
+use App\Facades\LibrenmsConfig;
+use App\Models\AlertRule;
 use App\Models\Device;
 use App\Models\DeviceGroup;
 use Illuminate\Database\Eloquent\Collection;
-use LibreNMS\Alert\AlertDB;
-use LibreNMS\Config;
+use LibreNMS\Alerting\QueryBuilderParser;
 use LibreNMS\Util\Debug;
 use LibreNMS\Util\Notifications;
 use LibreNMS\Validations\Php;
 
 $options = getopt('df:o:t:r:');
+$options['f'] = isset($options['f']) ? $options['f'] : '';
 
 /**
  * Scripts without dependencies
@@ -47,13 +49,13 @@ if (isset($options['d'])) {
 }
 
 if ($options['f'] === 'update') {
-    if (! Config::get('update')) {
+    if (! LibrenmsConfig::get('update')) {
         exit(0);
     }
 
-    if (Config::get('update_channel') == 'master') {
+    if (LibrenmsConfig::get('update_channel') == 'master') {
         exit(1);
-    } elseif (Config::get('update_channel') == 'release') {
+    } elseif (LibrenmsConfig::get('update_channel') == 'release') {
         exit(3);
     }
     exit(0);
@@ -62,12 +64,12 @@ if ($options['f'] === 'update') {
 if ($options['f'] === 'rrd_purge') {
     $lock = Cache::lock('rrd_purge', 86000);
     if ($lock->get()) {
-        $rrd_purge = Config::get('rrd_purge');
-        $rrd_dir = Config::get('rrd_dir');
+        $rrd_purge = LibrenmsConfig::get('rrd_purge');
+        $rrd_dir = LibrenmsConfig::get('rrd_dir');
 
         if (is_numeric($rrd_purge) && $rrd_purge > 0) {
-            $cmd = "find $rrd_dir -type f -mtime +$rrd_purge -print -exec rm -f {} +";
-            $purge = `$cmd`;
+            $cmd = "find $rrd_dir -name .gitignore -prune -o -type f -mtime +$rrd_purge -print -exec rm -f {} +";
+            $purge = shell_exec($cmd);
             if (! empty($purge)) {
                 echo "Purged the following RRD files due to old age (over $rrd_purge days old):\n";
                 echo $purge;
@@ -77,44 +79,21 @@ if ($options['f'] === 'rrd_purge') {
     }
 }
 
-if ($options['f'] === 'syslog') {
-    $lock = Cache::lock('syslog_purge', 86000);
-    if ($lock->get()) {
-        $syslog_purge = Config::get('syslog_purge');
-
-        if (is_numeric($syslog_purge)) {
-            $rows = (int) dbFetchCell('SELECT MIN(seq) FROM syslog');
-            $initial_rows = $rows;
-            while (true) {
-                $limit = dbFetchCell('SELECT seq FROM syslog WHERE seq >= ? ORDER BY seq LIMIT 1000,1', [$rows]);
-                if (empty($limit)) {
-                    break;
-                }
-
-                // Deletes are done in blocks of 1000 to avoid a single very large operation.
-                if (dbDelete('syslog', 'seq >= ? AND seq < ? AND timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)', [$rows, $limit, $syslog_purge]) > 0) {
-                    $rows = $limit;
-                } else {
-                    break;
-                }
-            }
-
-            dbDelete('syslog', 'seq >= ? AND timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)', [$rows, $syslog_purge]);
-            $final_rows = $rows - $initial_rows;
-            echo "Syslog cleared for entries over $syslog_purge days (about $final_rows rows)\n";
-        }
-        $lock->release();
-    }
-}
-
 if ($options['f'] === 'ports_fdb') {
     $ret = lock_and_purge('ports_fdb', 'updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)');
     exit($ret);
 }
+
+if ($options['f'] === 'ports_nac') {
+    $ret = lock_and_purge('ports_nac', 'updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)');
+    exit($ret);
+}
+
 if ($options['f'] === 'route') {
     $ret = lock_and_purge('route', 'updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)');
     exit($ret);
 }
+
 if ($options['f'] === 'eventlog') {
     $ret = lock_and_purge('eventlog', 'datetime < DATE_SUB(NOW(), INTERVAL ? DAY)');
     exit($ret);
@@ -129,18 +108,13 @@ if ($options['f'] === 'callback') {
     \LibreNMS\Util\Stats::submit();
 }
 
-if ($options['f'] === 'device_perf') {
-    $ret = lock_and_purge('device_perf', 'timestamp < DATE_SUB(NOW(),INTERVAL ? DAY)');
-    exit($ret);
-}
-
 if ($options['f'] === 'ports_purge') {
-    if (Config::get('ports_purge')) {
-        $lock = Cache::lock('syslog_purge', 86000);
+    if (LibrenmsConfig::get('ports_purge')) {
+        $lock = Cache::lock('ports_purge', 86000);
         if ($lock->get()) {
             \App\Models\Port::query()->with(['device' => function ($query) {
                 $query->select('device_id', 'hostname');
-            }])->isDeleted()->chunk(100, function ($ports) {
+            }])->isDeleted()->chunkById(100, function ($ports) {
                 foreach ($ports as $port) {
                     $port->delete();
                 }
@@ -154,7 +128,7 @@ if ($options['f'] === 'ports_purge') {
 if ($options['f'] === 'handle_notifiable') {
     if ($options['t'] === 'update') {
         $title = 'Error: Daily update failed';
-        $poller_name = Config::get('distributed_poller_name');
+        $poller_name = LibrenmsConfig::get('distributed_poller_name');
 
         if ($options['r']) {
             // result was a success (1), remove the notification
@@ -172,7 +146,7 @@ if ($options['f'] === 'handle_notifiable') {
         $error_title = 'Error: PHP version too low';
 
         // if update is not set to false and version is min or newer
-        if (Config::get('update') && $options['r']) {
+        if (LibrenmsConfig::get('update') && $options['r']) {
             if (preg_match('/^php\d{2}/', $options['r'])) {
                 $phpver = Php::PHP_MIN_VERSION;
                 $eol_date = Php::PHP_MIN_VERSION_DATE;
@@ -192,7 +166,7 @@ if ($options['f'] === 'handle_notifiable') {
         $error_title = 'Error: Python requirements not met';
 
         // if update is not set to false and version is min or newer
-        if (Config::get('update') && $options['r']) {
+        if (LibrenmsConfig::get('update') && $options['r']) {
             if ($options['r'] === 'python3-missing') {
                 Notifications::create($error_title,
                     'Python 3 is required to run LibreNMS as of May, 2020. You need to install Python 3 to continue to receive updates.  If you do not install Python 3 and required packages, LibreNMS will continue to function but stop receiving bug fixes and updates.',
@@ -212,14 +186,6 @@ if ($options['f'] === 'handle_notifiable') {
 
         Notifications::remove($error_title);
         exit(0);
-    }
-}
-
-if ($options['f'] === 'notifications') {
-    $lock = Cache::lock('notifications', 86000);
-    if ($lock->get()) {
-        Notifications::post();
-        $lock->release();
     }
 }
 
@@ -258,27 +224,16 @@ if ($options['f'] === 'alert_log') {
     // we want only to keep the last alert_log that contains the alert details
 
     $msg = "Deleting history of active alert_logs more than %d days\n";
-    $sql = 'DELETE
+    $sql = 'DELETE alert_log FROM
+                alert_log
+                INNER JOIN
+                (SELECT device_id, rule_id, max(time_logged) AS mtime_logged
                     FROM alert_log
-                    WHERE id IN(
-                        SELECT id FROM(
-                            SELECT id
-                            FROM alert_log a1
-                            WHERE
-                                time_logged < DATE_SUB(NOW(),INTERVAL ? DAY)
-                                AND (device_id, rule_id, time_logged) NOT IN (
-                                    SELECT device_id, rule_id, max(time_logged)
-                                    FROM alert_log a2 WHERE a1.device_id = a2.device_id AND a1.rule_id = a2.rule_id
-                                    AND a2.time_logged < DATE_SUB(NOW(),INTERVAL ? DAY)
-                                )
-                        ) as c
-                    )
-                ';
-    $purge_duration = Config::get('alert_log_purge');
-    if (! (is_numeric($purge_duration) && $purge_duration > 0)) {
-        return -2;
-    }
-    $sql = preg_replace('/\?/', strval($purge_duration), $sql, 1);
+                    WHERE time_logged < DATE_SUB(NOW(), INTERVAL ? DAY)
+                    GROUP BY device_id, rule_id) AS b
+                ON
+                    alert_log.device_id = b.device_id AND alert_log.rule_id = b.rule_id
+                WHERE alert_log.time_logged < b.mtime_logged';
     lock_and_purge_query($table, $sql, $msg);
 }
 
@@ -286,11 +241,11 @@ if ($options['f'] === 'purgeusers') {
     $lock = Cache::lock('purgeusers', 86000);
     if ($lock->get()) {
         $purge = 0;
-        if (is_numeric(\LibreNMS\Config::get('radius.users_purge')) && Config::get('auth_mechanism') === 'radius') {
-            $purge = \LibreNMS\Config::get('radius.users_purge');
+        if (is_numeric(\App\Facades\LibrenmsConfig::get('radius.users_purge')) && LibrenmsConfig::get('auth_mechanism') === 'radius') {
+            $purge = \App\Facades\LibrenmsConfig::get('radius.users_purge');
         }
-        if (is_numeric(\LibreNMS\Config::get('active_directory.users_purge')) && Config::get('auth_mechanism') === 'active_directory') {
-            $purge = \LibreNMS\Config::get('active_directory.users_purge');
+        if (is_numeric(\App\Facades\LibrenmsConfig::get('active_directory.users_purge')) && LibrenmsConfig::get('auth_mechanism') === 'active_directory') {
+            $purge = \App\Facades\LibrenmsConfig::get('active_directory.users_purge');
         }
         if ($purge > 0) {
             $users = \App\Models\AuthLog::where('datetime', '>=', \Carbon\Carbon::now()->subDays($purge))
@@ -310,15 +265,11 @@ if ($options['f'] === 'refresh_alert_rules') {
     $lock = Cache::lock('refresh_alert_rules', 86000);
     if ($lock->get()) {
         echo 'Refreshing alert rules queries' . PHP_EOL;
-        $rules = dbFetchRows('SELECT `id`, `rule`, `builder`, `extra` FROM `alert_rules`');
+        $rules = AlertRule::query()->select(['id', 'builder', 'extra'])->get();
         foreach ($rules as $rule) {
-            $rule_options = json_decode($rule['extra'], true);
-            if ($rule_options['options']['override_query'] !== 'on') {
-                $data['query'] = AlertDB::genSQL($rule['rule'], $rule['builder']);
-                if (! empty($data['query'])) {
-                    dbUpdate($data, 'alert_rules', 'id=?', [$rule['id']]);
-                    unset($data);
-                }
+            if (($rule->extra['options']['override_query'] ?? false) !== 'on' && ($rule->extra['options']['override_query'] ?? false) !== true) {
+                $rule->query = QueryBuilderParser::fromJson($rule->builder)->toSql();
+                $rule->save();
             }
         }
         $lock->release();
@@ -341,12 +292,12 @@ if ($options['f'] === 'refresh_device_groups') {
 }
 
 if ($options['f'] === 'notify') {
-    if (\LibreNMS\Config::has('alert.default_mail')) {
-        send_mail(
-            \LibreNMS\Config::get('alert.default_mail'),
-            '[LibreNMS] Auto update has failed for ' . Config::get('distributed_poller_name'),
-            "We just attempted to update your install but failed. The information below should help you fix this.\r\n\r\n" . $options['o']
-        );
+    if (\App\Facades\LibrenmsConfig::has('alert.default_mail')) {
+        try {
+            \LibreNMS\Util\Mail::send(\App\Facades\LibrenmsConfig::get('alert.default_mail'), '[LibreNMS] Auto update has failed for ' . LibrenmsConfig::get('distributed_poller_name'), "We just attempted to update your install but failed. The information below should help you fix this.\r\n\r\n" . $options['o'], false);
+        } catch (Exception $e) {
+            echo 'Failed to send update failed email. ' . $e->getMessage();
+        }
     }
 }
 
@@ -358,31 +309,21 @@ if ($options['f'] === 'peeringdb') {
     }
 }
 
-if ($options['f'] === 'mac_oui') {
-    $lock = Cache::lock('macouidb', 86000);
-    if ($lock->get()) {
-        $res = cache_mac_oui();
-        $lock->release();
-        exit($res);
-    }
-}
-
-if ($options['f'] === 'refresh_os_cache') {
-    echo 'Clearing OS cache' . PHP_EOL;
-    if (is_file(Config::get('install_dir') . '/cache/os_defs.cache')) {
-        unlink(Config::get('install_dir') . '/cache/os_defs.cache');
-    }
-}
-
 if ($options['f'] === 'recalculate_device_dependencies') {
     // fix broken dependency max_depth calculation in case things weren't done though eloquent
 
     $lock = Cache::lock('recalculate_device_dependencies', 86000);
     if ($lock->get()) {
         // update all root nodes and recurse, chunk so we don't blow up
-        Device::doesntHave('parents')->with('children')->chunk(100, function (Collection $devices) {
+        Device::doesntHave('parents')->with('children')->chunkById(100, function (Collection $devices) {
             // anonymous recursive function
-            $recurse = function (Device $device) use (&$recurse) {
+            $processed = [];
+            $recurse = function (Device $device) use (&$recurse, &$processed) {
+                // Do not process the same device 2 times
+                if (array_key_exists($device->device_id, $processed)) {
+                    return;
+                }
+                $processed[$device->device_id] = true;
                 $device->updateMaxDepth();
 
                 $device->children->each($recurse);

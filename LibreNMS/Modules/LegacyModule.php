@@ -1,4 +1,5 @@
 <?php
+
 /**
  * LegacyModule.php
  *
@@ -28,20 +29,22 @@ namespace LibreNMS\Modules;
 use App\Models\Device;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use LibreNMS\Component;
+use LibreNMS\Interfaces\Data\DataStorageInterface;
 use LibreNMS\Interfaces\Module;
 use LibreNMS\OS;
+use LibreNMS\Polling\ModuleStatus;
 use LibreNMS\Util\Debug;
 use Symfony\Component\Yaml\Yaml;
 
 class LegacyModule implements Module
 {
-    /** @var array */
-    private $module_deps = [
+    private array $module_deps = [
         'arp-table' => ['ports'],
-        'bgp-peers' => ['ports', 'vrf'],
-        'cisco-mac-accounting' => ['ports'],
+        'bgp-peers' => ['ports', 'vrf', 'ipv4-addresses', 'ipv6-addresses'],
         'fdb-table' => ['ports', 'vlans'],
+        'transceivers' => ['ports'],
         'vlans' => ['ports'],
         'vrf' => ['ports'],
     ];
@@ -54,53 +57,81 @@ class LegacyModule implements Module
         return $this->module_deps[$this->name] ?? [];
     }
 
-    /**
-     * @var string
-     */
-    private $name;
-
-    public function __construct(string $name)
+    public function __construct(private readonly string $name)
     {
-        $this->name = $name;
+    }
+
+    public function shouldDiscover(OS $os, ModuleStatus $status): bool
+    {
+        return $this->shouldPoll($os, $status);
     }
 
     public function discover(OS $os): void
     {
-        // TODO: Implement discover() method.
-    }
-
-    public function poll(OS $os): void
-    {
-        if (! is_file(base_path("includes/polling/$this->name.inc.php"))) {
-            echo "Module $this->name does not exist, please remove it from your configuration";
+        if (! \LibreNMS\Util\Module::legacyDiscoveryExists($this->name)) {
+            Log::error("Module $this->name does not exist, please remove it from your configuration");
 
             return;
         }
 
         $device = &$os->getDeviceArray();
-        $device['attribs'] = $os->getDevice()->attribs->toArray();
+        $module = $this->name;
         Debug::disableErrorReporting(); // ignore errors in legacy code
 
         include_once base_path('includes/dbFacile.php');
-        include base_path("includes/polling/$this->name.inc.php");
+        include_once base_path('includes/rewrites.php');
+        include base_path("includes/discovery/$this->name.inc.php");
 
         Debug::enableErrorReporting(); // and back to normal
     }
 
-    public function cleanup(Device $device): void
+    public function shouldPoll(OS $os, ModuleStatus $status): bool
     {
-        // TODO: Implement cleanup() method.
+        // all legacy modules require snmp except ipmi and unix-agent
+        return $status->isEnabledAndDeviceUp($os->getDevice(), check_snmp: ! in_array($this->name, ['ipmi', 'unix-agent']));
+    }
+
+    public function poll(OS $os, DataStorageInterface $datastore): void
+    {
+        if (! \LibreNMS\Util\Module::legacyPollingExists($this->name)) {
+            Log::error("Module $this->name does not exist, please remove it from your configuration");
+
+            return;
+        }
+
+        $device = &$os->getDeviceArray();
+
+        include_once base_path('includes/dbFacile.php');
+        include_once base_path('includes/rewrites.php');
+        include base_path("includes/polling/$this->name.inc.php");
+    }
+
+    public function dataExists(Device $device): bool
+    {
+        return false; // impossible to determine for legacy modules
+    }
+
+    public function cleanup(Device $device): int
+    {
+        return 0; // Not possible to cleanup legacy modules
     }
 
     /**
      * @inheritDoc
      */
-    public function dump(Device $device)
+    public function dump(Device $device, string $type): ?array
     {
+        if ($type == 'discovery' && ! \LibreNMS\Util\Module::legacyDiscoveryExists($this->name)) {
+            return null;
+        }
+        if ($type == 'poller' && ! \LibreNMS\Util\Module::legacyPollingExists($this->name)) {
+            return null;
+        }
+
         $data = [];
         $dump_rules = $this->moduleDumpDefinition();
         if (empty($dump_rules)) {
-            return false; // not supported for this legacy module
+            return null; // not supported for this legacy module
         }
 
         foreach ($dump_rules as $table => $info) {
@@ -125,8 +156,8 @@ class LegacyModule implements Module
 
                     $default_select = [];
                 } else {
-                    [$left, $lkey] = explode('.', $join_info['left']);
-                    [$right, $rkey] = explode('.', $join_info['right']);
+                    [$left, $lkey] = explode('.', (string) $join_info['left']);
+                    [$right, $rkey] = explode('.', (string) $join_info['right']);
                     $join .= " LEFT JOIN `$right` ON (`$left`.`$lkey` = `$right`.`$rkey`)";
 
                     $default_select = ["`$right`.*"];
@@ -148,14 +179,10 @@ class LegacyModule implements Module
             // remove unwanted fields
             if (isset($info['included_fields'])) {
                 $keys = array_flip($info['included_fields']);
-                $rows = array_map(function ($row) use ($keys) {
-                    return array_intersect_key((array) $row, $keys);
-                }, $rows);
+                $rows = array_map(fn ($row) => array_intersect_key((array) $row, $keys), $rows);
             } elseif (isset($info['excluded_fields'])) {
                 $keys = array_flip($info['excluded_fields']);
-                $rows = array_map(function ($row) use ($keys) {
-                    return array_diff_key((array) $row, $keys);
-                }, $rows);
+                $rows = array_map(fn ($row) => array_diff_key((array) $row, $keys), $rows);
             }
 
             $data[$table] = $rows;
@@ -179,9 +206,7 @@ class LegacyModule implements Module
     private function collectComponents(int $device_id): array
     {
         $components = (new Component())->getComponents($device_id)[$device_id] ?? [];
-        $components = Arr::sort($components, function ($item) {
-            return $item['type'] . $item['label'];
-        });
+        $components = Arr::sort($components, fn ($item) => $item['type'] . $item['label']);
 
         return array_values($components);
     }

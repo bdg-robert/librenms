@@ -14,20 +14,17 @@ if (isset($vars['vm'])) {
     $rrd_filename = Rrd::name($device['hostname'], ['app', $name, $app->app_id]);
 }
 
-$rrd_list = [];
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Major',
-        'ds'       => 'majflt',
-    ];
-    $rrd_list[] = [
+        'descr' => 'Major',
+        'ds' => 'majflt',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'Minor',
-        'ds'       => 'minflt',
-    ];
-} else {
-    d_echo('RRD "' . $rrd_filename . '" not found');
-}
+        'descr' => 'Minor',
+        'ds' => 'minflt',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

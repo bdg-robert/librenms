@@ -59,13 +59,13 @@ return [
             'distributed' => ['name' => 'Distributed Poller'],
             'graphite' => ['name' => 'Datastore: Graphite'],
             'influxdb' => ['name' => 'Datastore: InfluxDB'],
+            'kafka' => ['name' => 'Datastore: Kafka'],
             'opentsdb' => ['name' => 'Datastore: OpenTSDB'],
             'ping' => ['name' => 'Ping'],
             'prometheus' => ['name' => 'Datastore: Prometheus'],
             'rrdtool' => ['name' => 'Datastore: RRDTool'],
             'snmp' => ['name' => 'SNMP'],
             'poller_modules' => ['name' => 'Poller Modules'],
-            'interface_types' => ['name' => 'Interface Type by RFC 7224'],
         ],
         'system' => [
             'cleanup' => ['name' => 'Cleanup'],
@@ -88,7 +88,7 @@ return [
         'active_directory' => [
             'users_purge' => [
                 'description' => 'Keep inactive users for',
-                'help' => 'Users will be deleted from LibreNMS after this may days of not logging in. 0 means never and users will be recreated if the user logs back in.',
+                'help' => 'Users will be deleted from LibreNMS after this many days of not logging in. 0 means never and users will be recreated if the user logs back in.',
             ],
         ],
         'addhost_alwayscheckip' => [
@@ -236,9 +236,6 @@ return [
                     'help' => 'Matches the request origin. Wildcards can be used, eg. *.mydomain.com',
                 ],
             ],
-        ],
-        'api_demo' => [
-            'description' => 'This is the demo',
         ],
         'apps' => [
             'powerdns-recursor' => [
@@ -465,10 +462,6 @@ return [
             'description' => 'Specific URL',
             'help' => 'This should *only* be set if you want to *force* a particular hostname/port. It will prevent the web interface being usable form any other hostname',
         ],
-        'device_perf_purge' => [
-            'description' => 'Device performance entries older than',
-            'help' => 'Cleanup done by daily.sh',
-        ],
         'discovery_modules' => [
             'arp-table' => [
                 'description' => 'ARP Table',
@@ -479,14 +472,11 @@ return [
             'bgp-peers' => [
                 'description' => 'BGP Peers',
             ],
-            'cisco-cbqos' => [
-                'description' => 'Cisco CBQOS',
-            ],
             'cisco-cef' => [
                 'description' => 'Cisco CEF',
             ],
-            'cisco-mac-accounting' => [
-                'description' => 'Cisco MAC Accounting',
+            'mac-accounting' => [
+                'description' => 'MAC Accounting',
             ],
             'cisco-otv' => [
                 'description' => 'Cisco OTV',
@@ -532,9 +522,6 @@ return [
             ],
             'junose-atm-vp' => [
                 'description' => 'Junose ATM VP',
-            ],
-            'libvirt-vminfo' => [
-                'description' => 'Libvirt VMInfo',
             ],
             'loadbalancers' => [
                 'description' => 'Loadbalancers',
@@ -591,8 +578,8 @@ return [
             'vlans' => [
                 'description' => 'VLans',
             ],
-            'vmware-vminfo' => [
-                'description' => 'VMWare VMInfo',
+            'vminfo' => [
+                'description' => 'Hypervisor VM Info',
             ],
             'vrf' => [
                 'description' => 'VRF',
@@ -872,9 +859,21 @@ return [
                 'description' => 'Username',
                 'help' => 'Username to connect to InfluxDB, if required',
             ],
+            'batch_size' => [
+                'description' => 'Batch Size',
+                'help' => 'Number of metrics to send in a single batch, 0 means no batching',
+            ],
+            'measurements' => [
+                'description' => 'Measurements',
+                'help' => 'List of measurements to send to InfluxDB, leave empty to send all',
+            ],
             'verifySSL' => [
                 'description' => 'Verify SSL',
                 'help' => 'Verify the SSL certificate is valid and trusted',
+            ],
+            'debug' => [
+                'description' => 'Debug',
+                'help' => 'To enable or disable verbose output to CLI',
             ],
         ],
         'ipmitool' => [
@@ -929,7 +928,7 @@ return [
         'nfsen_top_default' => [
             'description' => 'Default Top N',
         ],
-        'nfsen_stat_default' => [
+        'nfsen_stats_default' => [
             'description' => 'Default Stat',
         ],
         'nfsen_order_default' => [
@@ -948,9 +947,6 @@ return [
         'nfsen_suffix' => [
             'description' => 'File name suffix',
             'help' => 'This is a very important bit as device names in NfSen are limited to 21 characters. This means full domain names for devices can be very problematic to squeeze in, so therefor this chunk is usually removed.',
-        ],
-        'nmap' => [
-            'description' => 'Path to nmap',
         ],
         'opentsdb' => [
             'enable' => [
@@ -1033,9 +1029,6 @@ return [
             'description' => 'Bad Interfaces',
             'help' => 'Network Interface Types which should be ignored',
         ],
-        'ping' => [
-            'description' => 'Path to ping',
-        ],
         'ping_rrd_step' => [
             'description' => 'Ping Frequency',
             'help' => 'How often to check. Sets the default value for all nodes. Warning! If you change this you must make additional changes.  Check the Fast Ping docs.',
@@ -1089,14 +1082,14 @@ return [
             'ucd-diskio' => [
                 'description' => 'UCD DiskIO',
             ],
-            'wifi' => [
-                'description' => 'Wifi',
-            ],
             'wireless' => [
                 'description' => 'Wireless',
             ],
             'ospf' => [
                 'description' => 'OSPF',
+            ],
+            'ospfv3' => [
+                'description' => 'OSPFv3',
             ],
             'isis' => [
                 'description' => 'ISIS',
@@ -1113,8 +1106,8 @@ return [
             'slas' => [
                 'description' => 'Service Level Agreement Tracking',
             ],
-            'cisco-mac-accounting' => [
-                'description' => 'Cisco MAC Accounting',
+            'mac-accounting' => [
+                'description' => 'MAC Accounting',
             ],
             'cipsec-tunnels' => [
                 'description' => 'Cipsec Tunnels',
@@ -1124,15 +1117,6 @@ return [
             ],
             'cisco-ace-serverfarms' => [
                 'description' => 'Cisco ACE Serverfarms',
-            ],
-            'cisco-asa-firewall' => [
-                'description' => 'Cisco ASA Firewall',
-            ],
-            'cisco-voice' => [
-                'description' => 'Cisco Voice',
-            ],
-            'cisco-cbqos' => [
-                'description' => 'Cisco CBQOS',
             ],
             'cisco-otv' => [
                 'description' => 'Cisco OTV',
@@ -1167,6 +1151,9 @@ return [
             'stp' => [
                 'description' => 'STP',
             ],
+            'vminfo' => [
+                'description' => 'Hypervisor VM Info',
+            ],
             'ntp' => [
                 'description' => 'NTP',
             ],
@@ -1182,6 +1169,10 @@ return [
         ],
         'ports_fdb_purge' => [
             'description' => 'Port FDB entries older than',
+            'help' => 'Cleanup done by daily.sh',
+        ],
+        'ports_nac_purge' => [
+            'description' => 'Port NAC entries older than',
             'help' => 'Cleanup done by daily.sh',
         ],
         'ports_purge' => [
@@ -1271,10 +1262,6 @@ return [
             'description' => 'Sets the version of rrdtool on your server',
             'help' => 'Anything over 1.5.5 supports all features LibreNMS uses, do not set higher than your installed version',
         ],
-        'service_poller_enabled' => [
-            'description' => 'Enable Polling',
-            'help' => 'Enable poller workers. Sets the default value for all nodes.',
-        ],
         'service_poller_workers' => [
             'description' => 'Poller Workers',
             'help' => 'Amount of poller workers to spawn. Sets the default value for all nodes.',
@@ -1287,10 +1274,6 @@ return [
             'description' => 'Device Down Retry',
             'help' => 'If a device is down when polling is attempted. This is the amount of time to wait before retrying. Sets the default value for all nodes.',
         ],
-        'service_discovery_enabled' => [
-            'description' => 'Discovery Enabled',
-            'help' => 'Enable discovery workers. Sets the default value for all nodes.',
-        ],
         'service_discovery_workers' => [
             'description' => 'Discovery Workers',
             'help' => 'Amount of discovery workers to run. Setting too high can cause overload. Sets the default value for all nodes.',
@@ -1298,10 +1281,6 @@ return [
         'service_discovery_frequency' => [
             'description' => 'Discovery Frequency',
             'help' => 'How often to run device discovery. Sets the default value for all nodes. Default is 4 times a day.',
-        ],
-        'service_services_enabled' => [
-            'description' => 'Services Enabled',
-            'help' => 'Enable services workers. Sets the default value for all nodes.',
         ],
         'service_services_workers' => [
             'description' => 'Services Workers',
@@ -1311,10 +1290,6 @@ return [
             'description' => 'Services Frequency',
             'help' => 'How often to run services. This should match poller frequency. Sets the default value for all nodes.',
         ],
-        'service_billing_enabled' => [
-            'description' => 'Billing Enabled',
-            'help' => 'Enable billing workers. Sets the default value for all nodes.',
-        ],
         'service_billing_frequency' => [
             'description' => 'Billing Frequency',
             'help' => 'How often to collect billing data. Sets the default value for all nodes.',
@@ -1323,17 +1298,9 @@ return [
             'description' => 'Billing Calculate Frequency',
             'help' => 'How often to calculate bill usage. Sets the default value for all nodes.',
         ],
-        'service_alerting_enabled' => [
-            'description' => 'Alerting Enabled',
-            'help' => 'Enable the alerting worker. Sets the default value for all nodes.',
-        ],
         'service_alerting_frequency' => [
             'description' => 'Alerting Frequency',
             'help' => 'How often alert rules are checked. Note that data is only updated based on poller frequency. Sets the default value for all nodes.',
-        ],
-        'service_ping_enabled' => [
-            'description' => 'Fast Ping Enabled',
-            'help' => 'Fast Ping just pings devices to check if they are up or down. Sets the default value for all nodes.',
         ],
         'service_update_enabled' => [
             'description' => 'Daily Maintenance Enabled',
@@ -1349,14 +1316,11 @@ return [
         ],
         'service_watchdog_enabled' => [
             'description' => 'Watchdog Enabled',
-            'help' => 'Watchdog monitors the log file and restarts the service it it has not been updated. Sets the default value for all nodes.',
+            'help' => 'Watchdog monitors the log file and restarts the service if it has not been updated. Sets the default value for all nodes.',
         ],
         'service_watchdog_log' => [
             'description' => 'Log File to Watch',
             'help' => 'Default is the LibreNMS log file. Sets the default value for all nodes.',
-        ],
-        'sfdp' => [
-            'description' => 'Path to sfdp',
         ],
         'shorthost_target_length' => [
             'description' => 'Shortened hostname maximum length',
@@ -1565,9 +1529,6 @@ return [
         'device_location_map_open' => [
             'description' => 'Location Map open',
             'help' => 'Location Map is shown by default',
-        ],
-        'whois' => [
-            'description' => 'Path to whois',
         ],
         'smokeping.integration' => [
             'description' => 'Enable',

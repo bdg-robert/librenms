@@ -1,49 +1,50 @@
 #! /usr/bin/env python3
 """
- wrapper        A small tool which wraps services, discovery and poller php scripts
-                in order to run them as threads with Queue and workers
+wrapper        A small tool which wraps services, discovery and poller php scripts
+               in order to run them as threads with Queue and workers
 
- Authors:       Orsiris de Jong <contact@netpower.fr>
-                Neil Lathwood <neil@librenms.org>
-                Job Snijders <job.snijders@atrato.com>
+Authors:       Orsiris de Jong <contact@netpower.fr>
+               Neil Lathwood <neil@librenms.org>
+               Job Snijders <job.snijders@atrato.com>
 
-                Distributed poller code (c) 2015, GPLv3, Daniel Preussker <f0o@devilcode.org>
-                All code parts that belong to Daniel are enclosed in EOC comments
+               Distributed poller code (c) 2015, GPLv3, Daniel Preussker <f0o@devilcode.org>
+               All code parts that belong to Daniel are enclosed in EOC comments
 
- Date:          Sep 2021
+Date:          Sep 2021
 
- Usage:         This program accepts three command line arguments
-                - the number of threads (defaults to 1 for discovery / service, and 16 for poller)
-                - the wrapper type (service, discovery or poller)
-                - optional debug boolean
+Usage:         This program accepts three command line arguments
+               - the number of threads (defaults to 1 for discovery / service, and 16 for poller)
+               - the wrapper type (service, discovery or poller)
+               - optional debug boolean
 
 
- Ubuntu Linux:  apt-get install python-mysqldb
- FreeBSD:       cd /usr/ports/*/py-MySQLdb && make install clean
- RHEL 7:        yum install MySQL-python
- RHEL 8:        dnf install mariadb-connector-c-devel gcc && python -m pip install mysqlclient
+Ubuntu Linux:  apt-get install python-mysqldb
+FreeBSD:       cd /usr/ports/*/py-MySQLdb && make install clean
+RHEL 7:        yum install MySQL-python
+RHEL 8:        dnf install mariadb-connector-c-devel gcc && python -m pip install mysqlclient
 
- Tested on:     Python 3.6.8 / PHP 7.2.11 / CentOS 8 / AlmaLinux 8.4
+Tested on:     Python 3.6.8 / PHP 7.2.11 / CentOS 8 / AlmaLinux 8.4
 
- License:       This program is free software: you can redistribute it and/or modify it
-                under the terms of the GNU General Public License as published by the
-                Free Software Foundation, either version 3 of the License, or (at your
-                option) any later version.
+License:       This program is free software: you can redistribute it and/or modify it
+               under the terms of the GNU General Public License as published by the
+               Free Software Foundation, either version 3 of the License, or (at your
+               option) any later version.
 
-                This program is distributed in the hope that it will be useful, but
-                WITHOUT ANY WARRANTY; without even the implied warranty of
-                MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-                Public License for more details.
+               This program is distributed in the hope that it will be useful, but
+               WITHOUT ANY WARRANTY; without even the implied warranty of
+               MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+               Public License for more details.
 
-                You should have received a copy of the GNU General Public License along
-                with this program. If not, see https://www.gnu.org/licenses/.
+               You should have received a copy of the GNU General Public License along
+               with this program. If not, see https://www.gnu.org/licenses/.
 
-                LICENSE.txt contains a copy of the full GPLv3 licensing conditions.
+               LICENSE.txt contains a copy of the full GPLv3 licensing conditions.
 """
 
 import logging
 import os
 import queue
+import re
 import sys
 import threading
 import time
@@ -53,7 +54,6 @@ from argparse import ArgumentParser
 import LibreNMS
 from LibreNMS.command_runner import command_runner
 from LibreNMS.config import DBConfig
-
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ All time related variables are in seconds
 wrappers = {
     "service": {
         "executable": "check-services.php",
+        "option": "-h",
         "table_name": "services",
         "memc_touch_time": 10,
         "stepping": 300,
@@ -92,7 +93,8 @@ wrappers = {
         "total_exec_time": 300,
     },
     "discovery": {
-        "executable": "discovery.php",
+        "executable": "lnms",
+        "option": "device:discover",
         "table_name": "devices",
         "memc_touch_time": 30,
         "stepping": 300,
@@ -100,7 +102,8 @@ wrappers = {
         "total_exec_time": 21600,
     },
     "poller": {
-        "executable": "poller.php",
+        "executable": "lnms",
+        "option": "device:poll",
         "table_name": "devices",
         "memc_touch_time": 10,
         "stepping": 300,
@@ -229,6 +232,7 @@ def poll_worker(
     log_dir,  # Type: str
     wrapper_type,  # Type: str
     debug,  # Type: bool
+    modules="",  # Type: string
 ):
     """
     This function will fork off single instances of the php process, record
@@ -278,16 +282,26 @@ def poll_worker(
                     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
                     wrappers[wrapper_type]["executable"],
                 )
-                command = "/usr/bin/env php {} -h {}".format(executable, device_id)
-                if debug:
+                command = "/usr/bin/env php {} {} {}".format(
+                    executable, wrappers[wrapper_type]["option"], device_id
+                )
+                if modules is not None and len(str(modules).strip()):
+                    module_str = re.sub(r"\s", "", str(modules).strip())
+                    command = command + " -m {}".format(module_str)
+
+                # enable debug output otherwise, set -q for lnms commands
+                if wrappers[wrapper_type]["executable"] == "lnms":
+                    command = command + (" -vv" if debug else " -q")
+                elif debug:
                     command = command + " -d"
+
                 exit_code, output = command_runner(
                     command,
                     shell=True,
                     timeout=PER_DEVICE_TIMEOUT,
                     valid_exit_codes=VALID_EXIT_CODES,
                 )
-                if exit_code not in [0, 6]:
+                if exit_code not in VALID_EXIT_CODES:
                     logger.error(
                         "Thread {} exited with code {}".format(
                             threading.current_thread().name, exit_code
@@ -327,6 +341,7 @@ def wrapper(
     config,  # Type: dict
     log_dir,  # Type: str
     _debug=False,  # Type: bool
+    **kwargs,  # Type: dict, may contain modules
 ):  # -> None
     """
     Actual code that runs various php scripts, in single node mode or distributed poller mode
@@ -446,6 +461,8 @@ def wrapper(
         logger.critical("Bogus wrapper type called")
         sys.exit(3)
 
+    maxlocks = 0
+    minlocks = 0
     sconfig = DBConfig()
     sconfig.populate(config)
     db_connection = LibreNMS.DB(sconfig)
@@ -495,6 +512,7 @@ def wrapper(
                 "log_dir": log_dir,
                 "wrapper_type": wrapper_type,
                 "debug": _debug,
+                "modules": kwargs.get("modules", ""),
             },
         )
         worker.setDaemon(True)
@@ -615,6 +633,12 @@ if __name__ == "__main__":
         default=False,
         help="Enable debug output. WARNING: Leaving this enabled will consume a lot of disk space.",
     )
+    parser.add_argument(
+        "-m",
+        "--modules",
+        default="",
+        help="Enable passing of a module string, modules are separated by comma",
+    )
 
     parser.add_argument(
         dest="wrapper",
@@ -628,6 +652,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     debug = args.debug
+    modules = args.modules or ""
     wrapper_type = args.wrapper
     amount_of_workers = args.threads
 
@@ -654,4 +679,16 @@ if __name__ == "__main__":
             )
         )
 
-    wrapper(wrapper_type, amount_of_workers, config, log_dir, _debug=debug)
+    if wrapper_type in ["discovery", "poller"]:
+        modules_validated = modules
+    else:
+        modules_validated = ""  # ignore module parameter
+
+    wrapper(
+        wrapper_type,
+        amount_of_workers,
+        config,
+        log_dir,
+        _debug=debug,
+        modules=modules_validated,
+    )

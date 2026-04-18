@@ -11,7 +11,7 @@ Example contents:
     <a href="#" class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown"><i class="fa fa-star fa-fw fa-lg fa-nav-icons hidden-md" aria-hidden="true"></i>
         <span class="hidden-sm">Custom Menu</span></a>
     <ul class="dropdown-menu">
-        @admin
+        @can('weathermap.manage')
             <li><a href="plugins/Weathermap/output/history/index.html"><i class="fa fa-film fa-fw fa-lg" aria-hidden="true"></i> Weathermap Animation</a></li>
             <li role="presentation" class="divider"></li>
             <li><a href="#"><i class="fa fa-database fa-fw fa-lg" aria-hidden="true"></i> Item 1</a></li>
@@ -22,7 +22,7 @@ Example contents:
             <li><a href="#"><i class="fa fa-truck fa-fw fa-lg" aria-hidden="true"></i> Item 63</a></li>
         @else
             <li><a href="#">You need admin rights to see this</a></li>
-        @endadmin
+        @endcan
     </ul>
 </li>
 ```
@@ -65,7 +65,7 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\winbox\shell]
 [HKEY_CLASSES_ROOT\winbox\shell\open]
 [HKEY_CLASSES_ROOT\winbox\shell\open\command]
-@= '@="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command \"$val=\'%l\'; $val = $val.TrimEnd(\'/\');if ($val.StartsWith(\'winbox://\' { $val = $val.SubString(9) }; & \'C:\Program Files\winbox64.exe\' \"$val\"\""' =@
+@= '@="C:\\Windows\\System32\\WindowsPowerShell\v1.0\\powershell.exe -Command \"$val=\'%l\'; $val = $val.TrimEnd(\'/\');if ($val.StartsWith(\'winbox://\' { $val = $val.SubString(9) }; & \'C:\\Program Files\\winbox64.exe\' \"$val\"\""' =@
 ```
 
 Now we can use that in the device menu entry to open winbox.
@@ -103,3 +103,8 @@ The primary button is edit device by default.
 | custom7 | Custom Link 7 |
 | custom8 | Custom Link 8 |
 
+!!! Custom http, ssh, telnet ports
+
+Custom ports can be set through the device setting misc tab and will be appended to the Uri. Empty value will not append anything and automatically default to the standard.
+	- custom ssh port set to 2222 will result in ssh://10.0.0.0:2222
+	- custom telnet port set to 2323 will result in telnet://10.0.0.0:2323

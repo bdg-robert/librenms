@@ -37,5 +37,46 @@
             ]
         },
         "poller": "matches discovery"
+    },
+    "entity-physical": {
+        "discovery": {
+            "entPhysical": [
+                {
+                    "entPhysicalIndex": 1,
+                    "entPhysicalDescr": "e5x16f",
+                    "entPhysicalClass": "chassis",
+                    "entPhysicalName": "e5x16f",
+                    "entPhysicalHardwareRev": null,
+                    "entPhysicalFirmwareRev": null,
+                    "entPhysicalSoftwareRev": null,
+                    "entPhysicalAlias": null,
+                    "entPhysicalAssetID": null,
+                    "entPhysicalIsFRU": "false",
+                    "entPhysicalModelName": "e5x16f",
+                    "entPhysicalVendorType": null,
+                    "entPhysicalSerialNum": "071710980001",
+                    "entPhysicalContainedIn": 0,
+                    "entPhysicalParentRelPos": -1,
+                    "entPhysicalMfgName": "Calix",
+                    "entPhysicalMfgDate": null,
+                    "ifIndex": null
+                }
+            ]
+        },
+        "poller": "matches discovery"
+    },
+    "hr-device": {
+        "discovery": {
+            "hrDevice": [
+                {
+                    "hrDeviceIndex": 768,
+                    "hrDeviceDescr": "",
+                    "hrDeviceType": "",
+                    "hrDeviceErrors": 0,
+                    "hrDeviceStatus": "unknown",
+                    "hrProcessorLoad": 42
+                }
+            ]
+        }
     }
 }

@@ -248,7 +248,7 @@
                     "ifMtu": 1500,
                     "ifType": "softwareLoopback",
                     "ifAlias": "Nucleus NET Software Loopback Interface",
-                    "ifPhysAddress": "303a303a303a",
+                    "ifPhysAddress": "000000000000",
                     "ifLastChange": 0,
                     "ifVlan": null,
                     "ifTrunk": null,
@@ -348,7 +348,7 @@
                     "ifMtu": 1500,
                     "ifType": "ethernetCsmacd",
                     "ifAlias": "MFC5272 Ethernet: Software revision 1.0",
-                    "ifPhysAddress": "303a32303a65",
+                    "ifPhysAddress": "0020e903486e",
                     "ifLastChange": 0,
                     "ifVlan": null,
                     "ifTrunk": null,
@@ -536,5 +536,25 @@
             ]
         },
         "poller": "matches discovery"
+    },
+    "ipv4-addresses": {
+        "discovery": {
+            "ipv4_addresses": [
+                {
+                    "ipv4_address": "10.7.9.20",
+                    "ipv4_prefixlen": 24,
+                    "context_name": "",
+                    "ipv4_network": "10.7.9.0/24",
+                    "ifIndex": 2
+                },
+                {
+                    "ipv4_address": "127.0.0.1",
+                    "ipv4_prefixlen": 8,
+                    "context_name": "",
+                    "ipv4_network": "127.0.0.0/8",
+                    "ifIndex": 1
+                }
+            ]
+        }
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /*
  * LibreNMS
  *
@@ -11,12 +12,12 @@
  * the source code distribution for details.
  */
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 
 $hops = [];
 $links = [];
 
-$options = Config::get('network_map_vis_options');
+$options = LibrenmsConfig::get('network_map_vis_options');
 
 $lsp_path_id = $path['lsp_path_id'];
 $last_node = dbFetchCell('SELECT L.mplsLspToAddr FROM mpls_lsps AS L, mpls_lsp_paths AS P WHERE P.lsp_path_id = ? AND L.lsp_id = P.lsp_id', [$path['lsp_path_id']]);
@@ -26,20 +27,20 @@ $ar_list = dbFetchRows('SELECT * from `mpls_tunnel_ar_hops` where device_id = ? 
 d_echo($ar_list);
 
 // first node is host self
-$node = device_has_ip($ar_list[0]['mplsTunnelARHopRouterId']);
+$node = \App\Models\Device::findByIp($ar_list[0]['mplsTunnelARHopRouterId']);
 if ($node) {
-    $node_id = $node['device_id'];
-    $label = $node['hostname'];
+    $node_id = $node->device_id;
+    $label = $node->displayName();
     $first_node = $ar_list[0]['mplsTunnelARHopRouterId'];
 } else {
     $node_id = $label = $first_node;
 }
 
 foreach ($ar_list as $value) {
-    $node = device_has_ip($value['mplsTunnelARHopRouterId']);
+    $node = \App\Models\Device::findByIp($value['mplsTunnelARHopRouterId']);
     if ($node) {
-        $remote_node_id = $node['device_id'];
-        $remote_label = $node['hostname'];
+        $remote_node_id = $node->device_id;
+        $remote_label = $node->displayName();
     } else {
         $remote_node_id = $remote_label = $value['mplsTunnelARHopRouterId'];
     }
@@ -96,9 +97,7 @@ $dev_mpls_tunnel_c_hops = collect(dbFetchRows('SELECT * FROM mpls_tunnel_c_hops 
 $keyed = $dev_mpls_tunnel_c_hops->keyBy('mplsTunnelCHopListIndex'); // reduce to last hops
 
 // Filter to only with final destination
-$filtered = $keyed->filter(function ($value) use ($last_node) {
-    return $value['mplsTunnelCHopRouterId'] == $last_node;
-});
+$filtered = $keyed->filter(fn ($value) => $value['mplsTunnelCHopRouterId'] == $last_node);
 // FIXME pick the last one, but it seems that the secod one could work too. On NOKIA it actually does not matter, the paths have the same hops.
 // The first one is the active route path.
 $filtered2 = $filtered->last()['mplsTunnelCHopListIndex'];
@@ -107,16 +106,16 @@ $filtered2 = $filtered->last()['mplsTunnelCHopListIndex'];
 $c_list = dbFetchRows('SELECT * from `mpls_tunnel_c_hops` where device_id = ? AND mplsTunnelCHopListIndex = ?', [$device_id, $filtered2]);
 
 // first node is host self
-$node = device_has_ip($c_list[0]['mplsTunnelCHopRouterId']);
+$node = \App\Models\Device::findByIp($c_list[0]['mplsTunnelCHopRouterId']);
 if ($node) {
-    $node_id = $node['device_id'];
-    $label = $node['hostname'];
+    $node_id = $node->device_id;
+    $label = $node->displayName();
 } else {
     $node_id = $label = $c_list[0]['mplsTunnelCHopRouterId'];
 }
 
 foreach ($c_list as $value) {
-    $node = device_has_ip($value['mplsTunnelCHopRouterId']);
+    $node = \App\Models\Device::findByIp($value['mplsTunnelCHopRouterId']);
     if ($node) {
         $remote_node_id = $node['device_id'];
         $remote_label = $node['hostname'];
@@ -161,7 +160,8 @@ $edges = json_encode($links);
 if (count($hops) > 1 && count($links) > 0) {
     $visualization = 'visualization-' . $i;
     echo '<div id="visualization-' . $i . '"></div>
-        <script src="js/vis.min.js"></script>
+        <script src="js/vis-network.min.js"></script>
+        <script src="js/vis-data.min.js"></script>
         <script type="text/javascript">
         var height = $(window).height() / 2;
         ';

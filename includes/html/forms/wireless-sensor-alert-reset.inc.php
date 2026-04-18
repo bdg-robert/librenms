@@ -13,20 +13,22 @@
  * the source code distribution for details.
  */
 
+use App\Models\WirelessSensor;
+
 header('Content-type: text/plain');
 
 // FUA
 
-if (! Auth::user()->hasGlobalAdmin()) {
-    exit('ERROR: You need to be admin');
+if (Gate::denies('update', WirelessSensor::class)) {
+    exit('ERROR: You need permission');
 }
 
 for ($x = 0; $x < count($_POST['sensor_id']); $x++) {
     dbUpdate(
         [
-            'sensor_limit' => set_null($_POST['sensor_limit'][$x], ['NULL']),
-            'sensor_limit_low' => set_null($_POST['sensor_limit_low'][$x], ['NULL']),
-            'sensor_alert' => set_null($_POST['sensor_alert'][$x], ['NULL']),
+            'sensor_limit' => set_null($_POST['sensor_limit'][$x]),
+            'sensor_limit_low' => set_null($_POST['sensor_limit_low'][$x]),
+            'sensor_alert' => set_null($_POST['sensor_alert'][$x]),
         ],
         'wireless_sensors',
         '`sensor_id` = ?',

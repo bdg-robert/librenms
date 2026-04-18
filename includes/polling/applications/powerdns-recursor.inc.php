@@ -1,4 +1,5 @@
 <?php
+
 /**
  * powerdns-recursor.inc.php
  *
@@ -24,20 +25,20 @@
  * @author     Tony Murray <murraytony@gmail.com>
  */
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\RRD\RrdDefinition;
 
 $data = '';
 $name = 'powerdns-recursor';
 
-if ($agent_data['app'][$name]) {
+if (! empty($agent_data['app'][$name])) {
     $data = $agent_data['app'][$name];
-} elseif (Config::has('apps.powerdns-recursor.api-key')) {
-    $port = Config::get('apps.powerdns-recursor.port', 8082);
-    $scheme = Config::get('apps.powerdns-recursor.https') ? 'https://' : 'http://';
+} elseif (LibrenmsConfig::has('apps.powerdns-recursor.api-key')) {
+    $port = LibrenmsConfig::get('apps.powerdns-recursor.port', 8082);
+    $scheme = LibrenmsConfig::get('apps.powerdns-recursor.https') ? 'https://' : 'http://';
 
     d_echo("\nNo Agent Data. Attempting to connect directly to the powerdns-recursor server $scheme" . $device['hostname'] . ":$port\n");
-    $context = stream_context_create(['http' => ['header' => 'X-API-Key: ' . Config::get('apps.powerdns-recursor.api-key')]]);
+    $context = stream_context_create(['http' => ['header' => 'X-API-Key: ' . LibrenmsConfig::get('apps.powerdns-recursor.api-key')]]);
     $data = file_get_contents($scheme . $device['hostname'] . ':' . $port . '/api/v1/servers/localhost/statistics', false, $context);
     if ($data === false) {
         $data = file_get_contents($scheme . $device['hostname'] . ':' . $port . '/servers/localhost/statistics', false, $context);
@@ -112,7 +113,8 @@ if (! empty($data)) {
 
     //decode and flatten the data
     $stats = [];
-    foreach (json_decode($data, true) as $stat) {
+    [$json_data] = explode("\n", (string) $data, 2);
+    foreach (json_decode($json_data, true) as $stat) {
         $stats[$stat['name']] = $stat['value'];
     }
     d_echo($stats);
@@ -126,14 +128,18 @@ if (! empty($data)) {
         if (isset($stats[$key])) {
             $fields[$key] = $stats[$key];
         } else {
-            $fields[$key] = 'U';
+            $fields[$key] = null;
         }
     }
 
-    $rrd_name = ['app', 'powerdns', 'recursor', $app->app_id];
-    $tags = compact('name', 'app_id', 'rrd_name', 'rrd_def');
-    data_update($device, 'app', $tags, $fields);
+    $tags = [
+        'name' => $name,
+        'app_id' => $app->app_id,
+        'rrd_name' => ['app', 'powerdns', 'recursor', $app->app_id],
+        'rrd_def' => $rrd_def,
+    ];
+    app('Datastore')->put($device, 'app', $tags, $fields);
     update_application($app, $data, $fields);
 }
 
-unset($data, $stats, $rrd_def, $rrd_name, $rrd_keys, $tags, $fields);
+unset($data, $stats, $rrd_def, $rrd_keys, $tags, $fields);

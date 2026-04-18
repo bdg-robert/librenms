@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GraylogController.php
  *
@@ -26,22 +27,22 @@
 namespace App\Http\Controllers\Table;
 
 use App\ApiClients\GraylogApi;
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use DateInterval;
 use DateTime;
 use DateTimeZone;
 use Illuminate\Http\Request;
-use LibreNMS\Config;
-use LibreNMS\Util\Url;
+use Illuminate\Support\Facades\Blade;
 
 class GraylogController extends SimpleTableController
 {
     private $timezone;
-    private $deviceCache = [];
+    private $deviceLinkCache = [];
 
     public function __construct()
     {
-        $timezone = Config::get('graylog.timezone');
+        $timezone = LibrenmsConfig::get('graylog.timezone');
         $this->timezone = $timezone ? new DateTimeZone($timezone) : null;
     }
 
@@ -60,34 +61,35 @@ class GraylogController extends SimpleTableController
             'loglevel' => 'nullable|int|min:0|max:7',
         ]);
 
-        $search = $request->get('searchPhrase');
-        $device_id = $request->get('device');
+        $search = $request->input('searchPhrase');
+        $device_id = (int) $request->input('device');
         $device = $device_id ? Device::find($device_id) : null;
-        $range = $request->get('range', 0);
-        $limit = $request->get('rowCount', 10);
-        $page = $request->get('current', 1);
-        $offset = ($page - 1) * $limit;
-        $loglevel = $request->get('loglevel') ?? Config::get('graylog.loglevel');
+        $range = (int) $request->input('range', 0);
+        $limit = (int) $request->input('rowCount', 10);
+        $page = (int) $request->input('current', 1);
+        $offset = (int) (($page - 1) * $limit);
+        $loglevel = $request->input('loglevel') ?? LibrenmsConfig::get('graylog.loglevel');
 
         $query = $api->buildSimpleQuery($search, $device) .
             ($loglevel !== null ? ' AND level: <=' . $loglevel : '');
 
         $sort = null;
-        foreach ($request->get('sort', []) as $field => $direction) {
+        foreach ($request->input('sort', []) as $field => $direction) {
             $sort = "$field:$direction";
         }
 
-        $stream = $request->get('stream');
+        $stream = $request->input('stream');
         $filter = $stream ? "streams:$stream" : null;
 
         try {
             $data = $api->query($query, $range, $limit, $offset, $sort, $filter);
+            $messages = $data['messages'] ?? [];
 
             return $this->formatResponse(
-                array_map([$this, 'formatMessage'], $data['messages']),
+                array_map($this->formatMessage(...), $messages),
                 $page,
-                count($data['messages']),
-                $data['total_results']
+                count($messages),
+                $data['total_results'] ?? 0,
             );
         } catch (\Exception $se) {
             $error = $se->getMessage();
@@ -111,17 +113,17 @@ class GraylogController extends SimpleTableController
             $displayTime = $message['message']['timestamp'];
         }
 
-        $device = $this->deviceFromSource($message['message']['source']);
         $level = $message['message']['level'] ?? '';
         $facility = $message['message']['facility'] ?? '';
 
         return [
-            'severity'  => $this->severityLabel($level),
+            'origin' => $this->deviceLinkFromSource($message['message']['gl2_remote_ip']),
+            'severity' => $this->severityLabel($level),
             'timestamp' => $displayTime,
-            'source'    => $device ? Url::deviceLink($device) : htmlspecialchars($message['message']['source']),
-            'message'   => htmlspecialchars($message['message']['message'] ?? ''),
-            'facility'  => is_numeric($facility) ? "($facility) " . __("syslog.facility.$facility") : $facility,
-            'level'     => (is_numeric($level) && $level >= 0) ? "($level) " . __("syslog.severity.$level") : $level,
+            'source' => $this->deviceLinkFromSource($message['message']['source']),
+            'message' => htmlspecialchars($message['message']['message'] ?? ''),
+            'facility' => is_numeric($facility) ? "($facility) " . __("syslog.facility.$facility") : $facility,
+            'level' => (is_numeric($level) && $level >= 0) ? "($level) " . __("syslog.severity.$level") : $level,
         ];
     }
 
@@ -136,9 +138,9 @@ class GraylogController extends SimpleTableController
             '5' => 'label-info',
             '6' => 'label-info',
             '7' => 'label-default',
-            ''  => 'label-info',
+            '' => 'label-info',
         ];
-        $barColor = isset($map[$severity]) ? $map[$severity] : 'label-info';
+        $barColor = $map[$severity] ?? 'label-info';
 
         return '<span class="alert-status ' . $barColor . '" style="margin-right:8px;float:left;"></span>';
     }
@@ -147,14 +149,18 @@ class GraylogController extends SimpleTableController
      * Cache device lookups so we don't lookup for every entry
      *
      * @param  mixed  $source
-     * @return mixed
+     * @return string
      */
-    private function deviceFromSource($source)
+    private function deviceLinkFromSource($source): string
     {
-        if (! isset($this->deviceCache[$source])) {
-            $this->deviceCache[$source] = Device::findByIp($source) ?: Device::findByHostname($source);
+        if (! isset($this->deviceLinkCache[$source])) {
+            $device = Device::findByIp($source) ?: Device::findByHostname($source);
+
+            $this->deviceLinkCache[$source] = $device
+                ? Blade::render('<x-device-link :device="$device"/>', ['device' => $device])
+                : htmlspecialchars((string) $source);
         }
 
-        return $this->deviceCache[$source];
+        return $this->deviceLinkCache[$source];
     }
 }

@@ -1,11 +1,15 @@
 <?php
 
 $link_array = [
-    'page'   => 'device',
+    'page' => 'device',
     'device' => $device['device_id'],
-    'tab'    => 'apps',
-    'app'    => 'postgres',
+    'tab' => 'apps',
+    'app' => 'postgres',
 ];
+
+if (isset($vars['database'])) {
+    $vars['database'] = htmlspecialchars($vars['database']);
+}
 
 print_optionbar_start();
 
@@ -14,6 +18,7 @@ echo '| DBs:';
 $databases = $app->data['databases'] ?? [];
 sort($databases);
 foreach ($databases as $index => $db) {
+    $db = htmlspecialchars((string) $db);
     $label = $vars['database'] == $db
         ? '<span class="pagemenu-selected">' . $db . '</span>'
         : $db;
@@ -40,7 +45,7 @@ foreach ($graphs as $key => $text) {
     $graph_type = $key;
     $graph_array['height'] = '100';
     $graph_array['width'] = '215';
-    $graph_array['to'] = \LibreNMS\Config::get('time.now');
+    $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
     $graph_array['id'] = $app['app_id'];
     $graph_array['type'] = 'application_' . $key;
 

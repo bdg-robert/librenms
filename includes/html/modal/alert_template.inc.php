@@ -11,10 +11,6 @@
  * the source code distribution for details.
  */
 
-if (! Auth::user()->hasGlobalAdmin()) {
-    exit('ERROR: You need to be admin');
-}
-
 ?>
 
 <div class="modal fade bs-example-modal-lg" id="alert-template" tabindex="-1" role="dialog" aria-labelledby="Create" aria-hidden="true">
@@ -201,7 +197,9 @@ function alertTemplateAjaxOps(template, name, template_id, title, title_rec, rul
                         }
                     });
                 } else {
-                    var newrow = [{id: output.newid, templatename: name, alert_rules: JSON.stringify(row_rules)}];
+
+                    var escaped_name = new Option(name).innerHTML;
+                    var newrow = [{id: output.newid, templatename: escaped_name, alert_rules: JSON.stringify(row_rules)}];
                     $('#templatetable').bootgrid("append", newrow);
                 }
             } else {

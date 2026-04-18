@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ict-psu.inc.php
  *
@@ -26,7 +27,7 @@
 // Input Voltage
 // SNMPv2-SMI::enterprises.39145.11.6.0 = STRING: "120" -- inputVoltage
 
-$inputVoltage = trim(snmp_get($device, 'inputVoltage.0', '-Oqv', 'ICT-DIGITAL-SERIES-MIB'), '" ');
+$inputVoltage = trim((string) SnmpQuery::get('ICT-PLATINUM-MIB::inputVoltage.0')->value(), '" ');
 if (! empty($inputVoltage)) {
     $divisor = 1;
     $index = 0;
@@ -35,13 +36,13 @@ if (! empty($inputVoltage)) {
     $type = 'ict-psu';
     $currentValue = $inputVoltage / $divisor;
     echo "got in\n";
-    discover_sensor($valid['sensor'], 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $currentValue);
+    discover_sensor(null, 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $currentValue);
 }
 
 // Output Voltage
 // SNMPv2-SMI::enterprises.39145.11.7.0 = STRING: "55.2" -- outputVoltage
 
-$outputVoltage = trim(snmp_get($device, 'outputVoltage.0', '-Oqv', 'ICT-DIGITAL-SERIES-MIB'), '" ');
+$outputVoltage = trim((string) SnmpQuery::get('ICT-PLATINUM-MIB::outputVoltage.0')->value(), '" ');
 if (! empty($outputVoltage)) {
     $divisor = 1;
     $index = 1;
@@ -50,5 +51,5 @@ if (! empty($outputVoltage)) {
     $type = 'ict-psu';
     $currentValue = $outputVoltage / $divisor;
 
-    discover_sensor($valid['sensor'], 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $currentValue);
+    discover_sensor(null, 'voltage', $device, $oid, $index, $type, $descr, $divisor, '1', null, null, null, null, $currentValue);
 }

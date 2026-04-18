@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Template.php
  *
@@ -45,7 +46,7 @@ class Template
             // Return the cached template information.
             return $this->template;
         }
-        $this->template = AlertTemplate::whereHas('map', function ($query) use ($obj) {
+        $this->template = AlertTemplate::whereHas('map', function ($query) use ($obj): void {
             $query->where('alert_rule_id', '=', $obj['rule_id']);
         })->first();
         if (! $this->template) {
@@ -77,7 +78,7 @@ class Template
         try {
             return Blade::render($data['template']->template, $alert);
         } catch (\Exception $e) {
-            return Blade::render($this->getDefaultTemplate(), $alert);
+            return Blade::render($this->getDefaultTemplate($data['template']->name ?? '', $e->getMessage()), $alert);
         }
     }
 
@@ -92,17 +93,12 @@ class Template
         $alert['alert'] = new AlertData($data['alert']);
         try {
             return Blade::render($data['title'], $alert);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return $data['title'] ?: Blade::render('Template ' . $data['name'], $alert);
         }
     }
 
-    /**
-     * Get the default template
-     *
-     * @return string
-     */
-    public function getDefaultTemplate()
+    public function getDefaultTemplate(string $template_name, string $error): string
     {
         return '{{ $alert->title }}' . PHP_EOL .
             'Severity: {{ $alert->severity }}' . PHP_EOL .
@@ -114,6 +110,7 @@ class Template
             '@foreach ($alert->faults as $key => $value)' . PHP_EOL .
             '  #{{ $key }}: {{ $value[\'string\'] }} @endforeach' . PHP_EOL .
             '@endif' . PHP_EOL .
-            'Alert sent to: @foreach ($alert->contacts as $key => $value) {{ $value }} <{{ $key }}> @endforeach';
+            'Alert sent to: @foreach ($alert->contacts as $key => $value) {{ $value }} <{{ $key }}> @endforeach' . PHP_EOL .
+            'Warning! Fallback template used due to error in template ' . htmlspecialchars($template_name) . ': ' . htmlspecialchars($error) . PHP_EOL;
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MapquestGeocodeApi.php
  *
@@ -25,9 +26,9 @@
 
 namespace App\ApiClients;
 
+use App\Facades\LibrenmsConfig;
 use Exception;
 use Illuminate\Http\Client\Response;
-use LibreNMS\Config;
 use LibreNMS\Interfaces\Geocoder;
 
 class MapquestApi extends BaseApi implements Geocoder
@@ -43,19 +44,19 @@ class MapquestApi extends BaseApi implements Geocoder
     protected function parseLatLng(array $data): array
     {
         return [
-            'lat' => isset($data['results'][0]['locations'][0]['latLng']['lat']) ? $data['results'][0]['locations'][0]['latLng']['lat'] : 0,
-            'lng' => isset($data['results'][0]['locations'][0]['latLng']['lng']) ? $data['results'][0]['locations'][0]['latLng']['lng'] : 0,
+            'lat' => $data['results'][0]['locations'][0]['latLng']['lat'] ?? 0,
+            'lng' => $data['results'][0]['locations'][0]['latLng']['lng'] ?? 0,
         ];
     }
 
     /**
-     * Build Guzzle request option array
+     * Build request option array
      *
-     * @throws \Exception you may throw an Exception if validation fails
+     * @throws Exception you may throw an Exception if validation fails
      */
     protected function buildGeocodingOptions(string $address): array
     {
-        $api_key = Config::get('geoloc.api_key');
+        $api_key = LibrenmsConfig::get('geoloc.api_key');
         if (! $api_key) {
             throw new Exception('MapQuest API key missing, set geoloc.api_key');
         }

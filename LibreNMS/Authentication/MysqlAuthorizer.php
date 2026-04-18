@@ -4,7 +4,6 @@ namespace LibreNMS\Authentication;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use LibreNMS\DB\Eloquent;
 use LibreNMS\Exceptions\AuthenticationException;
 
 class MysqlAuthorizer extends AuthorizerBase
@@ -18,7 +17,12 @@ class MysqlAuthorizer extends AuthorizerBase
         $username = $credentials['username'] ?? null;
         $password = $credentials['password'] ?? null;
 
-        $user_data = User::whereNotNull('password')->firstWhere(['username' => $username]);
+        $user_data = User::thisAuth()->whereNotNull('password')->firstWhere(['username' => $username]);
+
+        if (! $user_data) {
+            throw new AuthenticationException();
+        }
+
         $hash = $user_data->password;
         $enabled = $user_data->enabled;
 
@@ -55,69 +59,15 @@ class MysqlAuthorizer extends AuthorizerBase
         }
     }
 
-    public function addUser($username, $password, $level = 0, $email = '', $realname = '', $can_modify_passwd = 1, $descr = '')
-    {
-        $user_array = get_defined_vars();
-
-        // no nulls
-        $user_array = array_filter($user_array, function ($field) {
-            return ! is_null($field);
-        });
-
-        $new_user = User::thisAuth()->firstOrNew(['username' => $username], $user_array);
-
-        // only update new users
-        if (! $new_user->user_id) {
-            $new_user->auth_type = LegacyAuth::getType();
-            $new_user->setPassword($password);
-            $new_user->email = (string) $new_user->email;
-
-            $new_user->save();
-            $user_id = $new_user->user_id;
-
-            // set auth_id
-            $new_user->auth_id = (string) $this->getUserid($username);
-            $new_user->save();
-
-            if ($user_id) {
-                return $user_id;
-            }
-        }
-
-        return false;
-    }
-
     public function userExists($username, $throw_exception = false)
     {
         return User::thisAuth()->where('username', $username)->exists();
-    }
-
-    public function getUserlevel($username)
-    {
-        return User::thisAuth()->where('username', $username)->value('level');
     }
 
     public function getUserid($username)
     {
         // for mysql user_id == auth_id
         return User::thisAuth()->where('username', $username)->value('user_id');
-    }
-
-    public function deleteUser($user_id)
-    {
-        // could be used on cli, use Eloquent helper
-        Eloquent::DB()->table('bill_perms')->where('user_id', $user_id)->delete();
-        Eloquent::DB()->table('devices_perms')->where('user_id', $user_id)->delete();
-        Eloquent::DB()->table('devices_group_perms')->where('user_id', $user_id)->delete();
-        Eloquent::DB()->table('ports_perms')->where('user_id', $user_id)->delete();
-        Eloquent::DB()->table('users_prefs')->where('user_id', $user_id)->delete();
-
-        return (bool) User::destroy($user_id);
-    }
-
-    public function getUserlist()
-    {
-        return User::thisAuth()->orderBy('username')->get()->toArray();
     }
 
     public function getUser($user_id)
@@ -128,17 +78,5 @@ class MysqlAuthorizer extends AuthorizerBase
         }
 
         return false;
-    }
-
-    public function updateUser($user_id, $realname, $level, $can_modify_passwd, $email)
-    {
-        $user = User::find($user_id);
-
-        $user->realname = $realname;
-        $user->level = (int) $level;
-        $user->can_modify_passwd = (int) $can_modify_passwd;
-        $user->email = $email;
-
-        return $user->save();
     }
 }

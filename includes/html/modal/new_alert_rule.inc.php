@@ -12,19 +12,16 @@
  * the source code distribution for details.
  */
 
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Alerting\QueryBuilderFilter;
-use LibreNMS\Config;
 
-$default_severity = Config::get('alert_rule.severity');
-$default_max_alerts = Config::get('alert_rule.max_alerts');
-$default_delay = Config::get('alert_rule.delay') . 'm';
-$default_interval = Config::get('alert_rule.interval') . 'm';
-$default_mute_alerts = Config::get('alert_rule.mute_alerts');
-$default_invert_rule_match = Config::get('alert_rule.invert_rule_match');
-$default_recovery_alerts = Config::get('alert_rule.recovery_alerts');
-$default_invert_map = Config::get('alert_rule.invert_map');
+$default_severity = LibrenmsConfig::get('alert_rule.severity');
+$default_invert_rule_match = LibrenmsConfig::get('alert_rule.invert_rule_match');
+$default_recovery_alerts = LibrenmsConfig::get('alert_rule.recovery_alerts');
+$default_acknowledgement_alerts = LibrenmsConfig::get('alert_rule.acknowledgement_alerts');
+$default_invert_map = LibrenmsConfig::get('alert_rule.invert_map');
 
-if (Auth::user()->hasGlobalAdmin()) {
+    $device_id = $device['device_id'] ?? -1;
     $filters = json_encode(new QueryBuilderFilter('alert')); ?>
 
     <div class="modal fade" id="create-alert" tabindex="-1" role="dialog"
@@ -43,12 +40,11 @@ if (Auth::user()->hasGlobalAdmin()) {
                     <br />
                     <form method="post" role="form" id="rules" class="form-horizontal alerts-form">
                         <?php echo csrf_field() ?>
-                        <input type="hidden" name="device_id" id="device_id" value="<?php echo isset($device['device_id']) ? $device['device_id'] : -1; ?>">
-                        <input type="hidden" name="device_name" id="device_name" value="<?php echo format_hostname($device); ?>">
+                        <input type="hidden" name="device_id" id="device_id" value="<?php echo $device_id; ?>">
+                        <input type="hidden" name="device_name" id="device_name" value="<?php echo htmlentities((string) DeviceCache::get($device_id)->displayName()); ?>">
                         <input type="hidden" name="rule_id" id="rule_id" value="">
-                        <input type="hidden" name="type" id="type" value="alert-rules">
-                        <input type="hidden" name="template_id" id="template_id" value="">
                         <input type="hidden" name="builder_json" id="builder_json" value="">
+                        <div id="alert-rule-form-error" class="alert alert-danger" style="display: none; margin-top: 10px;"></div>
                         <div class="tab-content">
                             <div role="tabpanel" class="tab-pane active" id="main">
                                 <div class='form-group' title="The description of this alert rule.">
@@ -88,34 +84,29 @@ if (Auth::user()->hasGlobalAdmin()) {
                                         </select>
                                     </div>
                                 </div>
-                                <div class="form-group form-inline">
-                                    <label for='count' class='col-sm-3 col-md-2 control-label' title="How many notifications to issue while active before stopping. -1 means no limit. If interval is 0, this has no effect.">Max alerts </label>
-                                    <div class="col-sm-2" title="How many notifications to issue while active before stopping. -1 means no limit. If interval is 0, this has no effect.">
-                                        <input type='text' id='count' name='count' class='form-control' size="4" value="123">
-                                    </div>
-                                    <div class="col-sm-3" title="How long to wait before issuing a notification. If the alert clears before the delay, no notification will be issued. (s,m,h,d)">
-                                        <label for='delay' class='control-label' style="vertical-align: top;">Delay </label>
-                                        <input type='text' id='delay' name='delay' class='form-control' size="4">
-                                    </div>
-                                    <div class="col-sm-4 col-md-3" title="How often to re-issue notifications while this alert is active. 0 means notify once. This is affected by the poller interval. (s,m,h,d)">
-                                        <label for='interval' class='control-label' style="vertical-align: top;">Interval </label>
-                                        <input type='text' id='interval' name='interval' class='form-control' size="4">
-                                    </div>
-                                </div>
                                 <div class='form-group form-inline'>
-                                    <label for='mute' class='col-sm-3 col-md-2 control-label' title="Show alert status in the webui, but do not issue notifications.">Mute alerts </label>
-                                    <div class='col-sm-2' title="Show alert status in the webui, but do not issue notifications.">
-                                        <input type="checkbox" name="mute" id="mute">
-                                    </div>
-                                    <label for='invert' class='col-sm-3 col-md-3 control-label' title="Alert when this rule doesn't match." style="vertical-align: top;">Invert rule match </label>
+                                    <label for='invert' class='col-sm-3 col-md-2 control-label' title="Alert when this rule doesn't match.">Invert rule match </label>
                                     <div class='col-sm-2' title="Alert when this rule doesn't match.">
                                         <input type='checkbox' name='invert' id='invert'>
                                     </div>
                                 </div>
-                                <div class="form-group" title="Issue recovery notifications.">
-                                    <label for='recovery' class='col-sm-3 col-md-2 control-label'>Recovery alerts </label>
-                                    <div class='col-sm-2'>
+                                <div class="form-group form-inline">
+                                    <label for='recovery' class='col-sm-3 col-md-2 control-label' title="Issue recovery alerts.">Recovery alerts </label>
+                                    <div class='col-sm-2' title="Issue recovery alerts.">
                                         <input type='checkbox' name='recovery' id='recovery'>
+                                    </div>
+                                    <label for='acknowledgement' class='col-sm-3 col-md-3 control-label' title="Issue acknowledgement alerts." style="vertical-align: top;">Acknowledgement alerts </label>
+                                    <div class='col-sm-2' title="Issue acknowledgement alerts.">
+                                        <input type='checkbox' name='acknowledgement' id='acknowledgement'>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="alert_operation_id" class="col-sm-3 col-md-2 control-label" title="Notification behaviour (escalation, transports). Configure under Alerts → Operations.">Operation </label>
+                                    <div class="col-sm-9 col-md-10">
+                                        <input type="hidden" name="alert_operation_id" id="alert_operation_id_input" value="">
+                                        <select id="alert_operation_id" class="form-control" style="width: 100%;" data-placeholder="<?php echo __('None (suppress notifications)'); ?>">
+                                        </select>
+                                        <p class="help-block"><?php echo __('Leave empty to suppress all notifications for this rule.'); ?></p>
                                     </div>
                                 </div>
                                 <div class="form-group form-inline">
@@ -128,16 +119,16 @@ if (Auth::user()->hasGlobalAdmin()) {
                                         <input type='checkbox' name='invert_map' id='invert_map'>
                                     </div>
                                 </div>
-                                <div class="form-group" title="Restricts this alert rule to specified transports.">
-                                    <label for="transports" class="col-sm-3 col-md-2 control-label">Transports </label>
-                                    <div class="col-sm-9 col-md-10">
-                                        <select id="transports" name="transports[]" class="form-control" multiple="multiple"></select>
-                                    </div>
-                                </div>
                                 <div class='form-group' title="A link to some documentation on how to handle this alert. This will be included in notifications.">
                                     <label for='proc' class='col-sm-3 col-md-2 control-label'>Procedure URL </label>
                                     <div class='col-sm-9 col-md-10'>
                                         <input type='text' id='proc' name='proc' class='form-control validation' pattern='(http|https)://.*' maxlength='80'>
+                                    </div>
+                                </div>
+                                <div class='form-group' title="A brief description for this alert rule">
+                                    <label for='notes' class='col-sm-3 col-md-2 control-label'>Notes</label>
+                                    <div class='col-sm-9 col-md-10'>
+                                        <textarea class="form-control" rows="6" name="notes" id='notes'></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -151,7 +142,7 @@ if (Auth::user()->hasGlobalAdmin()) {
                                 <div class="form-group">
                                     <label for="adv_query" class="col-sm-3 col-md-2 control-label">Query</label>
                                     <div class="col-sm-9 col-md-10">
-                                        <input type="text" id="adv_query" name="adv_query" class="form-control">
+                                        <textarea class="form-control code" rows="6" name="adv_query" id='adv_query' style="font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;";></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -171,6 +162,7 @@ if (Auth::user()->hasGlobalAdmin()) {
 
     <script src="js/sql-parser.min.js"></script>
     <script src="js/query-builder.standalone.min.js"></script>
+    <script src="js/interact.min.js"></script>
     <script>
         $('#builder').on('afterApplyRuleFlags.queryBuilder afterCreateRuleFilters.queryBuilder', function () {
             $("[name$='_filter']").each(function () {
@@ -186,7 +178,8 @@ if (Auth::user()->hasGlobalAdmin()) {
             }
         }).queryBuilder({
             plugins: [
-                'bt-tooltip-errors'
+                'bt-tooltip-errors',
+                'sortable'
                 // 'not-group'
             ],
 
@@ -220,14 +213,32 @@ if (Auth::user()->hasGlobalAdmin()) {
             }
         });
 
+        function syncAlertOperationHidden() {
+            var v = $('#alert_operation_id').val();
+            $('#alert_operation_id_input').val(v === null || v === undefined ? '' : v);
+        }
+
         $('#btn-save').on('click', function (e) {
             e.preventDefault();
+
+            var url = '<?php echo route('alert-rule.store') ?>';
+            var method = 'POST';
+            var rule_id = $('#rule_id').val();
+            if  (rule_id) {
+                url = '<?php echo route('alert-rule.update', ':alert_id') ?>'.replace(':alert_id', rule_id);
+                method = 'PUT';
+            }
             var result_json = $('#builder').queryBuilder('getRules');
+
+            // Clear any previous inline form error
+            $('#alert-rule-form-error').hide().text('');
+
             if (result_json !== null && result_json.valid) {
+                syncAlertOperationHidden();
                 $('#builder_json').val(JSON.stringify(result_json));
                 $.ajax({
-                    type: "POST",
-                    url: "ajax_form.php",
+                    type: method,
+                    url: url,
                     data: $('form.alerts-form').serializeArray(),
                     dataType: "json",
                     success: function (data) {
@@ -239,8 +250,17 @@ if (Auth::user()->hasGlobalAdmin()) {
                             toastr.error(data.message);
                         }
                     },
-                    error: function () {
-                        toastr.error('Failed to process rule');
+                    error: function (xhr) {
+                        var msg = 'Request failed';
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.errors && xhr.responseJSON.errors.alert_operation_id && xhr.responseJSON.errors.alert_operation_id[0]) {
+                                msg = xhr.responseJSON.errors.alert_operation_id[0];
+                            } else if (xhr.responseJSON.message) {
+                                msg = xhr.responseJSON.message;
+                            }
+                        }
+
+                        $('#alert-rule-form-error').text(msg).show();
                     }
                 });
             }
@@ -286,16 +306,15 @@ if (Auth::user()->hasGlobalAdmin()) {
         });
 
         $('#create-alert').on('show.bs.modal', function(e) {
+            $('#alert-rule-form-error').hide().text('');
             //get data-id attribute of the clicked element
             var rule_id = $(e.relatedTarget).data('rule_id');
             $('#rule_id').val(rule_id);
 
             if (rule_id >= 0) {
                 $.ajax({
-                    type: "POST",
-                    url: "ajax_form.php",
-                    data: { type: "parse-alert-rule", alert_id: rule_id },
-                    dataType: "json",
+                    type: "GET",
+                    url: "<?php echo route('alert-rule.show', ':alert_id') ?>".replace(':alert_id', rule_id),
                     success: function (data) {
                         loadRule(data);
                     }
@@ -305,16 +324,14 @@ if (Auth::user()->hasGlobalAdmin()) {
                 $("#builder").queryBuilder("reset");
                 var $severity = $('#severity');
                 $severity.val($severity.find("option[selected]").val());
-                $("#mute").bootstrapSwitch('state', <?=$default_mute_alerts?>);
                 $("#invert").bootstrapSwitch('state', <?=$default_invert_rule_match?>);
                 $("#recovery").bootstrapSwitch('state', <?=$default_recovery_alerts?>);
+                $("#acknowledgement").bootstrapSwitch('state', <?=$default_acknowledgement_alerts?>);
                 $("#override_query").bootstrapSwitch('state', false);
                 $("#invert_map").bootstrapSwitch('state', <?=$default_invert_map?>);
                 $(this).find("input[type=text]").val("");
-                $('#count').val('<?=$default_max_alerts?>');
-                $('#delay').val('<?=$default_delay?>');
-                $('#interval').val('<?=$default_interval?>');
                 $('#adv_query').val('');
+                $('#notes').val('');
                 $('#severity').val('<?=$default_severity?>');
 
                 var $maps = $('#maps');
@@ -322,10 +339,7 @@ if (Auth::user()->hasGlobalAdmin()) {
                 $maps.val(null).trigger('change');
                 setRuleDevice();// pre-populate device in the maps if this is a per-device rule
 
-                var $transports = $("#transports");
-                $transports.empty();
-                $transports.val(null).trigger('change');
-                $("#transport-choice").val("email");
+                $('#operations-table tbody.operation-group').remove();
             }
         });
 
@@ -335,6 +349,15 @@ if (Auth::user()->hasGlobalAdmin()) {
             $('#builder').queryBuilder("setRules", rule.builder);
             $('#severity').val(rule.severity).trigger('change');
             $('#adv_query').val(rule.adv_query);
+            $('#notes').val(rule.notes);
+
+            var $op = $('#alert_operation_id');
+            $op.empty().val(null).trigger('change');
+            if (rule.alert_operation_id) {
+                var opText = rule.alert_operation_name || ('#' + rule.alert_operation_id);
+                $op.append(new Option(opText, rule.alert_operation_id, true, true)).trigger('change');
+            }
+            syncAlertOperationHidden();
 
             var $maps = $('#maps');
             $maps.empty();
@@ -348,46 +371,18 @@ if (Auth::user()->hasGlobalAdmin()) {
                     $maps.append(option).trigger('change')
                 });
             }
-            var $transports = $("#transports");
-            $transports.empty();
-            $transports.val(null).trigger('change');
-            if(rule.transports != null) {
-                $.each(rule.transports, function(index, value) {
-                    var option = new Option(value.text, value.id, true, true);
-                    $transports.append(option).trigger("change");
-                });
-            }
 
             if (rule.extra != null) {
                 var extra = rule.extra;
-                $('#count').val(extra.count);
-                if ((extra.delay / 86400) >= 1) {
-                    $('#delay').val(extra.delay / 86400 + 'd');
-                } else if ((extra.delay / 3600) >= 1) {
-                    $('#delay').val( extra.delay / 3600 + 'h');
-                } else if ((extra.delay / 60) >= 1) {
-                    $('#delay').val( extra.delay / 60 + 'm');
-                } else {
-                    $('#delay').val(extra.delay);
-                }
-
-                if ((extra.interval / 86400) >= 1) {
-                    $('#interval').val(extra.interval / 86400 + 'd');
-                } else if ((extra.interval / 3600) >= 1) {
-                    $('#interval').val(extra.interval / 3600 + 'h');
-                } else if ((extra.interval / 60) >= 1) {
-                    $('#interval').val(extra.interval / 60 + 'm');
-                } else {
-                    $('#interval').val(extra.interval);
-                }
-
                 if (extra.adv_query) {
                     $('#adv_query').val(extra.adv_query);
                 }
-                $("[name='mute']").bootstrapSwitch('state', extra.mute);
                 $("[name='invert']").bootstrapSwitch('state', extra.invert);
                 if (typeof extra.recovery == 'undefined') {
                     extra.recovery = '<?=$default_recovery_alerts?>';
+                }
+                if (typeof extra.acknowledgement == 'undefined') {
+                    extra.acknowledgement = '<?=$default_acknowledgement_alerts?>';
                 }
 
                 if (typeof extra.options == 'undefined') {
@@ -397,6 +392,7 @@ if (Auth::user()->hasGlobalAdmin()) {
                     extra.options.override_query = false;
                 }
                 $("[name='recovery']").bootstrapSwitch('state', extra.recovery);
+                $("[name='acknowledgement']").bootstrapSwitch('state', extra.acknowledgement);
 
                 if (rule.invert_map == 1) {
                     $("[name='invert_map']").bootstrapSwitch('state', true);
@@ -405,8 +401,6 @@ if (Auth::user()->hasGlobalAdmin()) {
                 }
 
                 $("[name='override_query']").bootstrapSwitch('state', extra.options.override_query);
-            } else {
-                $('#count').val('<?=$default_max_alerts?>');
             }
         }
 
@@ -424,31 +418,21 @@ if (Auth::user()->hasGlobalAdmin()) {
             width: '100%',
             placeholder: "Devices, Groups or Locations",
             ajax: {
-                url: 'ajax_list.php',
-                delay: 250,
-                data: function (params) {
-                    return {
-                        type: 'devices_groups_locations',
-                        search: params.term
-                    };
-                }
+                url: '<?php echo route('ajax.select.devices-groups-locations') ?>',
+                delay: 150
             }
         });
 
-        $("#transports").select2({
-            width: "100%",
-            placeholder: "Transport/Group Name",
+        $('#alert_operation_id').on('change', syncAlertOperationHidden);
+
+        $('#alert_operation_id').select2({
+            width: '100%',
+            placeholder: '<?php echo __('None (suppress notifications)'); ?>',
+            allowClear: true,
             ajax: {
-                url: 'ajax_list.php',
-                delay: 250,
-                data: function(params) {
-                    return {
-                        type: "transport_groups",
-                        search: params.term
-                    }
-                }
-            }
+                url: '<?php echo route('ajax.select.alert-operation') ?>',
+                delay: 150
+            },
+            dropdownParent: $('#create-alert')
         });
     </script>
-    <?php
-}

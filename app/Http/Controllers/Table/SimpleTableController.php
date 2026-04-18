@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SimpleTableController.php
  *
@@ -41,7 +42,7 @@ abstract class SimpleTableController extends Controller
     /**
      * Validate the given request with the given rules.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param  array  $rules
      * @param  array  $messages
      * @param  array  $customAttributes
@@ -55,7 +56,7 @@ abstract class SimpleTableController extends Controller
     }
 
     /**
-     * @param  array|Collection  $rows
+     * @param  array|Collection<int, mixed>  $rows
      * @param  int  $page
      * @param  int  $currentCount
      * @param  int  $total

@@ -1,10 +1,10 @@
 <?php
 
 $link_array = [
-    'page'   => 'device',
+    'page' => 'device',
     'device' => $device['device_id'],
-    'tab'    => 'apps',
-    'app'    => 'portactivity',
+    'tab' => 'apps',
+    'app' => 'portactivity',
 ];
 
 print_optionbar_start();
@@ -34,10 +34,10 @@ if (! isset($vars['port'])) {
     ];
 } else {
     $graphs = [
-        'portactivity_totals'=>'Total Connections',
-        'portactivity_total_details'=>'Total Connections Details',
-        'portactivity_to'=>'Connections To Server',
-        'portactivity_from'=>'Connections From Server',
+        'portactivity_totals' => 'Total Connections',
+        'portactivity_total_details' => 'Total Connections Details',
+        'portactivity_to' => 'Connections To Server',
+        'portactivity_from' => 'Connections From Server',
     ];
 }
 
@@ -45,7 +45,7 @@ foreach ($graphs as $key => $text) {
     $graph_type = $key;
     $graph_array['height'] = '100';
     $graph_array['width'] = '215';
-    $graph_array['to'] = \LibreNMS\Config::get('time.now');
+    $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
     $graph_array['id'] = $app['app_id'];
     $graph_array['type'] = 'application_' . $key;
 

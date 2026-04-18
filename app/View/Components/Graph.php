@@ -30,14 +30,6 @@ class Graph extends Component
      */
     public $type;
     /**
-     * @var int|string|null
-     */
-    public $from;
-    /**
-     * @var int|string|null
-     */
-    public $to;
-    /**
      * @var string
      */
     public $legend;
@@ -46,9 +38,9 @@ class Graph extends Component
      */
     public $absolute_size;
     /**
-     * @var bool|string
+     * @var bool
      */
-    private $link;
+    private $popup;
 
     /**
      * Create a new component instance.
@@ -62,32 +54,34 @@ class Graph extends Component
      * @param  int|null  $width
      * @param  int|null  $height
      * @param  int  $absolute_size
-     * @param  \App\Models\Device|int|null  $device
-     * @param  \App\Models\Port|int|null  $port
+     * @param  Device|int|null  $device
+     * @param  Port|int|null  $port
+     * @param  bool  $link
+     * @param  string  $popupTitle
      */
     public function __construct(
         string $type = '',
         array $vars = [],
-        $from = '-1d',
-        $to = null,
+        public $from = '-1d',
+        public $to = null,
         string $legend = 'no',
         string $aspect = 'normal',
         ?int $width = null,
         ?int $height = null,
         int $absolute_size = 0,
-        $link = true,
+        private $link = true,
+        $popup = false,
+        public mixed $popupTitle = '',
         $device = null,
         $port = null
     ) {
         $this->type = $type;
         $this->vars = $vars;
-        $this->from = $from;
-        $this->to = $to;
         $this->legend = $legend;
         $this->absolute_size = $absolute_size;
         $this->width = $width ?: ($aspect == 'wide' ? self::DEFAULT_WIDE_WIDTH : self::DEFAULT_NORMAL_WIDTH);
         $this->height = $height ?: ($aspect == 'wide' ? self::DEFAULT_WIDE_HEIGHT : self::DEFAULT_NORMAL_HEIGHT);
-        $this->link = $link;
+        $this->popup = filter_var($popup, FILTER_VALIDATE_BOOLEAN);
 
         // handle device and port ids/models for convenience could be set in $vars
         if ($device instanceof Device) {
@@ -108,16 +102,13 @@ class Graph extends Component
      */
     public function render()
     {
-        if ($this->link === false) {
-            return view('components.graph', [
-                'src' => $this->getSrc(),
-            ]);
-        }
-
-        return view('components.linked-graph', [
+        $view = $this->popup ? 'components.graph-popup' : ($this->link === false ? 'components.graph' : 'components.linked-graph');
+        $data = [
             'link' => $this->getLink(),
             'src' => $this->getSrc(),
-        ]);
+        ];
+
+        return view($view, $data);
     }
 
     /**
@@ -127,10 +118,20 @@ class Graph extends Component
      */
     public function filterAttributes($value, $key): bool
     {
-        return ! in_array($key, [
+        $filtered = [
             'legend',
             'height',
-        ]);
+            'loading',
+            'img-class',
+        ];
+
+        // do not add class and style to the image, add them to the outer link
+        if ($this->link) {
+            $filtered[] = 'class';
+            $filtered[] = 'style';
+        }
+
+        return ! in_array($key, $filtered);
     }
 
     private function getSrc(): string
@@ -148,20 +149,14 @@ class Graph extends Component
 
     private function getLink(): string
     {
-        if ($this->link === true) {
-            $url = url('graphs') . '/' . http_build_query($this->vars + [
+        return match ($this->link) {
+            true => url('graphs') . '/' . http_build_query($this->vars + [
                 'type' => $this->type,
                 'from' => $this->from,
                 'to' => $this->to,
-            ], '', '/');
-
-            return $url;
-        }
-
-        if ($this->link === false) {
-            return '';
-        }
-
-        return $this->link;
+            ], '', '/'),
+            false => '',
+            default => $this->link,
+        };
     }
 }

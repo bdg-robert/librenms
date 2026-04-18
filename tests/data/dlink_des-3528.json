@@ -3037,8 +3037,8 @@
                     "ifName": "1/1",
                     "portName": null,
                     "ifIndex": 1,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -4037,8 +4037,8 @@
                     "ifName": "1/11",
                     "portName": null,
                     "ifIndex": 11,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -4437,8 +4437,8 @@
                     "ifName": "1/15",
                     "portName": null,
                     "ifIndex": 15,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -5537,8 +5537,8 @@
                     "ifName": "1/26",
                     "portName": null,
                     "ifIndex": 26,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -5637,8 +5637,8 @@
                     "ifName": "1/27",
                     "portName": null,
                     "ifIndex": 27,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -5737,8 +5737,8 @@
                     "ifName": "1/28",
                     "portName": null,
                     "ifIndex": 28,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "down",
                     "ifOperStatus_prev": "down",
@@ -5837,8 +5837,8 @@
                     "ifName": "802.1Q Encapsulation Tag 0001",
                     "portName": null,
                     "ifIndex": 1024,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "up",
                     "ifOperStatus_prev": "up",
@@ -5937,8 +5937,8 @@
                     "ifName": "System",
                     "portName": null,
                     "ifIndex": 5121,
-                    "ifSpeed": 0,
-                    "ifSpeed_prev": null,
+                    "ifSpeed": null,
+                    "ifSpeed_prev": 0,
                     "ifConnectorPresent": "true",
                     "ifOperStatus": "up",
                     "ifOperStatus_prev": "up",
@@ -6115,7 +6115,7 @@
                     "vlan_domain": 1,
                     "vlan_name": "default",
                     "vlan_type": null,
-                    "vlan_mtu": null
+                    "vlan_state": 1
                 }
             ],
             "ports_vlans": [
@@ -6681,5 +6681,18 @@
             ]
         },
         "poller": "matches discovery"
+    },
+    "ipv4-addresses": {
+        "discovery": {
+            "ipv4_addresses": [
+                {
+                    "ipv4_address": "196.253.174.11",
+                    "ipv4_prefixlen": 24,
+                    "context_name": "",
+                    "ipv4_network": "196.253.174.0/24",
+                    "ifIndex": 5121
+                }
+            ]
+        }
     }
 }

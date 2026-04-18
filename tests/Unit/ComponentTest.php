@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ComponentTest.php
  *
@@ -32,11 +33,11 @@ use Illuminate\Support\Str;
 use LibreNMS\Component;
 use LibreNMS\Tests\DBTestCase;
 
-class ComponentTest extends DBTestCase
+final class ComponentTest extends DBTestCase
 {
     use DatabaseTransactions;
 
-    public function testDeleteComponent()
+    public function testDeleteComponent(): void
     {
         $target = \App\Models\Component::factory()->create(); /** @var \App\Models\Component $target */
         $this->assertTrue(\App\Models\Component::where('id', $target->id)->exists(), 'Failed to create component, this shouldn\'t happen');
@@ -47,12 +48,12 @@ class ComponentTest extends DBTestCase
         $this->assertFalse(\App\Models\Component::where('id', $target->id)->exists(), 'deleteComponent failed to delete the component.');
     }
 
-    public function testGetComponentsEmpty()
+    public function testGetComponentsEmpty(): void
     {
         $this->assertEquals([], (new Component())->getComponents(43));
     }
 
-    public function testGetComponentsOptionsType()
+    public function testGetComponentsOptionsType(): void
     {
         $target = \App\Models\Component::factory()->create(); /** @var \App\Models\Component $target */
         $component = new Component();
@@ -64,7 +65,7 @@ class ComponentTest extends DBTestCase
         $this->assertEquals($this->buildExpected($target), $actual);
     }
 
-    public function testGetComponentsOptionsFilterNotIgnore()
+    public function testGetComponentsOptionsFilterNotIgnore(): void
     {
         \App\Models\Component::factory()->create(['device_id' => 1, 'ignore' => 1]);
         $target = \App\Models\Component::factory()->times(2)->create(['device_id' => 1, 'ignore' => 0]); /** @var \Illuminate\Support\Collection $target */
@@ -75,7 +76,7 @@ class ComponentTest extends DBTestCase
         $this->assertEquals($this->buildExpected($target), $actual);
     }
 
-    public function testGetComponentsOptionsComplex()
+    public function testGetComponentsOptionsComplex(): void
     {
         \App\Models\Component::factory()->create(['label' => 'Search Phrase']);
         \App\Models\Component::factory()->times(2)->create(['label' => 'Something Else']);
@@ -93,7 +94,7 @@ class ComponentTest extends DBTestCase
         $this->assertEquals($this->buildExpected($target->reverse()->values()), $actual);
     }
 
-    public function testGetFirstComponentID()
+    public function testGetFirstComponentID(): void
     {
         $input = [
             1 => [37 => [], 14 => []],
@@ -104,7 +105,7 @@ class ComponentTest extends DBTestCase
         $this->assertEquals(37, $component->getFirstComponentID($input[1]));
     }
 
-    public function testGetComponentCount()
+    public function testGetComponentCount(): void
     {
         \App\Models\Component::factory()->times(2)->create(['device_id' => 1, 'type' => 'three']);
         \App\Models\Component::factory()->create(['device_id' => 2, 'type' => 'three']);
@@ -116,7 +117,7 @@ class ComponentTest extends DBTestCase
         $this->assertEquals(['three' => 1, 'one' => 1], $component->getComponentCount(2));
     }
 
-    public function testSetComponentPrefs()
+    public function testSetComponentPrefs(): void
     {
         // Nightmare function, no where near exhaustive
         $base = \App\Models\Component::factory()->create(); /** @var \App\Models\Component $base */
@@ -152,9 +153,9 @@ class ComponentTest extends DBTestCase
         $this->assertFalse(ComponentPref::where('component', $base->id)->exists());
     }
 
-    public function testCreateComponent()
+    public function testCreateComponent(): void
     {
-        $device_id = rand(1, 32);
+        $device_id = random_int(1, 32);
         $type = Str::random(9);
         $component = (new Component())->createComponent($device_id, $type);
 
@@ -174,7 +175,7 @@ class ComponentTest extends DBTestCase
         $this->assertEquals($log->message, 'Component Created');
     }
 
-    public function testGetComponentStatusLog()
+    public function testGetComponentStatusLog(): void
     {
         // invalid id fails
         $component = new Component();
@@ -195,14 +196,12 @@ class ComponentTest extends DBTestCase
     {
         $collection = $target instanceof \App\Models\Component ? collect([$target]) : $target;
 
-        return $collection->groupBy('device_id')->map(function ($group) {
-            return $group->keyBy('id')->map(function ($model) {
-                $base = ['type' => null, 'label' => null, 'status' => 0, 'ignore' => 0, 'disabled' => 0, 'error' => null];
-                $merge = $model->toArray();
-                unset($merge['device_id'], $merge['id']);
+        return $collection->groupBy('device_id')->map(fn ($group) => $group->keyBy('id')->map(function ($model) {
+            $base = ['type' => null, 'label' => null, 'status' => 0, 'ignore' => 0, 'disabled' => 0, 'error' => null];
+            $merge = $model->toArray();
+            unset($merge['device_id'], $merge['id']);
 
-                return array_merge($base, $merge);
-            });
-        })->toArray();
+            return array_merge($base, $merge);
+        }))->toArray();
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * netagent2.inc.php
  *
@@ -57,16 +58,16 @@ $bat_3phase_divisor = 10;
 // Detect type of UPS (Signle-Phase/3 Phase)
 // Number of input lines
 $upsInputNumLines_oid = '.1.3.6.1.2.1.33.1.3.2.0';
-$in_phaseNum = snmp_get($device, $upsInputNumLines_oid, '-Oqv');
+$in_phaseNum = SnmpQuery::get($upsInputNumLines_oid)->value();
 
 // Number of output lines
 $upsOutputNumLines_oid = '.1.3.6.1.2.1.33.1.4.3.0';
-$out_phaseNum = snmp_get($device, $upsOutputNumLines_oid, '-Oqv');
+$out_phaseNum = SnmpQuery::get($upsOutputNumLines_oid)->value();
 
 // INPUT single-phase system
 if ($in_phaseNum == '1') {
     $in_voltage_oid = '.1.3.6.1.4.1.935.1.1.1.3.2.1.0';
-    $in_voltage = snmp_get($device, $in_voltage_oid, '-Oqv');
+    $in_voltage = SnmpQuery::get($in_voltage_oid)->value();
 
     if (! empty($in_voltage) || $in_voltage == 0) {
         $type = 'netagent2';
@@ -75,7 +76,7 @@ if ($in_phaseNum == '1') {
         $descr = 'Input';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $in_voltage_oid,
@@ -97,7 +98,7 @@ if ($in_phaseNum == '1') {
 if ($in_phaseNum == '3') {
     // Phase L1 (R)
     $in_voltage1_oid = '.1.3.6.1.4.1.935.1.1.1.8.2.2.0';
-    $in_voltage1 = snmp_get($device, $in_voltage1_oid, '-Oqv');
+    $in_voltage1 = SnmpQuery::get($in_voltage1_oid)->value();
 
     if (! empty($in_voltage1) || $in_voltage1 == 0) {
         $type = 'netagent2';
@@ -106,7 +107,7 @@ if ($in_phaseNum == '3') {
         $descr = 'In L1';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $in_voltage1_oid,
@@ -124,7 +125,7 @@ if ($in_phaseNum == '3') {
     }
     // Phase L2 (S)
     $in_voltage2_oid = '.1.3.6.1.4.1.935.1.1.1.8.2.3.0';
-    $in_voltage2 = snmp_get($device, $in_voltage2_oid, '-Oqv');
+    $in_voltage2 = SnmpQuery::get($in_voltage2_oid)->value();
 
     if (! empty($in_voltage2) || $in_voltage2 == 0) {
         $type = 'netagent2';
@@ -134,7 +135,7 @@ if ($in_phaseNum == '3') {
         $descr = 'In L2';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $in_voltage2_oid,
@@ -152,7 +153,7 @@ if ($in_phaseNum == '3') {
     }
     // Phase L3 (T)
     $in_voltage3_oid = '.1.3.6.1.4.1.935.1.1.1.8.2.4.0';
-    $in_voltage3 = snmp_get($device, $in_voltage3_oid, '-Oqv');
+    $in_voltage3 = SnmpQuery::get($in_voltage3_oid)->value();
 
     if (! empty($in_voltage3) || $in_voltage3 == 0) {
         $type = 'netagent2';
@@ -162,7 +163,7 @@ if ($in_phaseNum == '3') {
         $descr = 'In L3';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $in_voltage3_oid,
@@ -183,7 +184,7 @@ if ($in_phaseNum == '3') {
 // OUTPUT voltage single-phase
 if ($in_phaseNum == '1') {
     $out_voltage_oid = '.1.3.6.1.4.1.935.1.1.1.4.2.1.0';
-    $out_voltage = snmp_get($device, $out_voltage_oid, '-Oqv');
+    $out_voltage = SnmpQuery::get($out_voltage_oid)->value();
 
     if (! empty($out_voltage) || $out_voltage == 0) {
         $type = 'netagent2';
@@ -193,7 +194,7 @@ if ($in_phaseNum == '1') {
         $descr = 'Output';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $out_voltage_oid,
@@ -215,7 +216,7 @@ if ($in_phaseNum == '1') {
 if ($out_phaseNum == '3') {
     // Phase L1 (R)
     $out_voltage1_oid = '.1.3.6.1.4.1.935.1.1.1.8.3.2.0';
-    $out_voltage1 = snmp_get($device, $out_voltage1_oid, '-Oqv');
+    $out_voltage1 = SnmpQuery::get($out_voltage1_oid)->value();
 
     if (! empty($out_voltage1) || $out_voltage1 == 0) {
         $type = 'netagent2';
@@ -225,7 +226,7 @@ if ($out_phaseNum == '3') {
         $descr = 'Out L1';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $out_voltage1_oid,
@@ -243,7 +244,7 @@ if ($out_phaseNum == '3') {
     }
     // Phase L2 (S)
     $out_voltage2_oid = '.1.3.6.1.4.1.935.1.1.1.8.3.3.0';
-    $out_voltage2 = snmp_get($device, $out_voltage2_oid, '-Oqv');
+    $out_voltage2 = SnmpQuery::get($out_voltage2_oid)->value();
 
     if (! empty($out_voltage2) || $out_voltage2 == 0) {
         $type = 'netagent2';
@@ -253,7 +254,7 @@ if ($out_phaseNum == '3') {
         $descr = 'Out L2';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $out_voltage2_oid,
@@ -271,7 +272,7 @@ if ($out_phaseNum == '3') {
     }
     // Phase L3 (T)
     $out_voltage3_oid = '.1.3.6.1.4.1.935.1.1.1.8.3.4.0';
-    $out_voltage3 = snmp_get($device, $out_voltage3_oid, '-Oqv');
+    $out_voltage3 = SnmpQuery::get($out_voltage3_oid)->value();
 
     if (! empty($out_voltage3) || $out_voltage3 == 0) {
         $type = 'netagent2';
@@ -281,7 +282,7 @@ if ($out_phaseNum == '3') {
         $descr = 'Out L3';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $out_voltage3_oid,
@@ -303,7 +304,7 @@ if ($out_phaseNum == '3') {
 if ($out_phaseNum == '3') {
     // Phase L1 (R)
     $bypass_voltage1_oid = '.1.3.6.1.4.1.935.1.1.1.8.4.2.0';
-    $bypass_voltage1 = snmp_get($device, $bypass_voltage1_oid, '-Oqv');
+    $bypass_voltage1 = SnmpQuery::get($bypass_voltage1_oid)->value();
 
     if (! empty($bypass_voltage1) || $bypass_voltage1 == 0) {
         $type = 'netagent2';
@@ -313,7 +314,7 @@ if ($out_phaseNum == '3') {
         $descr = 'Bypass L1';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $bypass_voltage1_oid,
@@ -331,7 +332,7 @@ if ($out_phaseNum == '3') {
     }
     // Phase L2 (S)
     $bypass_voltage2_oid = '.1.3.6.1.4.1.935.1.1.1.8.4.3.0';
-    $bypass_voltage2 = snmp_get($device, $bypass_voltage2_oid, '-Oqv');
+    $bypass_voltage2 = SnmpQuery::get($bypass_voltage2_oid)->value();
 
     if (! empty($bypass_voltage2) || $bypass_voltage2 == 0) {
         $type = 'netagent2';
@@ -341,7 +342,7 @@ if ($out_phaseNum == '3') {
         $descr = 'Bypass L2';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $bypass_voltage2_oid,
@@ -359,7 +360,7 @@ if ($out_phaseNum == '3') {
     }
     // Phase L3 (T)
     $bypass_voltage3_oid = '.1.3.6.1.4.1.935.1.1.1.8.4.4.0';
-    $bypass_voltage3 = snmp_get($device, $bypass_voltage3_oid, '-Oqv');
+    $bypass_voltage3 = SnmpQuery::get($bypass_voltage3_oid)->value();
 
     if (! empty($bypass_voltage3) || $bypass_voltage3 == 0) {
         $type = 'netagent2';
@@ -369,7 +370,7 @@ if ($out_phaseNum == '3') {
         $descr = 'Bypass L3';
 
         discover_sensor(
-            $valid['sensor'],
+            null,
             'voltage',
             $device,
             $bypass_voltage3_oid,
@@ -391,7 +392,7 @@ if ($out_phaseNum == '3') {
 // Set divisor and limit ranges 1 phase UPS systems
 if ($in_phaseNum == '1') {
     $battery_voltage1_oid = '.1.3.6.1.4.1.935.1.1.1.2.2.2.0';
-    $battery_voltage1 = snmp_get($device, $battery_voltage1_oid, '-Oqv');
+    $battery_voltage1 = SnmpQuery::get($battery_voltage1_oid)->value();
     $limit = $bat_1phase_limit;
     $warnlimit = $bat_1phase_warnlimit;
     $lowlimit = $bat_1phase_lowlimit;
@@ -402,7 +403,7 @@ if ($in_phaseNum == '1') {
 // Set divisor and limit ranges 3 phase UPS systems
 if ($in_phaseNum == '3') {
     $battery_voltage1_oid = '.1.3.6.1.2.1.33.1.2.5.0';
-    $battery_voltage1 = snmp_get($device, $battery_voltage1_oid, '-Oqv');
+    $battery_voltage1 = SnmpQuery::get($battery_voltage1_oid)->value();
     $limit = $bat_3phase_limit;
     $warnlimit = $bat_3phase_warnlimit;
     $lowlimit = $bat_3phase_lowlimit;
@@ -417,7 +418,7 @@ if (! empty($battery_voltage1) || $battery_voltage1 == 0) {
     $descr = 'Battery';
 
     discover_sensor(
-        $valid['sensor'],
+        null,
         'voltage',
         $device,
         $battery_voltage1_oid,

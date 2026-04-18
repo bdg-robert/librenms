@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ApcPowerRestoredTest.php
  *
@@ -24,7 +25,9 @@
 
 namespace LibreNMS\Tests\Feature\SnmpTraps;
 
-class ApcPowerRestoredTest extends SnmpTrapTestCase
+use LibreNMS\Enum\Severity;
+
+final class ApcPowerRestoredTest extends SnmpTrapTestCase
 {
     /**
      * Test ApcPowerRestored handle
@@ -43,7 +46,7 @@ SNMPv2-MIB::snmpTrapEnterprise.0 PowerNet-MIB::apc
 TRAP,
             'INFORMATIONAL: Utility power has been restored.',
             'Could not handle testApcPowerRestored trap',
-            [1],
+            [Severity::Ok],
         );
     }
 }

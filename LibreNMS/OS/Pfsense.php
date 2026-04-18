@@ -1,4 +1,5 @@
 <?php
+
 /*
  * Pfsense.php
  *
@@ -25,13 +26,14 @@
 
 namespace LibreNMS\OS;
 
+use LibreNMS\Interfaces\Data\DataStorageInterface;
 use LibreNMS\Interfaces\Polling\OSPolling;
 use LibreNMS\OS\Shared\Unix;
 use LibreNMS\RRD\RrdDefinition;
 
 class Pfsense extends Unix implements OSPolling
 {
-    public function pollOS(): void
+    public function pollOS(DataStorageInterface $datastore): void
     {
         $oids = snmp_get_multi($this->getDeviceArray(), [
             'pfStateTableCount.0',
@@ -53,8 +55,8 @@ class Pfsense extends Unix implements OSPolling
                 'states' => $oids[0]['pfStateTableCount'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_states', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_states', $tags, $fields);
 
             $this->enableGraph('pf_states');
         }
@@ -66,8 +68,8 @@ class Pfsense extends Unix implements OSPolling
                 'searches' => $oids[0]['pfStateTableSearches'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_searches', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_searches', $tags, $fields);
 
             $this->enableGraph('pf_searches');
         }
@@ -79,8 +81,8 @@ class Pfsense extends Unix implements OSPolling
                 'inserts' => $oids[0]['pfStateTableInserts'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_inserts', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_inserts', $tags, $fields);
 
             $this->enableGraph('pf_inserts');
         }
@@ -92,8 +94,8 @@ class Pfsense extends Unix implements OSPolling
                 'removals' => $oids[0]['pfStateTableRemovals'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_removals', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_removals', $tags, $fields);
 
             $this->enableGraph('pf_removals');
         }
@@ -105,8 +107,8 @@ class Pfsense extends Unix implements OSPolling
                 'matches' => $oids[0]['pfCounterMatch'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_matches', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_matches', $tags, $fields);
 
             $this->enableGraph('pf_matches');
         }
@@ -118,8 +120,8 @@ class Pfsense extends Unix implements OSPolling
                 'badoffset' => $oids[0]['pfCounterBadOffset'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_badoffset', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_badoffset', $tags, $fields);
 
             $this->enableGraph('pf_badoffset');
         }
@@ -131,8 +133,8 @@ class Pfsense extends Unix implements OSPolling
                 'fragmented' => $oids[0]['pfCounterFragment'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_fragmented', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_fragmented', $tags, $fields);
 
             $this->enableGraph('pf_fragmented');
         }
@@ -144,8 +146,8 @@ class Pfsense extends Unix implements OSPolling
                 'short' => $oids[0]['pfCounterShort'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_short', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_short', $tags, $fields);
 
             $this->enableGraph('pf_short');
         }
@@ -157,8 +159,8 @@ class Pfsense extends Unix implements OSPolling
                 'normalized' => $oids[0]['pfCounterNormalize'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_normalized', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_normalized', $tags, $fields);
 
             $this->enableGraph('pf_normalized');
         }
@@ -170,8 +172,8 @@ class Pfsense extends Unix implements OSPolling
                 'memdropped' => $oids[0]['pfCounterMemDrop'],
             ];
 
-            $tags = compact('rrd_def');
-            data_update($this->getDeviceArray(), 'pf_memdropped', $tags, $fields);
+            $tags = ['rrd_def' => $rrd_def];
+            $datastore->put($this->getDeviceArray(), 'pf_memdropped', $tags, $fields);
 
             $this->enableGraph('pf_memdropped');
         }

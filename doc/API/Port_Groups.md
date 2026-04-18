@@ -7,7 +7,7 @@ Route: `/api/v0/port_groups`
 Examples:
 
 ```curl
-curl -H 'X-Auth-Token: YOURAPITOKENHERE' https://librenms.org/api/v0/port_groups
+curl -H 'X-Auth-Token: YOURAPITOKENHERE' https://foo.example/api/v0/port_groups
 ```
 
 Output:
@@ -36,7 +36,7 @@ List all ports matching the group provided.
 Route: `/api/v0/port_groups/:name`
 
 - name Is the name of the port group which can be obtained using
-  [`get_port_groups`](#function-get_port_groups). Please ensure that
+  [`get_port_groups`](#get_port_groups). Please ensure that
   the name is urlencoded if it needs to be (i.e Linux Servers would
   need to be urlencoded.
 
@@ -47,7 +47,7 @@ Params:
 Examples:
 
 ```curl
-curl -H 'X-Auth-Token: YOURAPITOKENHERE' https://librenms.org/api/v0/port_groups/Billable
+curl -H 'X-Auth-Token: YOURAPITOKENHERE' https://foo.example/api/v0/port_groups/Billable
 ```
 
 Output:
@@ -88,7 +88,7 @@ curl -H 'X-Auth-Token: YOURAPITOKENHERE' \
   -X POST \
   -d '{"name": "New Port Group", \
        "desc": "A very fancy port group"}' \
-  https://librenms.org/api/v0/port_groups
+  https://foo.example/api/v0/port_groups
 ```
 
 Output:
@@ -116,7 +116,7 @@ Examples:
 Dynamic Example:
 
 ```curl
-curl -H 'X-Auth-Token: YOURAPITOKENHERE' -X POST -d '{"port_ids": ["4","34","25,"983"]}' https://librenms.org/api/v0/port_groups/3/assign
+curl -H 'X-Auth-Token: YOURAPITOKENHERE' -X POST -d '{"port_ids": ["4","34","25,"983"]}' https://foo.example/api/v0/port_groups/3/assign
 ```
 
 Output:
@@ -143,7 +143,7 @@ Examples:
 Dynamic Example:
 
 ```curl
-curl -H 'X-Auth-Token: YOURAPITOKENHERE' -X POST -d '{"port_ids": ["4","34","25,"983"]}' https://librenms.org/api/v0/port_groups/3/remove
+curl -H 'X-Auth-Token: YOURAPITOKENHERE' -X POST -d '{"port_ids": ["4","34","25,"983"]}' https://foo.example/api/v0/port_groups/3/remove
 ```
 
 Output:

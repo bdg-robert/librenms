@@ -13,14 +13,16 @@
  * the source code distribution for details.
  */
 
+use App\Models\WirelessSensor;
+
 header('Content-type: application/json');
 
 // FUA
 
-if (! Auth::user()->hasGlobalAdmin()) {
+if (Gate::denies('update', WirelessSensor::class)) {
     exit(json_encode([
         'status' => 'error',
-        'message' => 'You need to be admin',
+        'message' => 'You need permission',
     ]));
 }
 
@@ -31,7 +33,7 @@ if (! is_numeric($_POST['device_id']) || ! is_numeric($_POST['sensor_id']) || ! 
     ]));
 } else {
     $update = dbUpdate(
-        [$_POST['value_type'] => set_null($_POST['data'], ['NULL']), 'sensor_custom' => 'Yes'],
+        [$_POST['value_type'] => set_null($_POST['data'], null), 'sensor_custom' => 'Yes'],
         'wireless_sensors',
         '`sensor_id` = ? AND `device_id` = ?',
         [$_POST['sensor_id'], $_POST['device_id']]

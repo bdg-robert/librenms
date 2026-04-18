@@ -1,4 +1,5 @@
 <?php
+
 /**
  * VmwHBTest.php
  * -Description-
@@ -28,8 +29,9 @@
 namespace LibreNMS\Tests\Feature\SnmpTraps;
 
 use App\Models\Device;
+use LibreNMS\Enum\Severity;
 
-class VmwHBTest extends SnmpTrapTestCase
+final class VmwHBTest extends SnmpTrapTestCase
 {
     public function testVmwVmHBLostTrap(): void
     {
@@ -45,7 +47,7 @@ SNMP-COMMUNITY-MIB::snmpTrapCommunity.0 \"public\"
 SNMPv2-MIB::snmpTrapEnterprise.0 VMWARE-PRODUCTS-MIB::vmwESX",
             "Heartbeat from guest $guest->hostname lost",
             'Could not handle VmwVmHBLostTrap',
-            [4],
+            [Severity::Warning],
         );
     }
 
@@ -63,7 +65,7 @@ SNMP-COMMUNITY-MIB::snmpTrapCommunity.0 \"public\"
 SNMPv2-MIB::snmpTrapEnterprise.0 VMWARE-PRODUCTS-MIB::vmwESX",
             "Heartbeat from guest $guest->hostname detected",
             'Could not handle VmwVmHBDetectedTrap',
-            [1],
+            [Severity::Ok],
         );
     }
 }

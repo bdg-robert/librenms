@@ -448,7 +448,7 @@
                     "ifMtu": 1500,
                     "ifType": "ethernetCsmacd",
                     "ifAlias": "MCF Fast Ethernet Controller",
-                    "ifPhysAddress": "303a38303a61",
+                    "ifPhysAddress": "0080a3909d9a",
                     "ifLastChange": 8,
                     "ifVlan": null,
                     "ifTrunk": null,
@@ -548,7 +548,7 @@
                     "ifMtu": 1500,
                     "ifType": "softwareLoopback",
                     "ifAlias": "Software Loopback",
-                    "ifPhysAddress": "303a303a303a",
+                    "ifPhysAddress": "000000000000",
                     "ifLastChange": 8,
                     "ifVlan": null,
                     "ifTrunk": null,
@@ -648,7 +648,7 @@
                     "ifMtu": 1500,
                     "ifType": "ppp",
                     "ifAlias": "HDLC",
-                    "ifPhysAddress": "303a303a303a",
+                    "ifPhysAddress": "000000000000",
                     "ifLastChange": 8,
                     "ifVlan": null,
                     "ifTrunk": null,
@@ -748,7 +748,7 @@
                     "ifMtu": 1500,
                     "ifType": "ppp",
                     "ifAlias": "HDLC",
-                    "ifPhysAddress": "303a303a303a",
+                    "ifPhysAddress": "000000000000",
                     "ifLastChange": 8,
                     "ifVlan": null,
                     "ifTrunk": null,
@@ -1813,173 +1813,169 @@
                 {
                     "state_name": "channelLocalRx",
                     "state_descr": "Off",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 1
                 },
                 {
                     "state_name": "channelLocalRx",
                     "state_descr": "On",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "channelLocalRx",
                     "state_descr": "Unknown",
-                    "state_draw_graph": 0,
                     "state_value": 8,
                     "state_generic_value": 3
                 },
                 {
                     "state_name": "channelLocalSfpPresent",
                     "state_descr": "Missing",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 1
                 },
                 {
                     "state_name": "channelLocalSfpPresent",
                     "state_descr": "Present",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "channelLocalTx",
                     "state_descr": "Off",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 1
                 },
                 {
                     "state_name": "channelLocalTx",
                     "state_descr": "On",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "channelLocalTx",
                     "state_descr": "Unknown",
-                    "state_draw_graph": 0,
                     "state_value": 8,
                     "state_generic_value": 3
                 },
                 {
                     "state_name": "channelPresent",
                     "state_descr": "Missing",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 1
                 },
                 {
                     "state_name": "channelPresent",
                     "state_descr": "Present",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "channelRemoteRx",
                     "state_descr": "Off",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 1
                 },
                 {
                     "state_name": "channelRemoteRx",
                     "state_descr": "On",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "channelRemoteRx",
                     "state_descr": "Unknown",
-                    "state_draw_graph": 0,
                     "state_value": 8,
                     "state_generic_value": 3
                 },
                 {
                     "state_name": "channelRemoteTx",
                     "state_descr": "Off",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 1
                 },
                 {
                     "state_name": "channelRemoteTx",
                     "state_descr": "On",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "channelRemoteTx",
                     "state_descr": "Unknown",
-                    "state_draw_graph": 0,
                     "state_value": 8,
                     "state_generic_value": 3
                 },
                 {
                     "state_name": "channelRemoteXfpPresent",
                     "state_descr": "Missing",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 1
                 },
                 {
                     "state_name": "channelRemoteXfpPresent",
                     "state_descr": "Present",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "muxLeftPower",
                     "state_descr": "PowerOn",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "muxLeftPower",
                     "state_descr": "PowerOff",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 2
                 },
                 {
                     "state_name": "muxLeftPower",
                     "state_descr": "Unknown",
-                    "state_draw_graph": 0,
                     "state_value": 8,
                     "state_generic_value": 3
                 },
                 {
                     "state_name": "muxRightPower",
                     "state_descr": "PowerOn",
-                    "state_draw_graph": 0,
                     "state_value": 0,
                     "state_generic_value": 0
                 },
                 {
                     "state_name": "muxRightPower",
                     "state_descr": "PowerOff",
-                    "state_draw_graph": 0,
                     "state_value": 1,
                     "state_generic_value": 2
                 },
                 {
                     "state_name": "muxRightPower",
                     "state_descr": "Unknown",
-                    "state_draw_graph": 0,
                     "state_value": 8,
                     "state_generic_value": 3
                 }
             ]
         },
         "poller": "matches discovery"
+    },
+    "ipv4-addresses": {
+        "discovery": {
+            "ipv4_addresses": [
+                {
+                    "ipv4_address": "10.1.16.108",
+                    "ipv4_prefixlen": 24,
+                    "context_name": "",
+                    "ipv4_network": "10.1.16.0/24",
+                    "ifIndex": 1
+                },
+                {
+                    "ipv4_address": "127.0.0.1",
+                    "ipv4_prefixlen": 24,
+                    "context_name": "",
+                    "ipv4_network": "127.0.0.0/24",
+                    "ifIndex": 2
+                }
+            ]
+        }
     }
 }

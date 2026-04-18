@@ -1,4 +1,5 @@
 <?php
+
 /**
  * OSModulesTest.php
  *
@@ -25,19 +26,24 @@
 
 namespace LibreNMS\Tests;
 
+use App\Facades\LibrenmsConfig;
 use DeviceCache;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Arr;
-use LibreNMS\Config;
 use LibreNMS\Data\Source\Fping;
 use LibreNMS\Data\Source\FpingResponse;
 use LibreNMS\Exceptions\FileNotFoundException;
 use LibreNMS\Exceptions\InvalidModuleException;
-use LibreNMS\Util\Debug;
+use LibreNMS\Util\ModuleList;
 use LibreNMS\Util\ModuleTestHelper;
+use LibreNMS\Util\Number;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Util\Color;
 
-class OSModulesTest extends DBTestCase
+#[TestDox('OS Modules')]
+final class OSModulesTest extends DBTestCase
 {
     use DatabaseTransactions;
 
@@ -49,27 +55,26 @@ class OSModulesTest extends DBTestCase
         parent::setUp();
 
         // backup modules
-        $this->discoveryModules = Config::get('discovery_modules');
-        $this->pollerModules = Config::get('poller_modules');
+        $this->discoveryModules = LibrenmsConfig::get('discovery_modules');
+        $this->pollerModules = LibrenmsConfig::get('poller_modules');
     }
 
     protected function tearDown(): void
     {
         // restore modules
-        Config::set('discovery_modules', $this->discoveryModules);
-        Config::set('poller_modules', $this->pollerModules);
+        LibrenmsConfig::set('discovery_modules', $this->discoveryModules);
+        LibrenmsConfig::set('poller_modules', $this->pollerModules);
 
         parent::tearDown();
     }
 
     /**
      * Test all modules for a particular OS
-     *
-     * @group os
-     *
-     * @dataProvider dumpedDataProvider
      */
-    public function testDataIsValid($os, $variant, $modules)
+    #[Group('os')]
+    #[DataProvider('dumpedDataProvider')]
+    #[TestDox('OS data is valid')]
+    public function testDataIsValid($os, $variant, $modules): void
     {
         // special case if data provider throws exception
         if ($os === false) {
@@ -82,15 +87,14 @@ class OSModulesTest extends DBTestCase
     /**
      * Test all modules for a particular OS
      *
-     * @group os
-     *
-     * @dataProvider dumpedDataProvider
-     *
      * @param  string  $os  base os
      * @param  string  $variant  optional variant
-     * @param  array  $modules  modules to test for this os
+     * @param  array<string, bool>  $modules  modules to test for this os
      */
-    public function testOS($os, $variant, $modules)
+    #[Group('os')]
+    #[DataProvider('dumpedDataProvider')]
+    #[TestDox('OS')]
+    public function testOS($os, $variant, array $modules): void
     {
         // Lock testing time
         $this->travelTo(new \DateTime('2022-01-01 00:00:00'));
@@ -99,13 +103,12 @@ class OSModulesTest extends DBTestCase
         $this->stubClasses();
 
         try {
-            Debug::set(false); // avoid all undefined index errors in the legacy code
-            $helper = new ModuleTestHelper($modules, $os, $variant);
+            $helper = new ModuleTestHelper(new ModuleList($modules), $os, $variant);
             $helper->setQuiet();
 
             $filename = $helper->getJsonFilepath(true);
             $expected_data = $helper->getTestData();
-            $results = $helper->generateTestData($this->getSnmpsim(), true);
+            $results = $helper->generateTestData($this->getSnmpsimIp(), $this->getSnmpsimPort(), true);
         } catch (FileNotFoundException|InvalidModuleException $e) {
             $this->fail($e->getMessage());
         }
@@ -117,39 +120,47 @@ class OSModulesTest extends DBTestCase
         // output all discovery and poller output if debug mode is enabled for phpunit
         $phpunit_debug = in_array('--debug', $_SERVER['argv'], true);
 
-        foreach ($modules as $module) {
-            $expected = $expected_data[$module]['discovery'] ?? [];
-            $actual = $results[$module]['discovery'] ?? [];
+        foreach ($modules as $module => $module_status) {
+            $expected = $expected_data[$module]['discovery'] ?? null;
+            $actual = $results[$module]['discovery'] ?? null;
             $this->checkTestData($expected, $actual, 'Discovered', $os, $module, $filename, $helper, $phpunit_debug);
 
-            if ($module === 'route') {
-                // no route poller module
+            // modules without polling
+            if (in_array($module, ['route', 'vlans'])) {
                 continue;
             }
 
-            if ($expected_data[$module]['poller'] !== 'matches discovery') {
-                $expected = $expected_data[$module]['poller'] ?? [];
+            if (isset($expected_data[$module]['poller'])) {
+                if ($expected_data[$module]['poller'] !== 'matches discovery') {
+                    $expected = $expected_data[$module]['poller']; // we have specific poller data, update expected
+                }
+                // pass through discovery expected data
+            } else {
+                $expected = null; // no poller data, clear discovery's expected
             }
-            $actual = $results[$module]['poller'] ?? [];
+
+            $actual = $results[$module]['poller'] ?? null;
             $this->checkTestData($expected, $actual, 'Polled', $os, $module, $filename, $helper, $phpunit_debug);
         }
 
+        /** @phpstan-ignore method.alreadyNarrowedType */
         $this->assertTrue(true, "Tested $os successfully"); // avoid no asserts error
 
         DeviceCache::flush(); // clear cached devices
         $this->travelBack();
     }
 
-    public function dumpedDataProvider()
+    public static function dumpedDataProvider(): array
     {
         $modules = [];
+        $baseDir = realpath(__DIR__ . '/..');
 
         if (getenv('TEST_MODULES')) {
             $modules = explode(',', getenv('TEST_MODULES'));
         }
 
         try {
-            return ModuleTestHelper::findOsWithData($modules);
+            return ModuleTestHelper::findOsWithData($modules, base_path: $baseDir);
         } catch (InvalidModuleException $e) {
             // special case for exception
             return [[false, false, $e->getMessage()]];
@@ -166,24 +177,38 @@ class OSModulesTest extends DBTestCase
         });
 
         $this->app->bind(Fping::class, function ($app) {
-            $mock = \Mockery::mock(\LibreNMS\Data\Source\Fping::class);
+            $mock = \Mockery::mock(Fping::class);
             $mock->shouldReceive('ping')->andReturn(FpingResponse::artificialUp());
 
             return $mock;
         });
     }
 
-    private function checkTestData(array $expected, array $actual, string $type, string $os, mixed $module, string $filename, ModuleTestHelper $helper, bool $phpunit_debug): void
+    private function checkTestData(?array $expected, ?array $actual, string $type, string $os, mixed $module, string $filename, ModuleTestHelper $helper, bool $phpunit_debug): void
     {
         // try simple and fast comparison first, if that fails, do a costly/well formatted comparison
         if ($expected != $actual) {
+            $this->assertNotNull($actual, "OS $os: $type $module no data generated when it is expected");
+            $this->assertNotNull($expected, "OS $os: $type $module generates data when none is expected");
+
             $message = Color::colorize('bg-red', "OS $os: $type $module data does not match that found in $filename");
             $message .= PHP_EOL;
             $message .= ($type == 'Discovered'
                 ? $helper->getDiscoveryOutput($phpunit_debug ? null : $module)
                 : $helper->getPollerOutput($phpunit_debug ? null : $module));
 
-            $this->assertSame(Arr::dot($expected), Arr::dot($actual), $message);
+            // convert to dot notation so the array is flat and easier to compare visually
+            $expected = Arr::dot($expected);
+            $actual = Arr::dot($actual);
+
+            // json will store 43.0 as 43, Number::cast will change those to integers too
+            foreach ($actual as $index => $value) {
+                if (is_float($value)) {
+                    $actual[$index] = Number::cast($value);
+                }
+            }
+
+            $this->assertSame($expected, $actual, $message);
         }
     }
 }

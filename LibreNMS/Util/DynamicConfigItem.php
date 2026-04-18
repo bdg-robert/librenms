@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DynamicConfigItem.php
  *
@@ -25,12 +26,12 @@
 
 namespace LibreNMS\Util;
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 use Validator;
 
+#[\AllowDynamicProperties]
 class DynamicConfigItem implements \ArrayAccess
 {
-    public $name;
     public $group;
     public $section;
     public $value;
@@ -46,10 +47,9 @@ class DynamicConfigItem implements \ArrayAccess
     public $validate;
     public $units;
 
-    public function __construct($name, $settings = [])
+    public function __construct(public $name, $settings = [])
     {
-        $this->name = $name;
-        $this->value = Config::get($this->name, $this->default);
+        $this->value = LibrenmsConfig::get($this->name, $this->default);
 
         foreach ($settings as $key => $value) {
             $this->$key = $value;
@@ -76,7 +76,7 @@ class DynamicConfigItem implements \ArrayAccess
             return in_array($value, array_keys($this->options));
         } elseif ($this->type == 'email') {
             // allow email format that includes display text
-            if (preg_match('/.* <(.*)>/', $value, $matches)) {
+            if (preg_match('/.* <(.*)>/', (string) $value, $matches)) {
                 $value = $matches[1];
             }
 
@@ -88,21 +88,30 @@ class DynamicConfigItem implements \ArrayAccess
                 return false;
             }
 
-            foreach ($value as $v) {
+            foreach ($value as $key => $v) {
                 if (! is_array($v)) {
+                    return false;
+                }
+
+                // check keys not empty
+                if (is_string($key) && strlen(trim($key)) == 0) {
                     return false;
                 }
             }
 
             return true;
         } elseif ($this->type == 'color') {
-            return (bool) preg_match('/^#?[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/', $value);
+            return (bool) preg_match('/^#?[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/', (string) $value);
         } elseif (in_array($this->type, ['text', 'password'])) {
             return ! is_array($value);
         } elseif ($this->type === 'executable') {
-            return is_file($value) && is_executable($value);
+            $value == $this->sanitizePath($value);
+
+            return $value !== false && is_file($value) && is_executable($value);
         } elseif ($this->type === 'directory') {
-            return is_dir($value);
+            $value == $this->sanitizePath($value);
+
+            return $value !== false && is_dir($value);
         }
 
         return false;
@@ -227,7 +236,7 @@ class DynamicConfigItem implements \ArrayAccess
     #[\ReturnTypeWillChange]
     public function offsetGet($offset): mixed
     {
-        return isset($this->$offset) ? $this->$offset : null;
+        return $this->$offset ?? null;
     }
 
     public function offsetSet($offset, $value): void
@@ -263,5 +272,14 @@ class DynamicConfigItem implements \ArrayAccess
     private function buildValidator($value)
     {
         return Validator::make(['value' => $value], $this->validate);
+    }
+
+    private function sanitizePath(string $path): string|false
+    {
+        if (preg_match('/[`;#$|&\'"><(]/', $path)) {
+            return false;
+        }
+
+        return realpath($path); // avoid path redirection shenanigans
     }
 }

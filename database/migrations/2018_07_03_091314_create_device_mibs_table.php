@@ -10,14 +10,14 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('device_mibs', function (Blueprint $table) {
             $table->unsignedInteger('device_id');
             $table->string('module');
             $table->string('mib');
             $table->string('included_by');
-            if (\LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
+            if (LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
                 $table->timestamp('last_modified')->default(DB::raw('CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'));
             } else {
                 $table->timestamp('last_modified')->useCurrent();
@@ -31,7 +31,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::drop('device_mibs');
     }

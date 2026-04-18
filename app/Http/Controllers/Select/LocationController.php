@@ -1,4 +1,5 @@
 <?php
+
 /**
  * LocationController.php
  *
@@ -44,6 +45,6 @@ class LocationController extends SelectController
     {
         return Location::hasAccess($request->user())
             ->orderBy('location')
-            ->select('id', 'location');
+            ->select(['id', 'location']);
     }
 }

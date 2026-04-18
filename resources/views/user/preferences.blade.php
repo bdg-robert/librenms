@@ -68,7 +68,7 @@
                 </div>
             </div>
             <div class="form-group">
-                <label for="site_style" class="col-sm-4 control-label">{{ __('CSS Style') }}</label>
+                <label for="site_style" class="col-sm-4 control-label">{{ __('preferences.theme') }}</label>
                 <div class="col-sm-4">
                     <select class="form-control ajax-select" name="site_style" data-pref="site_style" data-previous="{{ $site_style }}">
                         <option value="default">{{ __('Default') }} ({{ $site_style_default }})</option>
@@ -104,6 +104,15 @@
                 </div>
             </div>
             <div class="form-group">
+                <label for="temp_units" class="col-sm-4 control-label">{{ __('Temperature Units') }}</label>
+                <div class="col-sm-4">
+                    <select class="form-control ajax-select" name="temperature" data-pref="temp_units" data-previous="{{ $temp_units }}">
+                        <option value="default">{{ __('Celsius') }}</option>
+                        <option value="f" @if($temp_units == 'f') selected @endif>{{ __('Fahrenheit') }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
                 <label for="notetodevice" class="col-sm-4 control-label">{{ __('Add schedule notes to devices notes') }}</label>
                 <div class="col-sm-4">
                     <input id="notetodevice" type="checkbox" name="notetodevice" @if($note_to_device) checked @endif>
@@ -120,7 +129,7 @@
 
     @config('auth.socialite.configs')
     <x-panel title="{{ __('OAuth/SAML Authentication') }}">
-        @foreach (\LibreNMS\Config::get('auth.socialite.configs', []) as $provider => $config)
+        @foreach (\App\Facades\LibrenmsConfig::get('auth.socialite.configs', []) as $provider => $config)
         <form role="form" action="{{ route('socialite.redirect', $provider) }}" method="post">
             {{ csrf_field() }}
             <button type="submit" id="login" class="btn btn-success btn-block">
@@ -134,10 +143,14 @@
     @config('twofactor')
     <x-panel title="{{ __('Two-Factor Authentication') }}">
         @if($twofactor)
-            <div id="twofactorqrcontainer">
-                <div id="twofactorqr"></div>
-                <script>$("#twofactorqr").qrcode({"text": "{{ $twofactor_uri }}"});</script>
-                <button class="btn btn-default" onclick="$('#twofactorkeycontainer').show(); $('#twofactorqrcontainer').hide();">{{ __('Manual') }}</button>
+            <div class="tw:text-center" id="twofactorqrcontainer">
+                <div class="tw:inline-block tw:bg-white tw:p-4 tw:pb-2 tw:rounded-lg tw:mb-2">
+                    <div id="twofactorqr"></div>
+                    <script>$("#twofactorqr").qrcode({"text": "{{ $twofactor_uri }}"});</script>
+                </div>
+                <div>
+                    <button class="btn btn-default" onclick="$('#twofactorkeycontainer').show(); $('#twofactorqrcontainer').hide();">{{ __('Manual') }}</button>
+                </div>
             </div>
             <div id="twofactorkeycontainer">
                 <form id="twofactorkey" class="form-horizontal" role="form">
@@ -186,10 +199,18 @@
     </x-panel>
     @endconfig
 
+    <x-panel title="{{ __('Roles') }}">
+        @forelse($user->roles->map(fn($r) => Str::title(str_replace('-', ' ', $r->name))) as $role)
+            <span class="label label-info tw:mr-1">{{ $role }}</span>
+        @empty
+            <strong class="red">{{ __('No roles!') }}</strong>
+        @endforelse
+    </x-panel>
+
     <x-panel title="{{ __('Device Permissions') }}">
-        @if(auth()->user()->hasGlobalAdmin())
+        @can('update', \App\Models\Device::class)
             <strong class="blue">{{ __('Global Administrative Access') }}</strong>
-        @elseif(auth()->user()->hasGlobalRead())
+        @elseCan('viewAny', \App\Models\Device::class)
             <strong class="green">{{ __('Global Viewing Access') }}</strong>
         @else
             @forelse($devices as $device)
@@ -197,7 +218,7 @@
             @empty
                 <strong class="red">{{ __('No access!') }}</strong>
             @endforelse
-        @endif
+        @endcan
     </x-panel>
 </div>
 @endsection

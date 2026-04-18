@@ -10,11 +10,17 @@ return [
     'alertlog-stats' => [
         'title' => 'Alert History Stats',
     ],
+    'alert-map' => [
+        'title' => 'Alert Map',
+    ],
     'availability-map' => [
         'title' => 'Availability Map',
     ],
     'component-status' => [
         'title' => 'Component Status',
+    ],
+    'custom-map' => [
+        'title' => 'Custom Map',
     ],
     'device-summary-horiz' => [
         'title' => 'Device Summary Horizontal',
@@ -43,6 +49,9 @@ return [
     'notes' => [
         'title' => 'Notes',
     ],
+    'placeholder' => [
+        'title' => 'Placeholder',
+    ],
     'server-stats' => [
         'title' => 'Server Stats',
     ],
@@ -58,7 +67,7 @@ return [
     'top-interfaces' => [
         'title' => 'Top Interfaces',
     ],
-    'worldmap' => [
+    'world-map' => [
         'title' => 'World Map',
     ],
 ];

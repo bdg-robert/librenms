@@ -1,9 +1,12 @@
 <?php
 
+// laravel routing uses section for sub-tab navigation
+$vars['proto'] ??= $vars['section'] ?? null;
+
 $link_array = [
-    'page'   => 'device',
+    'page' => 'device',
     'device' => $device['device_id'],
-    'tab'    => 'routing',
+    'tab' => 'routing',
 ];
 
 // $type_text['overview'] = "Overview";
@@ -19,6 +22,7 @@ $type_text['netscaler_vsvr'] = 'VServers';
 $type_text['bgp'] = 'BGP';
 $type_text['cef'] = 'CEF';
 $type_text['ospf'] = 'OSPF';
+$type_text['ospfv3'] = 'OSPFv3';
 $type_text['isis'] = 'ISIS';
 $type_text['vrf'] = 'VRFs';
 $type_text['routes'] = 'Routing Table';
@@ -53,7 +57,7 @@ foreach ($routing_tabs as $type => $type_count) {
 
 print_optionbar_end();
 
-$protocol = basename($vars['proto']);
+$protocol = basename((string) $vars['proto']);
 if (is_file("includes/html/pages/device/routing/$protocol.inc.php")) {
     include "includes/html/pages/device/routing/$protocol.inc.php";
 } else {
@@ -61,10 +65,10 @@ if (is_file("includes/html/pages/device/routing/$protocol.inc.php")) {
         if ($type != 'overview') {
             if (is_file("includes/html/pages/device/routing/overview/$type.inc.php")) {
                 $g_i++;
-                if (! is_integer($g_i / 2)) {
-                    $row_colour = \LibreNMS\Config::get('list_colour.even');
+                if (! is_int($g_i / 2)) {
+                    $row_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
                 } else {
-                    $row_colour = \LibreNMS\Config::get('list_colour.odd');
+                    $row_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
                 }
 
                 echo '<div style="background-color: ' . $row_colour . ';">';

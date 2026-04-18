@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Oxidized.php
  *
@@ -25,17 +26,19 @@
 
 namespace App\ApiClients;
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Log;
 
 class Oxidized extends BaseApi
 {
-    private bool $enabled;
+    private readonly bool $enabled;
 
     public function __construct()
     {
         $this->timeout = 90;
-        $this->base_uri = Config::get('oxidized.url') ?? '';
-        $this->enabled = Config::get('oxidized.enabled') === true && $this->base_uri;
+        $this->base_uri = LibrenmsConfig::get('oxidized.url') ?? '';
+        $this->enabled = LibrenmsConfig::get('oxidized.enabled') === true && $this->base_uri;
     }
 
     /**
@@ -43,8 +46,12 @@ class Oxidized extends BaseApi
      */
     public function reloadNodes(): void
     {
-        if ($this->enabled && Config::get('oxidized.reload_nodes') === true) {
-            $this->getClient()->get('/reload.json');
+        if ($this->enabled && LibrenmsConfig::get('oxidized.reload_nodes') === true) {
+            try {
+                $this->getClient()->get('/reload.json');
+            } catch (ConnectionException $e) {
+                Log::warning('Oxidized is not reachable: ' . $e->getMessage());
+            }
         }
     }
 
@@ -57,9 +64,13 @@ class Oxidized extends BaseApi
             // Work around https://github.com/rack/rack/issues/337
             $msg = str_replace('%', '', $msg);
 
-            return $this->getClient()
-                ->put("/node/next/$hostname", ['user' => $username, 'msg' => $msg])
-                ->successful();
+            try {
+                return $this->getClient()
+                    ->put("/node/next/$hostname", ['user' => $username, 'msg' => $msg])
+                    ->successful();
+            } catch (ConnectionException $e) {
+                Log::warning('Oxidized is not reachable: ' . $e->getMessage());
+            }
         }
 
         return false;
@@ -69,9 +80,15 @@ class Oxidized extends BaseApi
     public function getContent(string $uri): string
     {
         if ($this->enabled) {
-            return $this->getClient()->get($uri);
-        } else {
-            return '';
+            try {
+                return $this->getClient()->get($uri);
+            } catch (ConnectionException $e) {
+                Log::warning('Oxidized is not reachable: ' . $e->getMessage());
+
+                return '';
+            }
         }
+
+        return '';
     }
 }

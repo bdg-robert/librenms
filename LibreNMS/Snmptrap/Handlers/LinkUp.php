@@ -1,4 +1,5 @@
 <?php
+
 /**
  * LinkUp.php
  *
@@ -26,6 +27,8 @@
 namespace LibreNMS\Snmptrap\Handlers;
 
 use App\Models\Device;
+use LibreNMS\Enum\IfOperStatus;
+use LibreNMS\Enum\Severity;
 use LibreNMS\Interfaces\SnmptrapHandler;
 use LibreNMS\Snmptrap\Trap;
 use Log;
@@ -52,17 +55,17 @@ class LinkUp implements SnmptrapHandler
             return;
         }
 
-        $port->ifOperStatus = $trap->getOidData("IF-MIB::ifOperStatus.$ifIndex") ?: 'up';
-        $port->ifAdminStatus = $trap->getOidData("IF-MIB::ifAdminStatus.$ifIndex") ?: 'up'; // If we receive LinkUp trap, we can safely assume that the ifAdminStatus is also up.
+        $port->ifOperStatus = IfOperStatus::tryFrom($trap->getOidData("IF-MIB::ifOperStatus.$ifIndex")) ?? IfOperStatus::Up;
+        $port->ifAdminStatus = IfOperStatus::tryFrom($trap->getOidData("IF-MIB::ifAdminStatus.$ifIndex")) ?? IfOperStatus::Up; // If we receive LinkUp trap, we can safely assume that the ifAdminStatus is also up.
 
-        $trap->log("SNMP Trap: linkUp $port->ifAdminStatus/$port->ifOperStatus " . $port->ifDescr, 1, 'interface', $port->port_id);
+        $trap->log("SNMP Trap: linkUp {$port->ifAdminStatus?->value}/{$port->ifOperStatus?->value} " . $port->ifDescr, Severity::Ok, 'interface', $port->port_id);
 
         if ($port->isDirty('ifAdminStatus')) {
-            $trap->log("Interface Enabled : $port->ifDescr (TRAP)", 3, 'interface', $port->port_id);
+            $trap->log("Interface Enabled : $port->ifDescr (TRAP)", Severity::Notice, 'interface', $port->port_id);
         }
 
         if ($port->isDirty('ifOperStatus')) {
-            $trap->log("Interface went Up : $port->ifDescr (TRAP)", 1, 'interface', $port->port_id);
+            $trap->log("Interface went Up : $port->ifDescr (TRAP)", Severity::Ok, 'interface', $port->port_id);
         }
 
         $port->save();

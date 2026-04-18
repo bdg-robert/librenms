@@ -1,353 +1,202 @@
-# Distributed Poller
+# Distributed Polling
 
-A normal install contains all parts of LibreNMS:
+**Distributed Polling** enables LibreNMS to spread polling and discovery tasks across multiple servers for horizontal scaling.
 
-- Poller/Discovery/etc workers
-- RRD (Time series data store) *
-- Database *
-- Webserver (Web UI/API) *
+A single poller can typically handle up to **1,000+ devices**, depending on factors like latency and device responsiveness.
+Before deploying distributed polling, review the [Performance Documentation](../Support/Performance.md) to ensure your system is fully optimized.
 
-\* may only be installed on one server (however, some can be clustered)
+> **Note:** Distributed polling is **not intended for remote polling**.
 
-Distributed Polling allows the workers to be spread across additional
-servers for horizontal scaling. Distributed polling is not intended for
-remote polling.
+---
 
-Devices can be grouped together into a `poller_group` to pin these
-devices to a single or a group of designated pollers.
+## Overview
 
-All pollers need to write to the same set of RRD files, preferably via
-RRDcached.
+In addition to separating LibreNMS components across different servers, distributed polling allows poller workloads to be balanced among multiple nodes.
 
-It is also a requirement that at least one locking service is in place
-to which all pollers can connect. There are currently three locking
-mechanisms available
+LibreNMS consists of several core services:
 
-- memcached
-- redis (preferred)
-- sql locks (default)
+- Poller, Discovery, and related workers
+- RRD (time-series data store)
+- Database
+- Web Server (UI/API)
 
-All of the above locking mechanisms are natively supported in LibreNMS.
-If none are specified, it will default to using SQL.
+Distributed Polling also requires:
 
-## Requirements for distributed polling
+- [The Dispatcher Service](Dispatcher-Service.md)
+- [RRDCached](RRDCached.md)
+- [Redis](#redis)
 
-These requirements are above the normal requirements for a full LibreNMS install.
+All poller nodes must connect to the same instance of:
 
-- rrdtool version 1.4 or above
-- At least one locking mechanism configured
-- a rrdcached install
+- Database
+- RRDCached
+- Redis
 
-By default, all hosts are shared and have the `poller_group = 0`. To
-pin a device to a poller, set it to a value greater than 0 and set the
-same value in the poller's config with
-`distributed_poller_group`. One can also specify a comma
-separated string of poller groups in
-`distributed_poller_group`.  The poller will then poll
-devices from any of the groups listed.  If new devices get added from
-the poller they will be assigned to the first poller group in the list
-unless the group is specified when adding the device.
+---
 
-The following is a standard config, combined with a locking mechanism below:
+## Redis
 
-!!! setting "poller/distributed"
-    ```bash
-    lnms config:set distributed_poller true
-    lnms config:set distributed_poller_group 0
-    ```
+Distributed Polling uses **Redis** to coordinate polling nodes.
 
-If you want to customise the hostname for the poller then you will need
-to set this in `config.php`:
+Install and configure Redis on a shared server, then set the following environment variables in the `.env` file on **all nodes**:
 
-```php
-$config['distributed_poller_name']           = php_uname('n');
-```
-
-## Locking mechanisms
-Pick one of the following setups, do not use all of them at the same
-time.
-
-### Using REDIS
-
-In your `.env` file you will need to specify a redis server, port and
-the driver.
-
-```
-REDIS_HOST=HOSTNAME or IP
+```dotenv
+REDIS_HOST=<Redis Server IP>
 REDIS_PORT=6379
+REDIS_DB=0
+REDIS_TIMEOUT=60
+
+# If Redis authentication is enabled (recommended):
+REDIS_PASSWORD=<Password>
+
+# If Redis ACLs are in use (recommended):
+REDIS_USERNAME=<Username>
+```
+
+### Sentinel
+
+If you use Redis Sentinel, you may still need to define
+`REDIS_PASSWORD`, `REDIS_USERNAME`, `REDIS_DB`, and `REDIS_TIMEOUT`.
+
+Sentinel provides high availability and automatic failover.
+Authentication can (and should) be enabled for both Sentinel and Redis instances.
+
+```dotenv
+REDIS_SENTINEL=<Server List> # Comma separated with host:port format eg: redis-001.example.org:26379,redis-002.example.org:26379
+REDIS_SENTINEL_SERVICE=<Sentinel Instance Name>
+
+# If Sentinel authentication is enabled (recommended):
+REDIS_SENTINEL_PASSWORD=<Sentinel Password>
+REDIS_SENTINEL_USERNAME=<Sentinel Username>
+```
+
+### Redis Security
+
+See <https://redis.io/docs/management/security/acl/> for details on Redis ACLs and security best practices.
+
+### Caching, Locks, and Sessions
+
+Since Redis is already configured, enable it for caching, queues, and sessions:
+
+```dotenv
 CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
 ```
-### Using Memcached
 
-Preferably you should set the memcached server settings via the web UI.
-Under Settings > Global Settings > Distributed poller, you fill out the
-memcached host and port, and then in your `.env` file you will need to add:
-
-```
-CACHE_DRIVER=memcached
-```
-If you want to use memcached, you will also need to install an additional
-Python 3 python-memcached package.
-
-## Example Setup
-
-Below is an example setup based on a real deployment which at the time
-of writing covers over 2,500 devices and 50,000 ports. The setup is
-running within an OpenStack environment with some commodity hardware
-for remote pollers. Here's a diagram of how you can scale LibreNMS
-out:
-
-![Example Setup](@= config.site_url =@/img/librenms-distributed-diagram.png)
-
-## Architecture
-
-How you set the distribution up is entirely up to you. You can choose
-to host the majority of the required services on a single virtual
-machine or server and then a poller to actually query the devices
-being monitored, all the way through to having a dedicated server for
-each of the individual roles. Below are notes on what you need to
-consider both from the software layer, but also connectivity.
-
-## Web / API Layer
-
-This is typically Apache but we have setup guides for both Nginx and
-Lighttpd which should work perfectly fine. There is nothing unique
-about the role this service is providing except that if you are adding
-devices from this layer then the web service will need to be able to
-connect to the end device via SNMP and perform an ICMP test.
-
-It is advisable to run RRDCached within this setup so that you don't
-need to share the rrd folder via a remote file share such as NFS. The
-web service can then generate rrd graphs via RRDCached. If RRDCached
-isn't an option then you can mount the rrd directory to read the RRD
-files directly.
-
-## Database Server
-
-MySQL / MariaDB - At the moment these are the only database servers
-that are supported.
-
-The pollers, web and API layers should all be able to access the
-database server directly.
-
-## RRD Storage
-
-Central storage should be provided so all RRD files can be read from
-and written to in one location. As suggested above, it's recommended
-that RRD Cached is configured and used.
-
-For this example, we are running RRDCached to allow all pollers and
-web/api servers to read/write to the rrd files with the rrd directory
-also exported by NFS for simple access and maintenance.
-
-## Pollers
-
-Pollers can be installed and run from anywhere, the only requirements are:
-
-- They can access the Memcache instance
-- They can create RRD files via some method such as a shared
-  filesystem or RRDTool >=1.5.5
-- They can access the MySQL server
-
-You can either assign pollers into groups and set a poller group
-against certain devices, this will mean that those devices will only
-be processed by certain pollers (default poller group is 0) or you can
-assign all pollers to the default poller group for them to process any
-and all devices.
-
-This will provide the ability to have a single poller behind a NAT
-firewall monitor internal devices and report back to your central
-system. You will then be able to monitor those devices from the Web UI
-as normal.
-
-Another benefit to this is that you can provide N+x pollers, i.e if
-you know that you require three pollers to process all devices within
-300 seconds then adding a 4th poller will mean that should any one
-single poller fail then the remaining three will complete polling in
-time. You could also use this to take a poller out of service for
-maintenance, i.e OS updates and software updates.
-
-It is extremely advisable to either run a central recursive dns server
-such as pdns-recursor and have all of your pollers use this or install
-a recursive dns server on each poller - the volume of DNS requests on
-large installs can be significant and will slow polling down enough to
-cause issues with a large number of devices.
-
-A last note to make sure of, is that all pollers writing to the same DB
-need to have the same `APP_KEY` value set in the `.env` file.
-
-## Discovery
-
-Depending on your setup will depend on how you configure your discovery processes.
-
-**Cron based polling**
-
-It's not necessary to run discovery services on all pollers. In fact, you should
-only run one discovery process per poller group.
-Designate a single poller to run discovery (or a separate server if required).
-
-**Dispatcher service**
-When using the dispatcher service, discovery can run on all nodes.
+---
 
 ## Configuration
 
-Settings in config.php should be copied to all servers as they only apply locally.
+Each node requires valid connection settings in `.env`.
+This file is generated after running Composer and setting both `APP_KEY` and `NODE_ID`.
 
-One way around this is to set settings in the database via the web ui or `./lnms config:set`
+!!! warning
+    `APP_KEY` must be **identical** across all nodes. You can generate one with `lnms key:generate --show`
 
-## Config sample
+    `NODE_ID` must be **unique** per node.
 
-The following config is taken from a live setup which consists of a
-Web server, DB server, RRDCached server and 3 pollers.
+```dotenv
+APP_KEY=<Generated App Key>   # Required - same on all nodes
+NODE_ID=<Unique Node ID>      # Required - unique per node
 
-Web Server:
+DB_HOST=<DB Server IP>
+DB_DATABASE=librenms
+DB_USERNAME=<DB Username>
+DB_PASSWORD=<DB Password>
+```
 
-Running Apache and an install of LibreNMS in /opt/librenms
+---
+
+## Poller Groups
+
+Poller groups allow you to assign devices to specific pollers or sets of pollers.
+By default, all devices and pollers belong to **group 0**.
+
+Enable distributed polling to expose poller group options in the Web UI:
 
 !!! setting "poller/distributed"
     ```bash
     lnms config:set distributed_poller true
     ```
 
-!!! setting "poller/rrdtool"
-    ```bash
-    lnms config:set rrdcached "example.com:42217"
-    ```
+### Creating Poller Groups
 
-Database Server:
-Running Memcache and MariaDB
+In the Web UI, go to **Settings > Poller > Groups** to create groups.
 
-- Memcache
+### Assigning Poller Nodes to Groups
 
-Ubuntu (/etc/memcached.conf)
+In **Settings > Poller > Settings**, choose poller group(s) for each node.
 
-```conf
--d
--m 64
--p 11211
--u memcache
--l ip.ip.ip.ip
-```
-
-RRDCached Server:
-Running RRDCached
-
-- RRDCached
-
-Ubuntu (/etc/default/rrdcached)
-
-```conf
-OPTS="-l 0:42217"
-OPTS="$OPTS -j /var/lib/rrdcached/journal/ -F"
-OPTS="$OPTS -b /opt/librenms/rrd -B"
-OPTS="$OPTS -w 1800 -z 900"
-```
-
-Ubuntu (/etc/default/rrdcached) - RRDCached 1.5.5 and above.
-
-```
-BASE_OPTIONS="-l 0:42217"
-BASE_OPTIONS="$BASE_OPTIONS -R -j /var/lib/rrdcached/journal/ -F"
-BASE_OPTIONS="$BASE_OPTIONS -b /opt/librenms/rrd -B"
-BASE_OPTIONS="$BASE_OPTIONS -w 1800 -z 900"
-```
-
-Poller 1:
-Running an install of LibreNMS in /opt/librenms
-
-`config.php`
+You can also set poller groups manually in `config.php` (though this is overridden by per-node Web UI settings):
 
 ```php
-$config['distributed_poller_name']           = php_uname('n');
+$config['distributed_poller_group'] = '1,2,3';
 ```
+
+### Assigning Devices to a Poller Group
+
+You can assign devices to a poller group when adding or editing them.
+To change the default poller group:
 
 !!! setting "poller/distributed"
     ```bash
-    lnms config:set distributed_poller_group 0
-    lnms config:set distributed_poller_memcached_host "example.com"
-    lnms config:set distributed_poller_memcached_port 11211
-    lnms config:set distributed_poller true
+    lnms config:set default_poller_group 1
     ```
 
-!!! setting "poller/rrdtool"
-    ```bash
-    lnms config:set rrdcached "example.com:42217"
-    ```
+### Distributed Billing
 
-`/etc/cron.d/librenms`
-
-Runs discovery and polling for group 0, daily.sh to deal with
-notifications and DB cleanup and alerts.
-
-```conf
-33   */6  * * *   librenms    /opt/librenms/cronic /opt/librenms/discovery-wrapper.py 1
-*/5  *    * * *   librenms    /opt/librenms/discovery.php -h new >> /dev/null 2>&1
-*/5  *    * * *   librenms    /opt/librenms/cronic /opt/librenms/poller-wrapper.py 16
-15   0    * * *   librenms    /opt/librenms/daily.sh >> /dev/null 2>&1
-*    *    * * *   librenms    /opt/librenms/alerts.php >> /dev/null 2>&1
-```
-
-Poller 2:
-Running an install of LibreNMS in /opt/librenms
-
-`config.php`
-
-```php
-$config['distributed_poller_name']           = php_uname('n');
-```
+By default, billing runs on a single poller.
+To allow billing across groups:
 
 !!! setting "poller/distributed"
     ```bash
-    lnms config:set distributed_poller_group 0
-    lnms config:set distributed_poller_memcached_host "example.com"
-    lnms config:set distributed_poller_memcached_port 11211
-    lnms config:set distributed_poller true
+    lnms config:set distributed_billing true
     ```
 
-!!! setting "poller/rrdtool"
-    ```bash
-    lnms config:set rrdcached "example.com:42217"
-    ```
+---
 
-`/etc/cron.d/librenms`
+## Scaling
 
-Runs billing as well as polling for group 0.
+Scale gradually to simplify management and maintain reliability.
+Stop when you are able to handle your work load.
 
-```conf
-*/5 * * * * librenms /opt/librenms/poller-wrapper.py 16 >> /opt/librenms/logs/wrapper.log
-*/5 * * * * librenms /opt/librenms/poll-billing.php >> /dev/null 2>&1
-01  * * * * librenms /opt/librenms/billing-calculate.php >> /dev/null 2>&1
-15  0 * * * librenms    /opt/librenms/daily.sh >> /dev/null 2>&1
-```
+1. Start with a stable single-server installation.
+2. Enable [RRDCached](RRDCached.md).
+3. Switch to [The Dispatcher Service](Dispatcher-Service.md).
+4. Review [Performance Documentation](../Support/Performance.md).
+5. Move services to separate servers as needed:
+    - Database
+    - RRDCached
+    - Web Server (UI/API)
+    - Poller
+6. Configure Redis.
+7. Add an additional poller node.
+8. Add more pollers as required.
+9. Use poller groups to control how devices are distributed across nodes.
 
-Poller 3:
-Running an install of LibreNMS in /opt/librenms
+---
 
-`config.php`
+## High Availability
 
-```php
-$config['distributed_poller_name']           = php_uname('n');
-```
+Not all services LibreNMS relies on can support High Availability. You can find
+more details in the [High Availability](../Support/High-Availability.md) docs.
 
-!!! setting "poller/distributed"
-    ```bash
-    lnms config:set distributed_poller_group '2,3'
-    lnms config:set distributed_poller_memcached_host "example.com"
-    lnms config:set distributed_poller_memcached_port 11211
-    lnms config:set distributed_poller true
-    ```
+---
 
-!!! setting "poller/rrdtool"
-    ```bash
-    lnms config:set rrdcached "example.com:42217"
-    ```
+## Dispatcher-Only Node
 
-`/etc/cron.d/librenms`
-Runs discovery and polling for groups 2 and 3.
+For nodes dedicated solely to polling, you can skip certain setup steps to streamline installation.
 
-```conf
-33  */6 * * *   librenms    /opt/librenms/cronic /opt/librenms/discovery-wrapper.py 1
-*/5 *   * * *   librenms    /opt/librenms/discovery.php -h new >> /dev/null 2>&1
-*/5 *   * * *   librenms    /opt/librenms/cronic /opt/librenms/poller-wrapper.py 16
-15  0   * * *   librenms    /opt/librenms/daily.sh >> /dev/null 2>&1
-```
+Do **not** install or configure:
+
+- Database
+- Web Server
+- Web Installer
+- Cron Scripts
+
+Follow the [installation guide](../Installation/Install-LibreNMS.md), skipping database and web configuration steps.
+When prompted for the web install, instead copy the `.env` file from another node and assign a unique `NODE_ID`.
+
+Then set up the [Dispatcher Service](Dispatcher-Service.md).
+The poller node will appear in the Web UI once it starts reporting.

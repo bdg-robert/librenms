@@ -1,6 +1,15 @@
 <?php
 
 return [
+    'errors' => [
+        'db_connect' => 'Failed to connect to database. Verify database service is running and connection settings.',
+        'db_auth' => 'Failed to connect to database. Verify credentials: :error',
+        'no_devices' => 'No devices found matching your given device specification',
+        'no_new_devices' => 'No new devices',
+    ],
+    'config:clear' => [
+        'description' => 'Clear config cache.  This will allow any changes that have been made since the last full config load to be reflected in the current config.',
+    ],
     'config:get' => [
         'description' => 'Get configuration value',
         'arguments' => [
@@ -9,6 +18,13 @@ return [
         'options' => [
             'dump' => 'Output the entire config as json',
         ],
+    ],
+    'config:list' => [
+        'description' => 'List and search configuration settings',
+        'arguments' => [
+            'search' => 'Search for a setting, matching config name or description',
+        ],
+        'not_found' => 'No settings found matching \':search\'',
     ],
     'config:set' => [
         'description' => 'Set configuration value (or unset)',
@@ -44,7 +60,7 @@ return [
             'fail-fast' => 'Stop checks when any failure is encountered',
             'full' => 'Run full checks ignoring changed file filtering',
             'module' => 'Specific Module to run tests on. Implies unit, --db, --snmpsim',
-            'os' => 'Specific OS to run tests on. Implies unit, --db, --snmpsim',
+            'os' => 'Specific OS to run tests on. May be a regex or comma seperated list. Implies unit, --db, --snmpsim',
             'os-modules-only' => 'Skip os detection test when specifying a specific OS.  Speeds up test time when checking non-detection changes.',
             'quiet' => 'Hide output unless there is an error',
             'snmpsim' => 'Use snmpsim for unit tests',
@@ -63,6 +79,7 @@ return [
         'exit' => 'Ctrl-C to stop',
         'removed' => 'Device :id removed',
         'updated' => 'Device :hostname (:id) updated',
+        'setup' => 'Setting up snmpsim venv in :dir',
     ],
     'device:add' => [
         'description' => 'Add a new device',
@@ -101,10 +118,33 @@ return [
             'added' => 'Added device :hostname (:device_id)',
         ],
     ],
+    'device:discover' => [
+        'description' => 'Discover information about existing devices, defines what will be polled',
+        'arguments' => [
+            'device spec' => 'Device spec to discover: device_id, hostname, wildcard (*), odd, even, all',
+        ],
+        'options' => [
+            'modules' => 'Specify module(s) to be run. submodules may be added with /.  Multiple values allowed.',
+            'os' => 'Discover devices only with specified operating system',
+            'type' => 'Discover devices only with specified type',
+        ],
+        'errors' => [
+            'none_up' => 'Device was down, unable to discover.|All devices were down, unable to discover.',
+            'none_actioned' => 'No devices were discovered.',
+        ],
+        'actioned' => 'Discovered :count devices in :time',
+        'starting' => 'Starting discovery:',
+    ],
     'device:ping' => [
         'description' => 'Ping device and record data for response',
         'arguments' => [
-            'device spec' => 'Device to ping one of: <Device ID>, <Hostname/IP>, all',
+            'device spec' => 'Device to ping one of: <Device ID>, <Hostname/IP>, all, fast ("fast" will ping all devices and update graphs and status)',
+        ],
+        'options' => [
+            'groups' => 'Group ID(s) to ping. Specify multiple times for multiple groups. (only valid with fast)',
+        ],
+        'errors' => [
+            'groups_without_fast' => 'The --groups (-g) option is only supported with "fast" device spec.',
         ],
     ],
     'device:poll' => [
@@ -115,14 +155,18 @@ return [
         'options' => [
             'modules' => 'Specify single module to be run. Comma separate modules, submodules may be added with /',
             'no-data' => 'Do not update datastores (RRD, InfluxDB, etc)',
+            'os' => 'Poll devices only with specified operating system',
+            'type' => 'Poll devices only with specified type',
         ],
         'errors' => [
-            'db_connect' => 'Failed to connect to database. Verify database service is running and connection settings.',
-            'db_auth' => 'Failed to connect to database. Verify credentials: :error',
-            'no_devices' => 'No devices found matching your given device specification.',
-            'none_polled' => 'No devices were polled.',
+            'none_up' => 'Device was down, unable to poll.|All devices were down, unable to poll.',
+            'none_actioned' => 'No devices were polled.',
         ],
-        'polled' => 'Polled :count devices in :time',
+        'actioned' => 'Polled :count devices in :time',
+        'starting' => 'Starting polling run:',
+    ],
+    'device:remove' => [
+        'doesnt_exists' => 'No such device: :device',
     ],
     'key:rotate' => [
         'description' => 'Rotate APP_KEY, this decrypts all encrypted data with the given old key and stores it with the new key in APP_KEY.',
@@ -157,6 +201,73 @@ return [
             'optionValue' => 'Selected :option is invalid. Should be one of: :values',
         ],
     ],
+    'maintenance:cleanup-database' => [
+        'description' => 'Database cleanup of orphaned items.',
+    ],
+    'maintenance:cleanup-networks' => [
+        'delete' => 'Deleting :count unused networks',
+    ],
+    'maintenance:fetch-ouis' => [
+        'description' => 'Fetch MAC OUIs and cache them to display vendor names for MAC addresses',
+        'options' => [
+            'force' => 'Ignore any settings or locks that prevent the command from being run',
+            'wait' => 'Wait a random amount of time, used by the scedueler to prevent server strain',
+        ],
+        'disabled' => 'Mac OUI integration disabled (:setting)',
+        'enable_question' => 'Enable Mac OUI integration and scheduled fetching?',
+        'recently_fetched' => 'MAC OUI Database fetched recently, skipping update.',
+        'waiting' => 'Waiting :minutes minute before attempting MAC OUI update|Waiting :minutes minutes before attempting MAC OUI update',
+        'starting' => 'Storing Mac OUI in the database',
+        'downloading' => 'Downloading',
+        'processing' => 'Processing CSV',
+        'saving' => 'Saving results',
+        'success' => 'Successfully updated OUI/Vendor mappings. :count modified OUI|Successfully updated. :count modified OUIs',
+        'error' => 'Error processing Mac OUI:',
+        'vendor_update' => 'Adding OUI :oui for :vendor',
+    ],
+    'maintenance:rrd-step' => [
+        'description' => 'Convert RRD files to match configured step and heartbeat',
+        'arguments' => [
+            'device' => 'Hostname, device id, or all',
+        ],
+        'options' => [
+            'confirm' => 'Confirm that you have backed up your rrd files.',
+        ],
+        'errors' => [
+            'invalid' => 'Invalid hostname or device id specified',
+        ],
+        'confirm_backup' => 'Before continuing, please confirm that you have backed up your rrd files.',
+        'mismatched_heartbeat' => ':file: Mismatched heartbeat. :ds != :hb',
+        'skipping' => 'Skipping :file, step is already :step.',
+        'converting' => 'Converting :file:',
+        'summary' => 'Converted: :converted  Failed: :failed  Skipped: :skipped',
+    ],
+    'maintenance:cleanup-syslog' => [
+        'description' => 'Cleanup syslog entries older than a specified number of days',
+        'arguments' => [
+            'days' => 'Number of days to keep syslog entries (default: syslog_purge configured value)',
+        ],
+        'bad_days_input' => 'Days must be numeric',
+        'bad_days_setting' => 'Syslog cleanup disabled due to invalid syslog_purge setting',
+        'delete' => 'Cleared syslog entries older than :days days (:count rows)',
+        'disabled' => 'Syslog cleanup disabled, days <= 0',
+    ],
+    'maintenance:discover-ssl-certificates' => [
+        'description' => 'Discover SSL certificates on devices (HTTPS port 443)',
+        'options' => [
+            'device' => 'Device spec to discover: device_id, hostname, or all',
+        ],
+        'no_devices' => 'No devices found',
+        'summary' => 'Created: :created, Updated: :updated, Failed: :failed',
+    ],
+    'maintenance:refresh-ssl-certificates' => [
+        'description' => 'Refresh certificate data for stored SSL certificates',
+        'options' => [
+            'id' => 'Certificate ID to refresh (omit to refresh all enabled)',
+        ],
+        'none' => 'No enabled certificates to refresh',
+        'summary' => 'Refreshed: :refreshed, Failed: :failed',
+    ],
     'plugin:disable' => [
         'description' => 'Disable all plugins with the given name',
         'arguments' => [
@@ -174,6 +285,34 @@ return [
         'already_enabled' => 'Plugin already enabled',
         'enabled' => ':count plugin enabled|:count plugins enabled',
         'failed' => 'Failed to enable plugin(s)',
+    ],
+    'port:tune' => [
+        'description' => 'Tune port rrd files to limit the max transfer rate based on ifSpeed',
+        'arguments' => [
+            'device spec' => 'Device spec to tune: device_id, hostname, wildcard (*), odd, even, all',
+            'ifname' => 'Port ifName to match can use all or * for a wildcard',
+        ],
+        'device' => 'Device :device:',
+        'port' => 'Tuning port :port',
+    ],
+    'report:devices' => [
+        'description' => 'Print out data from devices',
+        'columns' => 'Database columns:',
+        'synthetic' => 'Additional fields:',
+        'counts' => 'Relationship counts:',
+        'arguments' => [
+            'device spec' => 'Device spec to poll: device_id, hostname, wildcard (*), odd, even, all',
+        ],
+        'options' => [
+            'list-fields' => 'Print out a list of valid fields',
+            'fields' => 'A comma seperated list of fields to display. Valid options: device column names from the database, relationship counts (ports_count), and/or displayName. Not used for json output.',
+            'output' => 'Output format to display the data :types',
+            'no-header' => 'Do not add the header',
+            'relationships' => 'A comma seperated list of relationships to include. Only used for json output.',
+            'list-relationships' => 'Print out a list/description of relationships',
+            'all-relationships' => 'Include all relationships. -r, --relationships takes presidence.',
+            'devices-as-array' => 'Return the output as a JSON array instead of a JSON entry per device per line',
+        ],
     ],
     'smokeping:generate' => [
         'args-nonsense' => 'Use one of --probes and --targets',
@@ -197,10 +336,11 @@ return [
     'snmp:fetch' => [
         'description' => 'Run snmp query against a device',
         'arguments' => [
-            'device spec' => 'Device to query: device_id, hostname/ip, hostname regex, or all',
+            'device spec' => 'Device spec to poll: device_id, hostname, wildcard (*), odd, even, all',
             'oid(s)' => 'One or more SNMP OID to fetch.  Should be either MIB::oid or a numeric oid',
         ],
         'failed' => 'SNMP command failed!',
+        'numeric' => 'Numeric',
         'oid' => 'OID',
         'options' => [
             'output' => 'Specify the output format :formats',
@@ -208,6 +348,7 @@ return [
             'depth' => 'Depth to group the snmp table at. Usually the same number as the items in the index of the table',
         ],
         'not_found' => 'Device not found',
+        'textual' => 'Textual',
         'value' => 'Value',
     ],
     'translation:generate' => [
@@ -225,7 +366,14 @@ return [
             'full-name' => 'Full name for the user',
             'role' => 'Set the user to the desired role :roles',
         ],
-        'password-request' => "Please enter the user's password",
+        'form' => [
+            'username' => 'Username',
+            'password' => 'Password',
+            'roles' => 'Select user role(s)',
+            'email' => 'Email (optional)',
+            'full-name' => 'Full name (optional)',
+            'descr' => 'Description (optional)',
+        ],
         'success' => 'Successfully added user: :username',
         'wrong-auth' => 'Warning! You will not be able to log in with this user because you are not using MySQL auth',
     ],

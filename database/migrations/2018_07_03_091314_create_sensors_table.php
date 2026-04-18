@@ -10,7 +10,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('sensors', function (Blueprint $table) {
             $table->increments('sensor_id');
@@ -34,7 +34,7 @@ return new class extends Migration
             $table->enum('sensor_custom', ['No', 'Yes'])->default('No');
             $table->string('entPhysicalIndex', 16)->nullable();
             $table->string('entPhysicalIndex_measured', 16)->nullable();
-            if (\LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
+            if (LibreNMS\DB\Eloquent::getDriver() == 'mysql') {
                 $table->timestamp('lastupdate')->default(DB::raw('CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP'));
             } else {
                 $table->timestamp('lastupdate')->useCurrent();
@@ -49,7 +49,7 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::drop('sensors');
     }

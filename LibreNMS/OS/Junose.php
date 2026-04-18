@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Junose.php
  *
@@ -37,13 +38,13 @@ class Junose extends \LibreNMS\OS
             return;
         }
 
-        $junose_hardware = \SnmpQuery::translate($device->sysObjectID, 'Juniper-Products-MIB');
+        $junose_hardware = \SnmpQuery::mibs(['Juniper-Products-MIB'])->translate($device->sysObjectID);
         $device->hardware = $this->rewriteHardware($junose_hardware) ?: null;
 
         $junose_version = \SnmpQuery::get('Juniper-System-MIB::juniSystemSwVersion.0')->value();
-        preg_match('/\((.*)\)/', $junose_version, $matches);
+        preg_match('/\((.*)\)/', (string) $junose_version, $matches);
         $device->version = $matches[1] ?? null;
-        preg_match('/\[(.*)]/', $junose_version, $matches);
+        preg_match('/\[(.*)]/', (string) $junose_version, $matches);
         $device->features = $matches[1] ?? null;
     }
 

@@ -10,70 +10,67 @@ $transparency = 15;
 
 $rrd_filename = Rrd::name($device['hostname'], ['app', $name, $app->app_id, $vars['port']]);
 
-$rrd_list = [];
-if (Rrd::checkRrdExists($rrd_filename)) {
-    $rrd_list[] = [
+$rrd_list = [
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'CLOSED',
-        'ds'       => 'toCLOSED',
-    ];
-    $rrd_list[] = [
+        'descr' => 'CLOSED',
+        'ds' => 'toCLOSED',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'SYN_SENT',
-        'ds'       => 'toSYN_SENT',
-    ];
-    $rrd_list[] = [
+        'descr' => 'SYN_SENT',
+        'ds' => 'toSYN_SENT',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'SYN_RECEIVED',
-        'ds'       => 'toSYN_RECEIVED',
-    ];
-    $rrd_list[] = [
+        'descr' => 'SYN_RECEIVED',
+        'ds' => 'toSYN_RECEIVED',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'ESTABLISHED',
-        'ds'       => 'toESTABLISHED',
-    ];
-    $rrd_list[] = [
+        'descr' => 'ESTABLISHED',
+        'ds' => 'toESTABLISHED',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'CLOSE_WAIT',
-        'ds'       => 'toCLOSE_WAIT',
-    ];
-    $rrd_list[] = [
+        'descr' => 'CLOSE_WAIT',
+        'ds' => 'toCLOSE_WAIT',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'FIN_WAIT_1',
-        'ds'       => 'toFIN_WAIT_1',
-    ];
-    $rrd_list[] = [
+        'descr' => 'FIN_WAIT_1',
+        'ds' => 'toFIN_WAIT_1',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'CLOSING',
-        'ds'       => 'toCLOSING',
-    ];
-    $rrd_list[] = [
+        'descr' => 'CLOSING',
+        'ds' => 'toCLOSING',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'LAST_ACK',
-        'ds'       => 'toLAST_ACK',
-    ];
-    $rrd_list[] = [
+        'descr' => 'LAST_ACK',
+        'ds' => 'toLAST_ACK',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'FIN_WAIT_2',
-        'ds'       => 'toFIN_WAIT_2',
-    ];
-    $rrd_list[] = [
+        'descr' => 'FIN_WAIT_2',
+        'ds' => 'toFIN_WAIT_2',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'TIME_WAIT',
-        'ds'       => 'toTIME_WAIT',
-    ];
-    $rrd_list[] = [
+        'descr' => 'TIME_WAIT',
+        'ds' => 'toTIME_WAIT',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'UNKNOWN',
-        'ds'       => 'toUNKNOWN',
-    ];
-    $rrd_list[] = [
+        'descr' => 'UNKNOWN',
+        'ds' => 'toUNKNOWN',
+    ],
+    [
         'filename' => $rrd_filename,
-        'descr'    => 'other',
-        'ds'       => 'toother',
-    ];
-} else {
-    d_echo('RRD "' . $rrd_filename . '" not found');
-}
+        'descr' => 'other',
+        'ds' => 'toother',
+    ],
+];
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

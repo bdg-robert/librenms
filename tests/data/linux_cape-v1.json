@@ -9,7 +9,8 @@
                     "app_state_prev": null,
                     "app_status": "",
                     "app_instance": "",
-                    "data": null
+                    "data": null,
+                    "deleted_at": null
                 }
             ]
         },
@@ -22,7 +23,8 @@
                     "app_state_prev": "UNKNOWN",
                     "app_status": "",
                     "app_instance": "",
-                    "data": null
+                    "data": null,
+                    "deleted_at": null
                 }
             ],
             "application_metrics": [
@@ -460,7 +462,7 @@
                 },
                 {
                     "metric": "s3files_written",
-                    "value": 1.0,
+                    "value": 1,
                     "value_prev": null,
                     "app_type": "cape"
                 },

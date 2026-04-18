@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PermissionsTest.php
  *
@@ -30,9 +31,8 @@ use App\Models\Device;
 use App\Models\Port;
 use App\Models\User;
 use LibreNMS\Tests\TestCase;
-use Mockery\Mock;
 
-class PermissionsTest extends TestCase
+final class PermissionsTest extends TestCase
 {
     private function devicePermissionData($user)
     {
@@ -57,12 +57,10 @@ class PermissionsTest extends TestCase
         return new \Illuminate\Support\Collection($data);
     }
 
-    public function testUserCanAccessDevice()
+    public function testUserCanAccessDevice(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
-        $perms->shouldReceive('getDevicePermissions')->andReturnUsing(function ($user) {
-            return self::devicePermissionData($user);
-        });
+        $perms->shouldReceive('getDevicePermissions')->andReturnUsing(fn ($user) => self::devicePermissionData($user));
 
         $device = Device::factory()->make(['device_id' => 54]); /** @var Device $device */
         $user = User::factory()->make(['user_id' => 43]); /** @var User $user */
@@ -81,12 +79,10 @@ class PermissionsTest extends TestCase
         $this->assertFalse($perms->canAccessDevice(54));
     }
 
-    public function testDevicesForUser()
+    public function testDevicesForUser(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
-        $perms->shouldReceive('getDevicePermissions')->andReturnUsing(function ($user) {
-            return self::devicePermissionData($user);
-        });
+        $perms->shouldReceive('getDevicePermissions')->andReturnUsing(fn ($user) => self::devicePermissionData($user));
 
         $this->assertEquals(collect([54, 32]), $perms->devicesForUser(43));
         $user = User::factory()->make(['user_id' => 43]); /** @var User $user */
@@ -114,7 +110,7 @@ class PermissionsTest extends TestCase
             $this->assertEmpty($perms->usersForDevice(9));
         }
     */
-    public function testUserCanAccessPort()
+    public function testUserCanAccessPort(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
         $perms->shouldReceive('getPortPermissions')->andReturn(collect([
@@ -140,7 +136,7 @@ class PermissionsTest extends TestCase
         $this->assertFalse($perms->canAccessPort(54));
     }
 
-    public function testPortsForUser()
+    public function testPortsForUser(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
         $perms->shouldReceive('getPortPermissions')->andReturn(collect([
@@ -158,7 +154,7 @@ class PermissionsTest extends TestCase
         $this->assertEquals(collect([5]), $perms->portsForUser());
     }
 
-    public function testUsersForPort()
+    public function testUsersForPort(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
         $perms->shouldReceive('getPortPermissions')->andReturn(collect([
@@ -175,7 +171,7 @@ class PermissionsTest extends TestCase
         $this->assertEmpty($perms->usersForPort(9));
     }
 
-    public function testUserCanAccessBill()
+    public function testUserCanAccessBill(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
         $perms->shouldReceive('getBillPermissions')->andReturn(collect([
@@ -201,7 +197,7 @@ class PermissionsTest extends TestCase
         $this->assertFalse($perms->canAccessBill(54));
     }
 
-    public function testBillsForUser()
+    public function testBillsForUser(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
         $perms->shouldReceive('getBillPermissions')->andReturn(collect([
@@ -219,7 +215,7 @@ class PermissionsTest extends TestCase
         $this->assertEquals(collect([5]), $perms->billsForUser());
     }
 
-    public function testUsersForBill()
+    public function testUsersForBill(): void
     {
         $perms = \Mockery::mock(\LibreNMS\Cache\PermissionsCache::class)->makePartial();
         $perms->shouldReceive('getBillPermissions')->andReturn(collect([

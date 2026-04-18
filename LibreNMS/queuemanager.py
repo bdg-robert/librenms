@@ -219,6 +219,7 @@ class QueueManager:
                 sentinel=self.config.redis_sentinel,
                 sentinel_service=self.config.redis_sentinel_service,
                 socket_timeout=self.config.redis_timeout,
+                ssl=(self.config.redis_scheme == "tls"),
             )
 
         except ImportError:
@@ -362,18 +363,17 @@ class BillingQueueManager(TimedQueueManager):
     def do_work(self, run_type, group):
         if run_type == "poll":
             logger.info("Polling billing")
-            exit_code, output = LibreNMS.call_script("poll-billing.php")
-            if exit_code != 0:
-                logger.warning(
-                    "Error {} in Polling billing:\n{}".format(exit_code, output)
-                )
+            args = ("-d", "-f") if self.config.debug else ("-f",)
+            exit_code, output = LibreNMS.call_script("poll-billing.php", args)
         else:  # run_type == 'calculate'
             logger.info("Calculating billing")
-            exit_code, output = LibreNMS.call_script("billing-calculate.php")
-            if exit_code != 0:
-                logger.warning(
-                    "Error {} in Calculating billing:\n{}".format(exit_code, output)
-                )
+            args = ("-d", "-f") if self.config.debug else ("-f",)
+            exit_code, output = LibreNMS.call_script("billing-calculate.php", args)
+
+        if exit_code != 0:
+            logger.warning(
+                "Error {} in {} billing:\n{}".format(exit_code, run_type, output)
+            )
 
 
 class PingQueueManager(TimedQueueManager):
@@ -401,7 +401,14 @@ class PingQueueManager(TimedQueueManager):
         if self.lock(group, "group", timeout=self.config.ping.frequency):
             try:
                 logger.info("Running fast ping")
-                exit_code, output = LibreNMS.call_script("ping.php", ("-g", group))
+
+                args = (
+                    ("device:ping", "fast", "-vv", "-g", group)
+                    if self.config.debug
+                    else ("device:ping", "fast", "-q", "-g", group)
+                )
+                exit_code, output = LibreNMS.call_script("lnms", args)
+
                 if exit_code != 0:
                     logger.warning(
                         "Running fast ping for {} failed with error code {}: {}".format(
@@ -439,9 +446,18 @@ class ServicesQueueManager(TimedQueueManager):
     def do_work(self, device_id, group):
         if self.lock(device_id, timeout=self.config.services.frequency):
             logger.info("Checking services on device {}".format(device_id))
-            exit_code, output = LibreNMS.call_script(
-                "check-services.php", ("-h", device_id)
+
+            output = (
+                "{}/dispatch_device_{}_services.log".format(
+                    self.config.logdir, device_id
+                )
+                if self.config.log_output == LibreNMS.LogOutput.FILE
+                else self.config.log_output
             )
+
+            args = ("-d", "-h", device_id) if self.config.debug else ("-h", device_id)
+            exit_code, output = LibreNMS.call_script("check-services.php", args, output)
+
             if exit_code == 0:
                 self.unlock(device_id)
             else:
@@ -480,7 +496,16 @@ class AlertQueueManager(TimedQueueManager):
 
     def do_work(self, device_id, group):
         logger.info("Checking alerts")
-        exit_code, output = LibreNMS.call_script("alerts.php")
+
+        output = (
+            "{}/dispatch_alerts.log".format(self.config.logdir)
+            if self.config.log_output == LibreNMS.LogOutput.FILE
+            else self.config.log_output
+        )
+
+        args = ("-d", "-f") if self.config.debug else ("-f",)
+        exit_code, output = LibreNMS.call_script("alerts.php", args, output)
+
         if exit_code != 0:
             if exit_code == 1:
                 logger.warning("There was an error issuing alerts: {}".format(output))
@@ -504,7 +529,21 @@ class PollerQueueManager(QueueManager):
         if self.lock(device_id, timeout=self.config.poller.frequency):
             logger.info("Polling device {}".format(device_id))
 
-            exit_code, output = LibreNMS.call_script("poller.php", ("-h", device_id))
+            output = (
+                "{}/dispatch_device_{}_poller.log".format(self.config.logdir, device_id)
+                if self.config.log_output == LibreNMS.LogOutput.FILE
+                else self.config.log_output
+            )
+
+            args_list = ["device:poll", device_id]
+            if self.config.debug:
+                args_list.append("-vv")
+            elif self.config.log_output is LibreNMS.LogOutput.NONE:
+                args_list.append("-q")
+            args = tuple(args_list)
+
+            exit_code, output = LibreNMS.call_script("lnms", args, output)
+
             if exit_code == 0:
                 self.unlock(device_id)
             else:
@@ -557,11 +596,28 @@ class DiscoveryQueueManager(TimedQueueManager):
             device_id, timeout=LibreNMS.normalize_wait(self.config.discovery.frequency)
         ):
             logger.info("Discovering device {}".format(device_id))
-            exit_code, output = LibreNMS.call_script("discovery.php", ("-h", device_id))
+
+            output = (
+                "{}/dispatch_device_{}_discovery.log".format(
+                    self.config.logdir, device_id
+                )
+                if self.config.log_output == LibreNMS.LogOutput.FILE
+                else self.config.log_output
+            )
+
+            args_list = ["device:discover", device_id]
+            if self.config.debug:
+                args_list.append("-vv")
+            elif self.config.log_output is LibreNMS.LogOutput.NONE:
+                args_list.append("-q")
+            args = tuple(args_list)
+
+            exit_code, output = LibreNMS.call_script("lnms", args, output)
+
             if exit_code == 0:
                 self.unlock(device_id)
             else:
-                if exit_code == 5:
+                if exit_code == 6:
                     logger.info(
                         "Device {} is down, cannot discover, waiting {}s for retry".format(
                             device_id, self.config.down_retry

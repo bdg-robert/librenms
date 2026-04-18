@@ -4,11 +4,11 @@ namespace App\Console\Commands;
 
 use App\Actions\Device\ValidateDeviceAndCreate;
 use App\Console\LnmsCommand;
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use App\Models\PollerGroup;
 use Exception;
 use Illuminate\Validation\Rule;
-use LibreNMS\Config;
 use LibreNMS\Enum\PortAssociationMode;
 use LibreNMS\Exceptions\HostExistsException;
 use LibreNMS\Exceptions\HostnameExistsException;
@@ -36,24 +36,16 @@ class DeviceAdd extends LnmsCommand
 
         $this->optionValues = [
             'transport' => ['udp', 'udp6', 'tcp', 'tcp6'],
-            'port-association-mode' => [PortAssociationMode::class, 'getModes'],
-            'auth-protocol' => [\LibreNMS\SNMPCapabilities::class, 'supportedAuthAlgorithms'],
-            'privacy-protocol' => [\LibreNMS\SNMPCapabilities::class, 'supportedCryptoAlgorithms'],
+            'port-association-mode' => PortAssociationMode::getModes(...),
+            'auth-protocol' => \LibreNMS\SNMPCapabilities::supportedAuthAlgorithms(...),
+            'privacy-protocol' => \LibreNMS\SNMPCapabilities::supportedCryptoAlgorithms(...),
         ];
 
         $this->optionDefaults = [
-            'port' => function () {
-                return Config::get('snmp.port', 161);
-            },
-            'transport' => function () {
-                return Config::get('snmp.transports.0', 'udp');
-            },
-            'poller-group' => function () {
-                return Config::get('default_poller_group');
-            },
-            'port-association-mode' => function () {
-                return Config::get('default_port_association_mode');
-            },
+            'port' => fn () => LibrenmsConfig::get('snmp.port', 161),
+            'transport' => fn () => LibrenmsConfig::get('snmp.transports.0', 'udp'),
+            'poller-group' => fn () => LibrenmsConfig::get('default_poller_group'),
+            'port-association-mode' => fn () => LibrenmsConfig::get('default_port_association_mode'),
 
         ];
 
@@ -85,10 +77,8 @@ class DeviceAdd extends LnmsCommand
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
-        $this->configureOutputOptions();
-
         $this->validate([
             'port' => 'numeric|between:1,65535',
             'poller-group' => ['numeric', Rule::in(PollerGroup::pluck('id')->prepend(0))],
@@ -105,10 +95,10 @@ class DeviceAdd extends LnmsCommand
             'poller_group' => $this->option('poller-group'),
             'port_association_mode' => PortAssociationMode::getId($this->option('port-association-mode')),
             'community' => $this->option('community'),
-            'authlevel'  => ($auth ? 'auth' : 'noAuth') . (($priv && $auth) ? 'Priv' : 'NoPriv'),
-            'authname'   => $this->option('security-name'),
-            'authpass'   => $this->option('auth-password'),
-            'authalgo'   => $this->option('auth-protocol'),
+            'authlevel' => ($auth ? 'auth' : 'noAuth') . (($priv && $auth) ? 'Priv' : 'NoPriv'),
+            'authname' => $this->option('security-name'),
+            'authpass' => $this->option('auth-password'),
+            'authalgo' => $this->option('auth-protocol'),
             'cryptopass' => $this->option('privacy-password'),
             'cryptoalgo' => $this->option('privacy-protocol'),
         ]);

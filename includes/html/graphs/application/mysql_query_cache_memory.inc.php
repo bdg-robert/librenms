@@ -5,7 +5,7 @@ require 'includes/html/graphs/common.inc.php';
 $rrd_filename = Rrd::name($device['hostname'], ['app', 'mysql', $app->app_id]);
 
 $array = [
-    'QCs'   => 'Cache size',
+    'QCs' => 'Cache size',
     'QCeFy' => 'Free mem',
 ];
 
@@ -23,7 +23,7 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $file";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 
 $colours = 'mixed';

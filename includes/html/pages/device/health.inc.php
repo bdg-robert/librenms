@@ -1,4 +1,5 @@
 <?php
+
 /**
  * includes/html/pages/device/health.inc.php
  *
@@ -36,7 +37,7 @@ use App\Models\Storage;
 $qfp = 0;
 if ($device['os_group'] == 'cisco') {
     $component = new LibreNMS\Component();
-    $components = $component->getComponents($device['device_id'], ['type'=> 'cisco-qfp']);
+    $components = $component->getComponents($device['device_id'], ['type' => 'cisco-qfp']);
     $components = $components[$device['device_id']];
     $qfp = isset($components) ? count($components) : 0;
 }
@@ -44,7 +45,7 @@ if ($device['os_group'] == 'cisco') {
 unset($datas);
 $datas[] = 'overview';
 
-if (Processor::where('device_id', $device['device_id'])->count()) {
+if (Processor::where('device_id', $device['device_id'])->exists()) {
     $datas[] = 'processor';
 }
 
@@ -52,31 +53,21 @@ if ($qfp) {
     $datas[] = 'qfp';
 }
 
-if (Mempool::where('device_id', $device['device_id'])->count()) {
+if (Mempool::where('device_id', $device['device_id'])->exists()) {
     $datas[] = 'mempool';
 }
 
-if (Storage::where('device_id', $device['device_id'])->count()) {
+if (Storage::where('device_id', $device['device_id'])->exists()) {
     $datas[] = 'storage';
 }
 
-if (DiskIo::where('device_id', $device['device_id'])->count()) {
+if (DiskIo::where('device_id', $device['device_id'])->exists()) {
     $datas[] = 'diskio';
 }
 
-$sensors = [
-    'airflow', 'ber', 'bitrate', 'charge', 'chromatic_dispersion', 'cooling', 'count', 'current', 'dBm', 'delay', 'eer',
-    'fanspeed', 'frequency', 'humidity', 'load', 'loss', 'percent', 'power', 'power_consumed', 'power_factor', 'pressure',
-    'runtime', 'signal', 'snr', 'state', 'temperature', 'tv_signal', 'voltage', 'waterflow', 'quality_factor',
-];
-
-foreach ($sensors as $sensor_name) {
-    if (Sensor::where('sensor_class', $sensor_name)->where('device_id', $device['device_id'])->count()) {
-        //strtolower because 'dBm - dbm' difference
-        $lowname = strtolower($sensor_name);
-        $datas[] = $lowname;
-        $type_text[$lowname] = trans('sensors.' . $lowname)['short'];
-    }
+foreach (Sensor::where('device_id', $device['device_id'])->distinct()->pluck('sensor_class') as $sensor_class) {
+    $datas[] = $sensor_class;
+    $type_text[$sensor_class] = trans('sensors.' . $sensor_class . '.short');
 }
 
 $type_text['overview'] = 'Overview';
@@ -87,9 +78,9 @@ $type_text['storage'] = 'Disk Usage';
 $type_text['diskio'] = 'Disk I/O';
 
 $link_array = [
-    'page'   => 'device',
+    'page' => 'device',
     'device' => $device['device_id'],
-    'tab'    => 'health',
+    'tab' => 'health',
 ];
 
 print_optionbar_start();
@@ -117,7 +108,7 @@ foreach ($datas as $type) {
 
 print_optionbar_end();
 
-$metric = basename($vars['metric']);
+$metric = basename((string) $vars['metric']);
 if (is_file("includes/html/pages/device/health/$metric.inc.php")) {
     include "includes/html/pages/device/health/$metric.inc.php";
 } else {

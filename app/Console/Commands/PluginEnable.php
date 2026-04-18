@@ -40,10 +40,13 @@ class PluginEnable extends LnmsCommand
                 return 0;
             }
 
+            //Caching application Routes
+            $this->callSilent('route:cache');
+
             $this->info(trans_choice('commands.plugin:enable.enabled', $updated, ['count' => $updated]));
 
             return 0;
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             $this->error(trans('commands.plugin:enable.failed'));
 
             return 1;

@@ -17,14 +17,14 @@ version 3. See https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
 $graphs = [
-    'powermon_consumption'    => 'PowerMon - Consumption',
+    'powermon_consumption' => 'PowerMon - Consumption',
 ];
 
 foreach ($graphs as $key => $text) {
     $graph_type = $key;
     $graph_array['height'] = '100';
     $graph_array['width'] = '215';
-    $graph_array['to'] = \LibreNMS\Config::get('time.now');
+    $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
     $graph_array['id'] = $app['app_id'];
     $graph_array['type'] = 'application_' . $key;
 

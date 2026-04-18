@@ -6,14 +6,14 @@ echo $displayLists;
 echo '</div>';
 echo '<div class="panel-body">';
 echo '<div style="padding-bottom: 10px;">';
-echo stripcslashes($output);
+echo stripcslashes((string) $output);
 echo '</div>';
 
 $param = [];
 $where = '';
 $ignore_filter = 0;
 $disabled_filter = 0;
-$device = DeviceCache::get((int) $vars['device_id']);
+$device = DeviceCache::get((int) ($vars['device_id'] ?? 0));
 
 $device_selected = json_encode($device->exists ? ['id' => $device->device_id, 'text' => $device->displayName()] : '');
 echo '<script>init_select2("#device_id", "device", {field: "device_id"}, ' . $device_selected . ' , "All Devices")</script>';
@@ -105,55 +105,29 @@ if ($ignore_filter == 0 && $disabled_filter == 0) {
 $query = 'SELECT * FROM `ports` AS I, `devices` AS D LEFT JOIN `locations` AS L ON D.location_id = L.id WHERE I.device_id = D.device_id' . $where;
 
 // only grab list of ports for graph pages, table uses ajax
-$ports = array_map(function ($value) {
-    return (array) $value;
-}, DB::select($query, $param));
+$ports = array_map(fn ($value) => (array) $value, DB::select($query, $param));
 
-switch ($vars['sort'] ?? '') {
-    case 'traffic':
-        $ports = array_sort_by_column($ports, 'ifOctets_rate', SORT_DESC);
-        break;
-    case 'traffic_in':
-        $ports = array_sort_by_column($ports, 'ifInOctets_rate', SORT_DESC);
-        break;
-    case 'traffic_out':
-        $ports = array_sort_by_column($ports, 'ifOutOctets_rate', SORT_DESC);
-        break;
-    case 'packets':
-        $ports = array_sort_by_column($ports, 'ifUcastPkts_rate', SORT_DESC);
-        break;
-    case 'packets_in':
-        $ports = array_sort_by_column($ports, 'ifInUcastOctets_rate', SORT_DESC);
-        break;
-    case 'packets_out':
-        $ports = array_sort_by_column($ports, 'ifOutUcastOctets_rate', SORT_DESC);
-        break;
-    case 'errors':
-        $ports = array_sort_by_column($ports, 'ifErrors_rate', SORT_DESC);
-        break;
-    case 'speed':
-        $ports = array_sort_by_column($ports, 'ifSpeed', SORT_DESC);
-        break;
-    case 'port':
-        $ports = array_sort_by_column($ports, 'ifDescr', SORT_ASC);
-        break;
-    case 'media':
-        $ports = array_sort_by_column($ports, 'ifType', SORT_ASC);
-        break;
-    case 'descr':
-        $ports = array_sort_by_column($ports, 'ifAlias', SORT_ASC);
-        break;
-    case 'device':
-    default:
-        $ports = array_sort_by_column($ports, 'hostname', SORT_ASC);
-}
+$ports = match ($vars['sort'] ?? '') {
+    'traffic' => collect($ports)->sortBy('ifOctets_rate', descending: true),
+    'traffic_in' => collect($ports)->sortBy('ifInOctets_rate', descending: true),
+    'traffic_out' => collect($ports)->sortBy('ifOutOctets_rate', descending: true),
+    'packets' => collect($ports)->sortBy('ifUcastPkts_rate', descending: true),
+    'packets_in' => collect($ports)->sortBy('ifInUcastOctets_rate', descending: true),
+    'packets_out' => collect($ports)->sortBy('ifOutUcastOctets_rate', descending: true),
+    'errors' => collect($ports)->sortBy('ifErrors_rate', descending: true),
+    'speed' => collect($ports)->sortBy('ifSpeed', descending: true),
+    'port' => collect($ports)->sortBy('ifDescr'),
+    'media' => collect($ports)->sortBy('ifType'),
+    'descr' => collect($ports)->sortBy('ifAlias'),
+    default => collect($ports)->sortBy('hostname'),
+};
 
 foreach ($ports as $port) {
-    $speed = \LibreNMS\Util\Number::formatSi($port['ifSpeed'], 2, 3, 'bps');
+    $speed = \LibreNMS\Util\Number::formatSi($port['ifSpeed'], 2, 0, 'bps');
     $type = \LibreNMS\Util\Rewrite::normalizeIfType($port['ifType']);
 
-    $port['in_rate'] = \LibreNMS\Util\Number::formatSi($port['ifInOctets_rate'] * 8, 2, 3, 'bps');
-    $port['out_rate'] = \LibreNMS\Util\Number::formatSi($port['ifOutOctets_rate'] * 8, 2, 3, 'bps');
+    $port['in_rate'] = \LibreNMS\Util\Number::formatSi($port['ifInOctets_rate'] * 8, 2, 0, 'bps');
+    $port['out_rate'] = \LibreNMS\Util\Number::formatSi($port['ifOutOctets_rate'] * 8, 2, 0, 'bps');
 
     if ($port['ifInErrors_delta'] > 0 || $port['ifOutErrors_delta'] > 0) {
         $error_img = generate_port_link($port, "<i class='fa fa-flag fa-lg' style='color:red' aria-hidden='true'></i>", 'errors');
@@ -181,10 +155,10 @@ foreach ($ports as $port) {
         $graph_array = [];
         $graph_array['height'] = 100;
         $graph_array['width'] = 210;
-        $graph_array['to'] = \LibreNMS\Config::get('time.now');
+        $graph_array['to'] = \App\Facades\LibrenmsConfig::get('time.now');
         $graph_array['id'] = $port['port_id'];
         $graph_array['type'] = $graph_type;
-        $graph_array['from'] = \LibreNMS\Config::get('time.day');
+        $graph_array['from'] = \App\Facades\LibrenmsConfig::get('time.day');
         $graph_array['legend'] = 'no';
 
         $link_array = $graph_array;

@@ -3,13 +3,13 @@
 $rrd_filename = Rrd::name($device['hostname'], 'netstats-icmp');
 
 $stats = [
-    'icmpInSrcQuenchs'    => [],
-    'icmpOutSrcQuenchs'   => [],
-    'icmpInRedirects'     => [],
-    'icmpOutRedirects'    => [],
-    'icmpInAddrMasks'     => [],
-    'icmpOutAddrMasks'    => [],
-    'icmpInAddrMaskReps'  => [],
+    'icmpInSrcQuenchs' => [],
+    'icmpOutSrcQuenchs' => [],
+    'icmpInRedirects' => [],
+    'icmpOutRedirects' => [],
+    'icmpInAddrMasks' => [],
+    'icmpOutAddrMasks' => [],
+    'icmpInAddrMaskReps' => [],
     'icmpOutAddrMaskReps' => [],
 ];
 
@@ -20,7 +20,7 @@ foreach ($stats as $stat => $array) {
     $rrd_list[$i]['filename'] = $rrd_filename;
     $rrd_list[$i]['descr'] = str_replace('icmp', '', $stat);
     $rrd_list[$i]['ds'] = $stat;
-    if (strpos($stat, 'Out') !== false) {
+    if (str_contains($stat, 'Out')) {
         $rrd_list[$i]['invert'] = true;
     }
 }

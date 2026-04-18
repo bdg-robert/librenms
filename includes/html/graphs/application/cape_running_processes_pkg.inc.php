@@ -19,15 +19,15 @@ foreach ($packages as $index => $package) {
     $rrd_filename = Rrd::name($device['hostname'], ['app', $name, $app['app_id'], $package]);
     $rrd_list[] = [
         'filename' => $rrd_filename,
-        'descr'    => $label,
-        'ds'       => 'running_processes',
+        'descr' => $label,
+        'ds' => 'running_processes',
     ];
 
     $packages_int++;
 }
 
-if (sizeof($rrd_list)) {
-    d_echo('No relevant package RRDs found');
+if (count($rrd_list)) {
+    throw new \LibreNMS\Exceptions\RrdGraphException('No relevant package RRDs found');
 }
 
 require 'includes/html/graphs/generic_multi_line.inc.php';

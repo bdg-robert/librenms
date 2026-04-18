@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Git.php
  *
@@ -25,10 +26,10 @@
 
 namespace LibreNMS\Util;
 
+use App\Facades\LibrenmsConfig;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Str;
-use LibreNMS\Config;
 use LibreNMS\Traits\RuntimeClassCache;
 use Symfony\Component\Process\Process;
 
@@ -42,7 +43,7 @@ class Git
     public function __construct(int $cache = 0)
     {
         $this->runtimeCacheExternalTTL = $cache;
-        $this->install_dir = Config::get('install_dir', realpath(__DIR__ . '/../..'));
+        $this->install_dir = realpath(__DIR__ . '/../..');
     }
 
     public static function make(int $cache = 0): Git
@@ -52,48 +53,38 @@ class Git
             $git->runtimeCacheExternalTTL = $cache;
 
             return $git;
-        } catch (BindingResolutionException $e) {
+        } catch (BindingResolutionException) {
             return new static($cache); // no container, just return a regular instance
         }
     }
 
     public function isAvailable(): bool
     {
-        return $this->cacheGet('isAvailable', function () {
-            return $this->repoPresent() && $this->binaryExists();
-        });
+        return $this->cacheGet('isAvailable', fn () => $this->repoPresent() && $this->binaryExists());
     }
 
     public function repoPresent(): bool
     {
-        return $this->cacheGet('repoPresent', function () {
-            return file_exists("$this->install_dir/.git");
-        });
+        return $this->cacheGet('repoPresent', fn () => is_dir("$this->install_dir/.git"));
     }
 
     public function binaryExists(): bool
     {
-        return $this->cacheGet('binaryExists', function () {
-            return $this->run('help', [])->isSuccessful();
-        });
+        return $this->cacheGet('binaryExists', fn () => $this->run('version', [])->isSuccessful());
     }
 
     public function tag(): string
     {
-        return $this->cacheGet('tag', function () {
-            return $this->isAvailable()
-                ? rtrim($this->run('describe', ['--tags'])->getOutput())
-                : '';
-        });
+        return $this->cacheGet('tag', fn () => $this->isAvailable()
+            ? rtrim($this->run('describe', ['--tags'])->getOutput())
+            : '');
     }
 
     public function shortTag(): string
     {
-        return $this->cacheGet('shortTag', function () {
-            return $this->isAvailable()
-                ? rtrim($this->run('describe', ['--tags', '--abbrev=0'])->getOutput())
-                : '';
-        });
+        return $this->cacheGet('shortTag', fn () => $this->isAvailable()
+            ? rtrim($this->run('describe', ['--tags', '--abbrev=0'])->getOutput())
+            : '');
     }
 
     /**
@@ -117,11 +108,9 @@ class Git
      */
     public function branch(): string
     {
-        return $this->cacheGet('branch', function () {
-            return $this->isAvailable()
-                ? rtrim($this->run('rev-parse', ['--abbrev-ref', 'HEAD'])->getOutput())
-                : '';
-        });
+        return $this->cacheGet('branch', fn () => $this->isAvailable()
+            ? rtrim($this->run('rev-parse', ['--abbrev-ref', 'HEAD'])->getOutput())
+            : '');
     }
 
     /**
@@ -129,24 +118,22 @@ class Git
      */
     public function hasChanges(): bool
     {
-        return $this->cacheGet('hasChanges', function () {
-            return $this->isAvailable() && ! $this->run('diff-index', ['--quiet', 'HEAD'])->isSuccessful();
-        });
+        return $this->cacheGet('hasChanges', fn () => $this->isAvailable() && ! $this->run('diff-index', ['--quiet', 'HEAD'])->isSuccessful());
     }
 
     /**
      * Note: It assumes origin/master points to github.com/librenms/librenms for this to work.
      */
-    public function isOfficialCommit(): bool
+    public function isOfficialCommits(): bool
     {
-        return $this->cacheGet('isOfficialCommit', function () {
+        return $this->cacheGet('isOfficialCommits', function () {
             if (! $this->isAvailable()) {
                 return false;
             }
 
-            $process = $this->run('branch', ['--remotes', '--contains', $this->commitHash(), 'origin/master']);
+            $process = $this->run('log', ['--exit-code', '--max-count=1', '--oneline', 'origin/master..HEAD']);
 
-            return $process->isSuccessful() && trim($process->getOutput()) == 'origin/master';
+            return $process->isSuccessful();
         });
     }
 
@@ -155,29 +142,23 @@ class Git
      */
     public function remoteUrl(): string
     {
-        return $this->cacheGet('remoteUrl', function () {
-            return $this->isAvailable()
-                ? rtrim($this->run('ls-remote', ['--get-url', 'origin'])->getOutput())
-                : '';
-        });
+        return $this->cacheGet('remoteUrl', fn () => $this->isAvailable()
+            ? rtrim($this->run('remote', ['get-url', 'origin'])->getOutput())
+            : '');
     }
 
     public function message(): string
     {
-        return $this->cacheGet('remoteUrl', function () {
-            return $this->isAvailable()
-                ? rtrim($this->run('log', ['--pretty=format:%s', '-n', '1'])->getOutput())
-                : '';
-        });
+        return $this->cacheGet('remoteUrl', fn () => $this->isAvailable()
+            ? rtrim($this->run('log', ['--pretty=format:%s', '-n', '1'])->getOutput())
+            : '');
     }
 
     public function log(int $lines = 10): string
     {
-        return $this->cacheGet('changelog' . $lines, function () use ($lines) {
-            return $this->isAvailable()
-                ? rtrim($this->run('log', ['-' . $lines])->getOutput())
-                : '';
-        });
+        return $this->cacheGet('changelog' . $lines, fn () => $this->isAvailable()
+            ? rtrim($this->run('log', ['-' . $lines])->getOutput())
+            : '');
     }
 
     /**
@@ -196,8 +177,8 @@ class Git
         return $this->cacheGet('remoteCommit', function () {
             if ($this->isAvailable()) {
                 try {
-                    return (array) \Http::withOptions(['proxy' => Proxy::forGuzzle()])->get(Config::get('github_api') . 'commits/master')->json();
-                } catch (ConnectionException $e) {
+                    return (array) Http::client()->get(LibrenmsConfig::get('github_api') . 'commits/master')->json();
+                } catch (ConnectionException) {
                 }
             }
 

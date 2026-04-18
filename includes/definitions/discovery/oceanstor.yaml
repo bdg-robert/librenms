@@ -1,3 +1,0 @@
-modules:
-  os:
-    version_regex: ISM-STORAGE-SVC-MIB::version.0

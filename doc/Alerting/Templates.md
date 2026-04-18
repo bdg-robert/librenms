@@ -1,9 +1,6 @@
 # Templates
 
-> This page is for installs running version 1.42 or later. You can
-> find the older docs [here](https://github.com/librenms/librenms/blob/773411359489e0ffcc3ba763f1f138403343591a/doc/Alerting/Old_Templates.md)
-
-Templates can be assigned to a single or a group of rules and can
+Templates can be assigned to a single rule or a group of rules and can
 contain any kind of text. There is also a default template which is
 used for any rule that isn't associated with a template. This template
 can be found under `Alert Templates` page and can be edited. It also
@@ -11,13 +8,16 @@ has an option revert it back to its default content.
 
 To attach a template to a rule just open the `Alert Templates`
 settings page, choose the template to assign and click the yellow
-button in the `Actions` column. In the appearing popupbox select the
+button in the `Actions` column. In the appearing popup box select the
 rule(s) you want the template to be assigned to and click the `Attach`
 button. You might hold down the CTRL key to select multiple rules at once.
 
-The templating engine in use is Laravel Blade. We will cover some of
+!!! note
+    Only one template can be associated with a rule at a time.
+
+Alert templates are based on Laravel Blade. We will cover some of
 the basics here, however the official Laravel docs will have more
-information [here](https://laravel.com/docs/blade)
+information [here](https://laravel.com/docs/blade).
 
 ## Syntax
 
@@ -36,8 +36,9 @@ will be replaced with the relevant data, I.e:
 }} seconds` would result in the following `The device localhost has
 been up for 30344 seconds`.
 
-> When using placeholders to echo data, you need to wrap
-> the placeholder in `{{ }}`. I.e `{{ $alert->hostname }}`.
+!!! note
+    When using placeholders to output data, you need to wrap
+    the placeholder in `{{ }}`. I.e `{{ $alert->hostname }}`.
 
 - Device ID: `$alert->device_id`
 - Hostname of the Device: `$alert->hostname`
@@ -53,6 +54,7 @@ been up for 30344 seconds`.
 - Features of the Device: `$alert->features`
 - Serial number of the Device: `$alert->serial`
 - Location of the Device: `$alert->location`
+- Device Groups of the Device (group_id->group_name Array): `$alert->device_groups`
 - uptime of the Device (in seconds): `$alert->uptime`
 - Short uptime of the Device (28d 22h 30m 7s): `$alert->uptime_short`
 - Long uptime of the Device (28 days, 22h 30m 7s): `$alert->uptime_long`
@@ -65,10 +67,6 @@ been up for 30344 seconds`.
 - ping max (if icmp enabled): `$alert->ping_max`
 - ping avg (if icmp enabled): `$alert->ping_avg`
 - debug (array) 
-  - poller_name - name of poller (for distributed setups)
-  - If `$config['debug']['run_trace] = true;` is set then this will contain:
-   - traceroute (if enabled you will receive traceroute output): `$alert->debug['traceroute']`
-   - traceroute_output (if the traceroute fails this will contain why): `$alert->debug['output']`
 - Title for the Alert: `$alert->title`
 - Time Elapsed, Only available on recovery (`$alert->state == 0`): `$alert->elapsed`
 - Rule Builder (the actual rule) (use `{!! $alert->builder !!}`): `$alert->builder`
@@ -83,7 +81,6 @@ been up for 30344 seconds`.
   this is the equivalent of the default used and must be encased in `{{ }}`
 - State: `$alert->state`
 - Severity: `$alert->severity`
-- Rule: `$alert->rule`
 - Rule-Name: `$alert->name`
 - Procedure URL: `$alert->proc`
 - Timestamp: `$alert->timestamp`
@@ -91,9 +88,12 @@ been up for 30344 seconds`.
 - Transport name: `$alert->transport_name`
 - Contacts, must be iterated in a foreach, `$key` holds email and
   `$value` holds name: `$alert->contacts`
+- Application Data: `$alert->applications`
+- Application Metrics: `$alert->applications_metrics`
 
 Placeholders can be used within the subjects for templates as well
-although $faults is most likely going to be worthless.
+although $faults is most likely going to be worthless due to it being
+an array.
 
 The Default Template is a 'one-size-fit-all'. We highly recommend
 defining your own templates for your rules to include more specific
@@ -101,13 +101,14 @@ information.
 
 ## Base Templates
 
-If you'd like to reuse a common template for your alerts follow below
+If you'd like to reuse a common template for your alerts you can
+create your own template to use (a default is included).
 
-A default file is located in
-` resources/views/alerts/templates/default.blade.php`
-Displays the following:
+The default file is located in
+`resources/views/alerts/templates/default.blade.php`
+and displays the following:
 
-```
+```php
 <html>
     <head>
         <title>LibreNMS Alert</title>
@@ -128,7 +129,7 @@ templates in the directory as needed.
 
 In your alert template just use
 
-```
+```php
 @extends('alerts.templates.default')
 
 @section('content')
@@ -138,13 +139,21 @@ In your alert template just use
 @endsection
 ```
 
-More info: [https://laravel.com/docs/blade#extending-a-layout](https://laravel.com/docs/blade#extending-a-layout)
+For more info on extending templates, see the [Laravel documentation](https://laravel.com/docs/blade#extending-a-layout).
+
+### Including other Alert templates
+
+Another way to extend a template, is to reuse the content of other Alert templates in LibreNMS. This can be done by leveraging the AlertTemplate database model. All inside the included template needed variables, need to be passed through to the second parameter (e.g.```["alert" => $alert]```) of the method Blade:render(). 
+With the following example the entire content of the template with the ID 5 will be included.  This could be useful to have all common text parts in seperate templates. E.g. headers or footers.
+```php
+{ \Illuminate\Support\Facades\Blade::render(\App\Models\AlertTemplate::find(5)->template , ["alert" => $alert]) }}
+```
 
 ## Examples
 
 ### Default Template
 
-```text
+```php
 {{ $alert->title }}
 Severity: {{ $alert->severity }}
 @if ($alert->state == 0) Time elapsed: {{ $alert->elapsed }} @endif
@@ -164,7 +173,7 @@ Alert sent to:
 
 #### Ports Utilization Template
 
-```text
+```php
 {{ $alert->title }}
 Device Name: {{ $alert->hostname }}
 Severity: {{ $alert->severity }}
@@ -182,7 +191,7 @@ Outbound Utilization: {{ (($value['ifOutOctets_rate']*8)/$value['ifSpeed'])*100 
 
 #### Storage
 
-```text
+```php
 {{ $alert->title }}
 
 Device Name: {{ $alert->hostname }}
@@ -204,7 +213,7 @@ Percent Utilized: {{ $value['storage_perc'] }}
 
 #### Value Sensors (Temperature, Humidity, Fanspeed, ...)
 
-```text
+```php
 {{ $alert->title }}
 
 Device Name: {{ $alert->hostname }}
@@ -237,7 +246,7 @@ Over Limit: {{ round($value['sensor_current']-$value['sensor_limit'], 2).$unit }
 
 #### Memory Alert
 
-```text
+```php
 {{ $alert->title }}
 
 Device Name: {{ $alert->hostname }}
@@ -256,6 +265,19 @@ Percent Utilized: {{ $value['mempool_perc'] }}
 @endforeach
 ```
 
+#### Sneck Alert
+
+```text
+{{ $alert->title }}
+Severity: {{ $alert->severity }}
+@if ($alert->state == 0) Time elapsed: {{ $alert->elapsed }} @endif
+Timestamp: {{ $alert->timestamp }}
+Unique-ID: {{ $alert->uid }}
+@if ($alert->description) Description: {{ $alert->description }} @endif
+@if ($alert->notes) Notes: {{ $alert->notes }} @endif
+Alert String: {{ $alert->applications['sneck'][0]['data']['alertString'] }}
+```
+
 ### Advanced options
 
 #### Conditional formatting
@@ -263,7 +285,7 @@ Percent Utilized: {{ $value['mempool_perc'] }}
 Conditional formatting example, will display a link to the host in
 email or just the hostname in any other transport:
 
-```text
+```php
 @if ($alert->transport == 'mail')<a href="https://my.librenms.install/device/device={{ $alert->hostname }}/">{{ $alert->hostname }}</a>
 @else
 {{ $alert->hostname }}
@@ -272,7 +294,7 @@ email or just the hostname in any other transport:
 
 #### Traceroute debugs
 
-```text
+```php
 @if ($alert->status == 0)
     @if ($alert->status_reason == 'icmp')
         {{ $alert->debug['traceroute'] }}
@@ -280,16 +302,53 @@ email or just the hostname in any other transport:
 @endif
 ```
 
+### Using Application Data In Alert Templates
+
+Application data may be used in a alert template. `$alert->applications` is a
+associative array that contains the various applications for the device in
+question the alert is for. Each sub array contains that line from the
+applications table. So if you wanted for example access the app data for Sneck,
+it would be `$alert->applications['sneck'][0]['data']` and thus if we wanted to
+make us of the value `.data.alertString` in the stored return JSON, we would
+use `$alert->applications['sneck'][0]['data']['data']['alertString']`.
+
+If you want to get a better idea of what is usable, call
+`lnms report:devices -o json -r applications $device | jq -S .applications | less`
+on some device that has the app in question you are curious about and pay attention
+to the app data chunk.
+
+`[0]` is there as the legacy apps proxmox and drdb don't use make
+use of app data and instead can have multiple instances.
+
+#### Metrics
+
+Application metrics are also available via `$alert->application_metrics`.
+
+For example for ZFS if you wanted to include error info, you could do this.
+
+```
+Current Total Errors: {{ $alert->applications['zfs'][0]['total_errors']['value'] }}
+Current Read Errors: {{ $alert->applications['zfs'][0]['read_errors']['value'] }}
+Current Write Errors: {{ $alert->applications['zfs'][0][write_errors']['value'] }}
+
+Previous Total Errors: {{ $alert->applications['zfs'][0]['total_errors']['value_prev'] }}
+Previous Read Errors: {{ $alert->applications['zfs'][0]['read_errors']['value_prev'] }}
+Previous Write Errors: {{ $alert->applications['zfs'][0][write_errors']['value_prev'] }}
+```
+
 ## Examples HTML
 
-Note: To use HTML emails you must set HTML email to Yes in the WebUI
-under Global Settings > Alerting Settings > Email transport > Use HTML
-emails
+To use HTML emails you must set HTML email to Yes in the WebUI:
+
+!!! setting "alerting/email"
+    ```bash
+    lnms config:set email_html true
+    ```
 
 ## Graphs
 
 There are two helpers for graphs that will use a signed url to allow secure external
-access.  Anyone using the signed url will be able to view the graph.
+access. Anyone using the signed url will be able to view the graph.
 
  - Your LibreNMS web must be accessible from the location where the graph is viewed.
    Some alert transports require publicly accessible urls.
@@ -311,7 +370,7 @@ This will insert a specially formatted html img tag linking to the graph.
 Some transports may search the template for this tag to attach images properly
 for that transport.
 
-```
+```php
 @signedGraphTag([
     'id' => $value['port_id'],
     'type' => 'port_bits',
@@ -323,13 +382,14 @@ for that transport.
 ```
 
 Output:
+
 ```html
 <img class="librenms-graph" src="https://librenms.org/graph?from=1662176216&amp;height=250&amp;id=20425&amp;to=1662219416&amp;type=port_bits&amp;width=700&amp;signature=f6e516e8fd893c772eeaba165d027cb400e15a515254de561a05b63bc6f360a4">
 ```
 
 Specific graph using url input:
 
-```
+```php
 @signedGraphTag('https://librenms.org/graph.php?type=device_processor&from=-2d&device=2&legend=no&height=400&width=1200')
 ```
 
@@ -338,7 +398,7 @@ Specific graph using url input:
 This is used when you need the url directly. One example is using the
 API Transport, you may want to include the url only instead of a html tag.
 
-```
+```php
 @signedGraphUrl([
     'id' => $value['port_id'],
     'type' => 'port_bits',
@@ -349,16 +409,16 @@ API Transport, you may want to include the url only instead of a html tag.
 
 ## Using models for optional data
 
-If some value does not exist within the `$faults[]`-array, you may
+If some value does not exist within the `$faults[]` array, you may
 query fields from the database using Laravel models. You may use
 models to query additional values and use them on the template by
 placing the model and the value to search for within the braces. For
-example, ISIS-alerts do have a `port_id` value associated with the
+example, ISIS alerts do have a `port_id` value associated with the
 alert but `ifName` is not directly accessible from the
-`$faults[]`-array. If the name of the port was needed, it's value
+`$faults[]` array. If the name of the port was needed, it's value
 could be queried using a template such as:
 
-```
+```php
 {{ $alert->title }}
 Severity: {{ $alert->severity }}
 @if ($alert->state == 0) Time elapsed: {{ $alert->elapsed }} @endif
@@ -369,14 +429,13 @@ Rule: @if ($alert->name) {{ $alert->name }} @else {{ $alert->rule }} @endif
   Local interface: {{ \App\Models\Port::find($value['port_id'])->ifName }}
   Adjacent IP: {{ $value['isisISAdjIPAddrAddress'] }}
   Adjacent state: {{ $value['isisISAdjState'] }}
-
 @endforeach
 @endif
 ```
 
 ### Service Alert
 
-```
+```php
 <div style="font-family:Helvetica;">
 <h2>@if ($alert->state == 1) <span style="color:red;">{{ $alert->severity }} @endif
 @if ($alert->state == 2) <span style="color:goldenrod;">acknowledged @endif</span>
@@ -398,7 +457,7 @@ Rule: @if ($alert->name) {{ $alert->name }} @else {{ $alert->rule }} @endif
 
 #### Processor Alert with Graph
 
-```
+```php
 {{ $alert->title }} <br>
 Severity: {{ $alert->severity }}  <br>
 @if ($alert->state == 0) Time elapsed: {{ $alert->elapsed }} @endif
@@ -411,8 +470,8 @@ Rule: @if ($alert->name) {{ $alert->name }} @else {{ $alert->rule }} @endif <br>
 @endforeach
 @if ($alert->faults) <b>Faults:</b><br>
 @foreach ($alert->faults as $key => $value)
-@signedGraphTag(['device_id' => $value['device_id'], 'type' => 'device_processor', 'width' => 459, 'height' => 213, 'from' => time() - 259200])<br>
-https://server/graphs/id={{ $value['device_id'] }}/type=device_processor/<br>
+@signedGraphTag(['device' => $value['device_id'], 'type' => 'device_processor', 'width' => 459, 'height' => 213, 'from' => time() - 259200])<br>
+https://server/graphs/device={{ $value['device_id'] }}/type=device_processor/<br>
 @endforeach
 Template: CPU alert <br>
 @endif
@@ -436,7 +495,7 @@ The included templates apart from the default template are:
 
 ### Microsoft Teams - Markdown
 
-```
+```php
 [{{ $alert->title }}](https://your.librenms.url/device/device={{ $alert->device_id }}/)
 **Device name:** {{ $alert->sysName }}
 **Severity:** {{ $alert->severity }}
@@ -458,9 +517,9 @@ The included templates apart from the default template are:
 
 ### Microsoft Teams - JSON
 
-```
+```php
 {
-    "@context": "https://schema.org/extensions",
+    "@@context": "https://schema.org/extensions",
     "@type": "MessageCard",
     "title": "{{ $alert->title }}",
 @if ($alert->state === 0)
@@ -559,3 +618,156 @@ The included templates apart from the default template are:
 }
 ```
 
+### Microsoft Teams - AdaptiveCard JSON
+
+```php
+@php
+    $state_color = match ((int) $alert->state) {
+        0  => 'Good',       // CLEAR, RECOVERED
+        1  => 'Attention',  // ACTIVE
+        2  => 'Accent',     // ACKNOWLEDGED
+        3  => 'Attention',  // WORSE
+        4  => 'Warning',    // BETTER
+        5  => 'Warning',    // CHANGED
+        default => 'Default',
+    };
+    $severity_color = match ($alert->severity) {
+        'ok', 'Ok' => 'Good',
+        'warning', 'Warning' => 'Warning',
+        'critical', 'Critical' => 'Attention',
+        default => 'Default',
+    };
+@endphp
+{
+    "type": "message"
+    "attachments": [
+        {
+            "contentType": "application/vnd.microsoft.card.adaptive",
+            "content": {
+                "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                "version": "1.4",
+                "type": "AdaptiveCard",
+                "body": [
+                    {
+                        "type":  "TextBlock",
+                        "size":  "Large",
+                        "weight":  "Bolder",
+                        "color":  "{{ $state_color }}",
+                        "text":  "🚨 **LibreNMS Alert @if ($alert->state == 0) - Resolved @endif**",
+                        "horizontalAlignment":  "Center",
+                        "spacing":  "Small"
+                    },
+                    {
+                        "type":  "TextBlock",
+                        "text":  "**🔔** {{ $alert->title }}",
+                        "wrap":  true,
+                        "color": "Accent",
+                        "weight":  "Bolder",
+                        "spacing":  "Small"
+                    },
+                    {
+                        "type":  "TextBlock",
+                        "text":  "**📌 State:** @switch ($alert->state)
+                            @case (0) OK ✅ @break
+                            @case (1) Warning ⚠️ @break
+                            @case (2) Critical ❌ @break
+                            @default Unknown @endswitch",
+                        "wrap":  true,
+                        "color":  "{{ $state_color }}",
+                        "spacing":  "Small"
+                    },
+                    @if ($alert->state == 0) {
+                        "type":  "TextBlock",
+                        "text":  "**🕒 Elapsed:** {{ $alert->elapsed }}",
+                        "wrap":  true,
+                        "spacing":  "Small"
+                    }, @endif
+                    {
+                        "type":  "TextBlock",
+                        "text":  "**📅 Timestamp:** {{ $alert->timestamp }}",
+                        "wrap":  true,
+                        "spacing":  "Small"
+                    },
+                    {
+                        "type":  "TextBlock",
+                        "text":  "**🆔 Unique-ID:** {{ $alert->uid }}",
+                        "wrap":  true,
+                        "spacing":  "Small"
+                    },
+                    {
+                        "type":  "TextBlock",
+                        "text":  "**⚠️ Severity:**  {{ $alert->severity }}",
+                        "wrap":  true,
+                        "color":  "{{ $severity_color }}",
+                        "spacing":  "Small"
+                    },
+                    {
+                        "type":  "TextBlock",
+                        "text":  "**📜 Rule:**  @if ($alert->name) {{ $alert->name }} @else {{ $alert->rule }} @endif",
+                        "wrap":  true,
+                        "color":  "Accent",
+                        "spacing":  "Small"
+                    },
+                    @if ($alert->faults and count($alert->faults) > 0)
+                    {
+                        "type":  "TextBlock",
+                        "text":  "**🔍 Fault Details:**",
+                        "wrap":  true,
+                        "size":  "Medium",
+                        "weight":  "Bolder",
+                        "spacing":  "Small"
+                    },
+                    @foreach ($alert->faults as $fault_key => $fault_details)
+                    {
+                        "type": "ActionSet",
+                        "actions": [
+                            {
+                                "type": "Action.ShowCard",
+                                "title": "Fault {{ $fault_key }} ",
+                                "card": {
+                                    "type": "AdaptiveCard",
+                                    "body": [
+                                        {
+                                            "type":  "FactSet",
+                                            "separator":  true,
+                                            "facts":  [
+                                                @foreach ($fault_details as $key => $value)
+                                                @if ($key == 'string')
+                                                    {{--
+                                                        the 'string' key is a redundant amalgam of all 
+                                                        other keys in the assoc array, skip it
+                                                    --}}
+                                                    @continue    
+                                                @endif
+                                                {
+                                                    "title":  "{{ $key }}",
+                                                    "value":  "{{ str_replace(array("\r\n", "\n", "\r"), "", $value) }}"
+                                                },
+                                                @endforeach
+                                                {"title": "", "value": ""}
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    @endforeach
+                    {"type": "TextBlock", "text": ""}
+                    @else
+                    {"type": "TextBlock", "text": "No fault data in this alert"}
+                    @endif
+                ],
+                "actions":  [
+                    {
+                        "type":  "Action.OpenUrl",
+                        "title":  "View Alert",
+                        "style": "positive",
+                        "url":  "https://librenms.server.utsc.utoronto.ca/device/{{ $alert->device_id }}/alerts"
+                    }
+                ]
+                }
+        }
+    ]
+}
+```

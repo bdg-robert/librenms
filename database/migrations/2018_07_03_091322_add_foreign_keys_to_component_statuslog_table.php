@@ -10,10 +10,10 @@ return new class extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::table('component_statuslog', function (Blueprint $table) {
-            $table->foreign('component_id', 'component_statuslog_ibfk_1')->references('id')->on('component')->onUpdate('CASCADE')->onDelete('CASCADE');
+            $table->foreign('component_id', 'component_statuslog_ibfk_1')->references('id')->on('component')->onUpdate('cascade')->onDelete('cascade');
         });
     }
 
@@ -22,9 +22,9 @@ return new class extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
-        if (\LibreNMS\DB\Eloquent::getDriver() !== 'sqlite') {
+        if (LibreNMS\DB\Eloquent::getDriver() !== 'sqlite') {
             Schema::table('component_statuslog', function (Blueprint $table) {
                 $table->dropForeign('component_statuslog_ibfk_1');
             });

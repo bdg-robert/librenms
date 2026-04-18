@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CiHelperTest.php
  *
@@ -28,17 +29,13 @@ namespace LibreNMS\Tests\Unit;
 use LibreNMS\Tests\TestCase;
 use LibreNMS\Util\CiHelper;
 
-class CiHelperTest extends TestCase
+final class CiHelperTest extends TestCase
 {
-    public function testSetFlags()
+    public function testSetFlags(): void
     {
         $helper = new CiHelper();
-        $allFalse = array_map(function ($flag) {
-            return false;
-        }, $this->getDefaultFlags());
-        $allTrue = array_map(function ($flag) {
-            return false;
-        }, $this->getDefaultFlags());
+        $allFalse = array_map(fn ($flag) => false, $this->getDefaultFlags());
+        $allTrue = array_map(fn ($flag) => true, $this->getDefaultFlags());
 
         $helper->setFlags($allFalse);
         $this->assertEquals($allFalse, $helper->getFlags());
@@ -55,13 +52,13 @@ class CiHelperTest extends TestCase
         $this->assertEquals($testOne, $helper->getFlags());
     }
 
-    public function testDefaults()
+    public function testDefaults(): void
     {
         $helper = new CiHelper();
         $this->assertEquals($this->getDefaultFlags(), $helper->getFlags());
     }
 
-    public function testNoFiles()
+    public function testNoFiles(): void
     {
         putenv('FILES=none');
         $helper = new CiHelper();
@@ -78,7 +75,7 @@ class CiHelperTest extends TestCase
         ]);
     }
 
-    public function testSetOs()
+    public function testSetOs(): void
     {
         $helper = new CiHelper();
         $helper->setOS(['netonix', 'e3meter']);
@@ -101,7 +98,7 @@ class CiHelperTest extends TestCase
             'lint_skip_bash' => true,
         ]);
 
-        putenv('FILES=includes/definitions/ios.yaml tests/data/fxos.json');
+        putenv('FILES=resources/definitions/os_detection/ios.yaml tests/data/fxos.json');
         $helper = new CiHelper();
         $helper->detectChangedFiles();
         $this->assertFlagsSet($helper, [
@@ -116,7 +113,7 @@ class CiHelperTest extends TestCase
         ]);
     }
 
-    public function testSetModules()
+    public function testSetModules(): void
     {
         $helper = new CiHelper();
         $helper->setModules(['sensors', 'processors']);
@@ -156,7 +153,7 @@ class CiHelperTest extends TestCase
             'lint_skip_bash' => true,
         ]);
 
-        putenv('FILES=includes/definitions/ios.yaml tests/data/fxos.json');
+        putenv('FILES=resources/definitions/os_detection/ios.yaml tests/data/fxos.json');
         $helper = new CiHelper();
         $helper->detectChangedFiles();
         $this->assertFlagsSet($helper, [
@@ -170,7 +167,7 @@ class CiHelperTest extends TestCase
             'lint_skip_bash' => true,
         ]);
 
-        putenv('FILES=includes/definitions/ios.yaml tests/data/fxos.json');
+        putenv('FILES=resources/definitions/os_detection/ios.yaml tests/data/fxos.json');
         $helper = new CiHelper();
         $helper->detectChangedFiles();
         $this->assertFlagsSet($helper, [
@@ -185,7 +182,7 @@ class CiHelperTest extends TestCase
         ]);
     }
 
-    public function testFileCategorization()
+    public function testFileCategorization(): void
     {
         putenv('FILES=LibreNMS/Alert/Transport/Sensu.php includes/services.inc.php');
         $helper = new CiHelper();

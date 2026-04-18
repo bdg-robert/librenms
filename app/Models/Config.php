@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Config.php
  *
@@ -34,15 +35,22 @@ class Config extends BaseModel
         'config_name',
         'config_value',
     ];
-    protected $casts = [
-        'config_default' => 'array',
-    ];
+
+    /**
+     * @return array{config_default: 'array'}
+     */
+    protected function casts(): array
+    {
+        return [
+            'config_default' => 'array',
+        ];
+    }
 
     // ---- Accessors/Mutators ----
 
     public function getConfigValueAttribute($value)
     {
-        return json_decode($value, true);
+        return json_decode((string) $value, true);
     }
 
     public function setConfigValueAttribute($value)

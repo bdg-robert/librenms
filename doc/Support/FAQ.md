@@ -4,7 +4,7 @@
 
 This is currently well documented within the doc folder of the installation files.
 
-Please see the following [doc](/Installation/Install-LibreNMS.md)
+Please see the following [doc](../Installation/Install-LibreNMS.md)
 
 ### <a name="faq2"> How do I add a device?</a>
 
@@ -120,7 +120,7 @@ enable support to limit this to the actual port speed.
 
 rrdtool tune will change the max value when the interface speed is
 detected as being changed (min value will be set for anything 10M or
-over) or when you run the included script (./scripts/tune_port.php) -
+over) or when you run the included script (lnms port:tune) -
 see [RRDTune doc](../Extensions/RRDTune.md)
 
  SNMP ifInOctets and ifOutOctets are counters, which means they start
@@ -329,11 +329,11 @@ the alert rule won't match. The alert rule is ignored.
 
 Some properties used for alerting (ending in `_prev`) are only updated when a
 change is detected, and not every time the poller runs. This means that if you
-make a permanant change to your network such as removing a device, performing a
+make a permanent change to your network such as removing a device, performing a
 major firmware upgrade, or downgrading a WAN connection, you may be stuck with
 some unresolvable alerts.
 
-If a port will be permantly down, it's best practice to configure it to be
+If a port will be permanently down, it's best practice to configure it to be
 administratively down on the device to prevent malicious access. You can then
 only run alerts on ports with `ifAdminStatus = up`. Otherwise, you'll need to
 reset the device port state history.
@@ -375,7 +375,7 @@ tell you in there.
 You can change the Device Type by going to the device you would like
 to change, then click on the Gear Icon -> Edit. If you would like to
 define custom types, we suggest using [Device
-Groups](/Extensions/Device-Groups/). They will be listed in the
+Groups](../Extensions/Device-Groups.md). They will be listed in the
 menu similarly to device types.
 
 ### <a name="faq34"> Editing large device groups gives error messages</a>
@@ -459,7 +459,7 @@ exit;
 ```
 - Enable and restart MySQL server.
 - Edit your `config.php` file to point the install to the new database server location.
-- **Very important**: On your LibreNMS server, inside your install directory is a `.env` file, in it you need to edit the `DBHOST` paramater to point to your new server location.
+- **Very important**: On your LibreNMS server, inside your install directory is a `.env` file, in it you need to edit the `DBHOST` parameter to point to your new server location.
 - After all this is done, enable all the cron entries again and start apache.
 ### <a name='optional-requirements-for-snmpv3-sha2-auth'>What are the "optional requirements message" when I add SNMPv3 devices?</a>
 When you add a device via the WebUI you may see a little message stating "Optional requirements are not met so some options are disabled". Do not panic. This simply means your system does not contain **openssl >= 1.1** and **net-snmp >= 5.8**, which are the minimum specifications needed to be able to use SHA-224|256|384|512 as auth algorithms.
@@ -479,19 +479,20 @@ follow the below steps.
 
 Please [open a feature request in the community forum](https://community.librenms.org/c/feature-requests) and provide
 the output of Discovery, Poller, and Snmpwalk as separate non-expiring
-<https://p.libren.ms/> links :
+"pastebin" links, we recommend using <https://paste.rs/> or <https://paste.sh/>
 
 Please use preferably the command line to obtain the information.
 Especially, if snmpwalk results in a large amount of data. Replace the
 relevant information in these commands such as HOSTNAME and
 COMMUNITY. Use `snmpwalk` instead of `snmpbulkwalk` for v1 devices.
 
-> These commands will automatically upload the data to LibreNMS servers.
+> These commands will automatically upload the data to <https://paste.rs/> servers.
+> Feel free to use another service!
 
 ```bash
-./discovery.php -h HOSTNAME -d | ./pbin.sh
-./poller.php -h HOSTNAME -r -f -d | ./pbin.sh
-snmpbulkwalk -OUneb -v2c -c COMMUNITY HOSTNAME .  | ./pbin.sh
+lnms device:discover -vv HOSTNAME | curl --data-binary @- https://paste.rs/
+lnms device:poll -vv HOSTNAME | curl --data-binary @- https://paste.rs/
+snmpbulkwalk -OUneb -v2c -c COMMUNITY HOSTNAME . | curl --data-binary @- https://paste.rs/
 ```
 
 You can use the links provided by these commands within the community post.

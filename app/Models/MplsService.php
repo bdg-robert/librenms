@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use LibreNMS\Interfaces\Models\Keyable;
 
@@ -36,18 +35,27 @@ class MplsService extends DeviceRelatedModel implements Keyable
 
     /**
      * Get a string that can identify a unique instance of this model
-     *
-     * @return int
      */
-    public function getCompositeKey()
+    public function getCompositeKey(): string
     {
-        return $this->svc_oid;
+        return (string) $this->svc_oid;
     }
 
     // ---- Define Relationships ----
 
+    /**
+     * @return HasMany<MplsSdpBind, $this>
+     */
     public function binds(): HasMany
     {
-        return $this->hasMany(\App\Models\MplsSdpBind::class, 'svc_id');
+        return $this->hasMany(MplsSdpBind::class, 'svc_id');
+    }
+
+    /**
+     * @return HasMany<MplsSap, $this>
+     */
+    public function saps(): HasMany
+    {
+        return $this->hasMany(MplsSap::class, 'svc_id');
     }
 }

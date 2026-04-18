@@ -1,28 +1,30 @@
 import json
 import logging
 import os
+import re
+import signal
+import subprocess
 import sys
 import tempfile
 import threading
 import timeit
 from collections import deque
 from logging.handlers import RotatingFileHandler
-from math import ceil
 from queue import Queue
 from time import time
 
+from math import ceil
+
 from .command_runner import command_runner
 from .queuemanager import (
-    QueueManager,
-    TimedQueueManager,
-    BillingQueueManager,
-    PingQueueManager,
-    ServicesQueueManager,
     AlertQueueManager,
-    PollerQueueManager,
+    BillingQueueManager,
     DiscoveryQueueManager,
+    PingQueueManager,
+    PollerQueueManager,
+    ServicesQueueManager,
 )
-from .service import Service, ServiceConfig
+from .service import Service, ServiceConfig, LogOutput
 
 # Hard limit script execution time so we don't get to "hang"
 DEFAULT_SCRIPT_TIMEOUT = 3600
@@ -167,7 +169,7 @@ def get_config_data(base_dir):
         )
         logger.debug("Traceback:", exc_info=True)
 
-    config_cmd = ["/usr/bin/env", "php", "%s/config_to_json.php" % base_dir]
+    config_cmd = ["/usr/bin/env", "php", "%s/lnms" % base_dir, "config:get", "--dump"]
     try:
         exit_code, output = command_runner(config_cmd, timeout=300, stderr=False)
         if exit_code != 0:
@@ -183,13 +185,21 @@ def normalize_wait(seconds):
     return ceil(seconds - (time() % seconds))
 
 
-def call_script(script, args=()):
+def reset_signals():
+    # https://bugs.python.org/issue38435
+    # https://bugs.python.org/issue32985
+    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+
+
+def call_script(script, args=(), log_dest=None):
     """
     Run a LibreNMS script.  Captures all output returns exit code.
     Blocks parent signals (like SIGINT and SIGTERM).
     Kills script if it takes too long
     :param script: the name of the executable relative to the base directory
     :param args: a tuple of arguments to send to the command
+    :param log_dest: LogOutput enum or file path
+    :type log_dest: str | LogOutput | None
     :returns the output of the command
     """
     if script.endswith(".php"):
@@ -198,13 +208,61 @@ def call_script(script, args=()):
     else:
         base = ()
 
+    # preexec_fn=reset_signals ensures we don't receive signals from children (close_fds=True is default, but may become false in a future release)
+    kwargs = {
+        "preexec_fn": reset_signals,
+        "close_fds": True,
+        "start_new_session": True,
+        "timeout": DEFAULT_SCRIPT_TIMEOUT,
+    }
+
+    if isinstance(log_dest, str):
+        kwargs["stdout"] = log_dest
+        kwargs["stderr"] = log_dest
+    elif isinstance(log_dest, LogOutput):
+        if log_dest is LogOutput.FILE:
+            raise ValueError(
+                "For FILE mode, pass a file path string instead of LogOutput.FILE"
+            )
+
+        elif log_dest is LogOutput.NONE:
+            kwargs["stdout"] = subprocess.DEVNULL
+            kwargs["stderr"] = subprocess.DEVNULL
+
+        elif log_dest is LogOutput.PASSTHROUGH:
+            kwargs["stdout"] = sys.stdout
+            kwargs["stderr"] = sys.stderr
+
     base_dir = os.path.realpath(os.path.dirname(__file__) + "/..")
     cmd = base + ("{}/{}".format(base_dir, script),) + tuple(map(str, args))
     logger.debug("Running {}".format(cmd))
-    # preexec_fn=os.setsid here keeps process signals from propagating (close_fds=True is default)
-    return command_runner(
-        cmd, preexec_fn=os.setsid, close_fds=True, timeout=DEFAULT_SCRIPT_TIMEOUT
-    )
+    exit_code, output = command_runner(cmd, **kwargs)
+
+    if log_dest is LogOutput.LOGGER:
+        if output:
+            for line in output.splitlines():
+                level = infer_log_level(line)
+                logger.log(level, line)
+
+    return exit_code, output
+
+
+def infer_log_level(line):
+    """Infer log level from a log line."""
+    upper_line = line.upper()
+
+    if re.match(r"^\s*(\[)?(CRITICAL|FATAL)(]|:|\s|-)", upper_line):
+        return logging.CRITICAL
+    elif re.match(r"^\s*(\[)?(ERROR|ERR)(]|:|\s|-)", upper_line):
+        return logging.ERROR
+    elif re.match(r"^\s*(\[)?(WARN|WARNING)(]|:|\s|-)", upper_line):
+        return logging.WARNING
+    elif re.match(r"^\s*(\[)?(INFO|INFORMATION)(]|:|\s|-)", upper_line):
+        return logging.INFO
+    elif re.match(r"^\s*(\[)?(DEBUG|TRACE)(]|:|\s|-)", upper_line):
+        return logging.DEBUG
+
+    return logging.INFO
 
 
 class DB:
@@ -423,8 +481,17 @@ class RedisLock(Lock):
     def __init__(self, namespace="lock", sentinel_kwargs=None, **redis_kwargs):
         import redis  # pylint: disable=import-error
         from redis.sentinel import Sentinel  # pylint: disable=import-error
+        from redis.retry import Retry
+        from redis.exceptions import TimeoutError, ConnectionError
+        from redis.backoff import ConstantBackoff
 
         redis_kwargs["decode_responses"] = True
+        redis_kwargs["retry"] = Retry(ConstantBackoff(backoff=2), 5)
+        redis_kwargs["retry_on_error"] = [
+            ConnectionError,
+            ConnectionRefusedError,
+            TimeoutError,
+        ]
         if redis_kwargs.get("sentinel") and redis_kwargs.get("sentinel_service"):
             sentinels = [
                 tuple(l.split(":")) for l in redis_kwargs.pop("sentinel").split(",")
@@ -434,7 +501,15 @@ class RedisLock(Lock):
                 k: v
                 for k, v in redis_kwargs.items()
                 if k
-                in ["decode_responses", "username", "password", "db", "socket_timeout"]
+                in [
+                    "decode_responses",
+                    "username",
+                    "password",
+                    "db",
+                    "socket_timeout",
+                    "retry",
+                    "retry_on_error",
+                ]
             }
             self._redis = Sentinel(
                 sentinels, sentinel_kwargs=sentinel_kwargs, **kwargs
@@ -444,9 +519,10 @@ class RedisLock(Lock):
             self._redis = redis.Redis(**kwargs)
         self._redis.ping()
         self._namespace = namespace
+        socket_timeout = redis_kwargs.get("socket_timeout")
         logger.debug(
             "Created redis lock manager with socket_timeout of {}s".format(
-                redis_kwargs["socket_timeout"]
+                socket_timeout if socket_timeout is not None else "default"
             )
         )
 
@@ -533,8 +609,17 @@ class RedisUniqueQueue(object):
     def __init__(self, name, namespace="queue", sentinel_kwargs=None, **redis_kwargs):
         import redis  # pylint: disable=import-error
         from redis.sentinel import Sentinel  # pylint: disable=import-error
+        from redis.retry import Retry
+        from redis.exceptions import TimeoutError, ConnectionError
+        from redis.backoff import ConstantBackoff
 
         redis_kwargs["decode_responses"] = True
+        redis_kwargs["retry"] = Retry(ConstantBackoff(backoff=2), 5)
+        redis_kwargs["retry_on_error"] = [
+            ConnectionError,
+            ConnectionRefusedError,
+            TimeoutError,
+        ]
         if redis_kwargs.get("sentinel") and redis_kwargs.get("sentinel_service"):
             sentinels = [
                 tuple(l.split(":")) for l in redis_kwargs.pop("sentinel").split(",")
@@ -544,7 +629,15 @@ class RedisUniqueQueue(object):
                 k: v
                 for k, v in redis_kwargs.items()
                 if k
-                in ["decode_responses", "username", "password", "db", "socket_timeout"]
+                in [
+                    "decode_responses",
+                    "username",
+                    "password",
+                    "db",
+                    "socket_timeout",
+                    "retry",
+                    "retry_on_error",
+                ]
             }
             self._redis = Sentinel(
                 sentinels, sentinel_kwargs=sentinel_kwargs, **kwargs

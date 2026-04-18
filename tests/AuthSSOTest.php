@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AuthSSO.php
  *
@@ -25,12 +26,13 @@
 
 namespace LibreNMS\Tests;
 
+use App\Facades\LibrenmsConfig;
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
 use LibreNMS\Authentication\LegacyAuth;
-use LibreNMS\Config;
 
-class AuthSSOTest extends DBTestCase
+final class AuthSSOTest extends DBTestCase
 {
     use DatabaseTransactions;
 
@@ -41,8 +43,8 @@ class AuthSSOTest extends DBTestCase
     {
         parent::setUp();
 
-        $this->original_auth_mech = Config::get('auth_mechanism');
-        Config::set('auth_mechanism', 'sso');
+        $this->original_auth_mech = LibrenmsConfig::get('auth_mechanism');
+        LibrenmsConfig::set('auth_mechanism', 'sso');
 
         $this->server = $_SERVER;
     }
@@ -50,21 +52,21 @@ class AuthSSOTest extends DBTestCase
     // Set up an SSO config for tests
     public function basicConfig()
     {
-        Config::set('sso.mode', 'env');
-        Config::set('sso.create_users', true);
-        Config::set('sso.update_users', true);
-        Config::set('sso.trusted_proxies', ['127.0.0.1', '::1']);
-        Config::set('sso.user_attr', 'REMOTE_USER');
-        Config::set('sso.realname_attr', 'displayName');
-        Config::set('sso.email_attr', 'mail');
-        Config::set('sso.descr_attr', null);
-        Config::set('sso.level_attr', null);
-        Config::set('sso.group_strategy', 'static');
-        Config::set('sso.group_attr', 'member');
-        Config::set('sso.group_filter', '/(.*)/i');
-        Config::set('sso.group_delimiter', ';');
-        Config::set('sso.group_level_map', null);
-        Config::set('sso.static_level', -1);
+        LibrenmsConfig::set('sso.mode', 'env');
+        LibrenmsConfig::set('sso.create_users', true);
+        LibrenmsConfig::set('sso.update_users', true);
+        LibrenmsConfig::set('sso.trusted_proxies', ['127.0.0.1', '::1']);
+        LibrenmsConfig::set('sso.user_attr', 'REMOTE_USER');
+        LibrenmsConfig::set('sso.realname_attr', 'displayName');
+        LibrenmsConfig::set('sso.email_attr', 'mail');
+        LibrenmsConfig::set('sso.descr_attr', null);
+        LibrenmsConfig::set('sso.level_attr', null);
+        LibrenmsConfig::set('sso.group_strategy', 'static');
+        LibrenmsConfig::set('sso.group_attr', 'member');
+        LibrenmsConfig::set('sso.group_filter', '/(.*)/i');
+        LibrenmsConfig::set('sso.group_delimiter', ';');
+        LibrenmsConfig::set('sso.group_level_map', null);
+        LibrenmsConfig::set('sso.static_level', -1);
     }
 
     // Set up $_SERVER in env mode
@@ -72,7 +74,7 @@ class AuthSSOTest extends DBTestCase
     {
         unset($_SERVER);
 
-        Config::set('sso.mode', 'env');
+        LibrenmsConfig::set('sso.mode', 'env');
 
         $_SERVER['REMOTE_ADDR'] = '::1';
         $_SERVER['REMOTE_USER'] = 'test';
@@ -86,7 +88,7 @@ class AuthSSOTest extends DBTestCase
     {
         unset($_SERVER);
 
-        Config::set('sso.mode', 'header');
+        LibrenmsConfig::set('sso.mode', 'header');
 
         $_SERVER['REMOTE_ADDR'] = '::1';
         $_SERVER['REMOTE_USER'] = Str::random();
@@ -104,13 +106,13 @@ class AuthSSOTest extends DBTestCase
     }
 
     // Excercise general auth flow
-    public function testValidAuthNoCreateUpdate()
+    public function testValidAuthNoCreateUpdate(): void
     {
         $this->basicConfig();
         $a = LegacyAuth::reset();
 
-        Config::set('sso.create_users', false);
-        Config::set('sso.update_users', false);
+        LibrenmsConfig::set('sso.create_users', false);
+        LibrenmsConfig::set('sso.update_users', false);
 
         // Create a random username and store it with the defaults
         $this->basicEnvironmentEnv();
@@ -118,19 +120,18 @@ class AuthSSOTest extends DBTestCase
         $this->assertTrue($a->authenticate(['username' => $user]));
 
         // Retrieve it and validate
-        $dbuser = $a->getUser($a->getUserid($user));
-        $this->assertFalse($dbuser);
+        $this->assertFalse(User::thisAuth()->where('username', $user)->exists());
     }
 
     // Excercise general auth flow with creation enabled
-    public function testValidAuthCreateOnly()
+    public function testValidAuthCreateOnly(): void
     {
         $this->basicConfig();
         /** @var \LibreNMS\Authentication\SSOAuthorizer */
         $a = LegacyAuth::reset();
 
-        Config::set('sso.create_users', true);
-        Config::set('sso.update_users', false);
+        LibrenmsConfig::set('sso.create_users', true);
+        LibrenmsConfig::set('sso.update_users', false);
 
         // Create a random username and store it with the defaults
         $this->basicEnvironmentEnv();
@@ -138,26 +139,26 @@ class AuthSSOTest extends DBTestCase
         $this->assertTrue($a->authenticate(['username' => $user]));
 
         // Retrieve it and validate
-        $dbuser = $a->getUser($a->getUserid($user));
-        $this->assertSame($dbuser['realname'], $a->authSSOGetAttr(Config::get('sso.realname_attr')));
-        $this->assertTrue($dbuser['level'] == -1);
-        $this->assertSame($dbuser['email'], $a->authSSOGetAttr(Config::get('sso.email_attr')));
+        $dbuser = User::thisAuth()->where('username', $user)->firstOrNew();
+        $this->assertSame($dbuser->realname, $a->authSSOGetAttr(LibrenmsConfig::get('sso.realname_attr')));
+        $this->assertEmpty($dbuser->getRoleNames());
+        $this->assertSame($dbuser->email, $a->authSSOGetAttr(LibrenmsConfig::get('sso.email_attr')));
 
         // Change a few things and reauth
         $_SERVER['mail'] = 'test@example.net';
         $_SERVER['displayName'] = 'Testier User';
-        Config::set('sso.static_level', 10);
+        LibrenmsConfig::set('sso.static_level', 10);
         $this->assertTrue($a->authenticate(['username' => $user]));
 
         // Retrieve it and validate the update was not persisted
-        $dbuser = $a->getUser($a->getUserid($user));
-        $this->assertFalse($a->authSSOGetAttr(Config::get('sso.realname_attr')) === $dbuser['realname']);
-        $this->assertFalse($dbuser['level'] === '10');
-        $this->assertFalse($a->authSSOGetAttr(Config::get('sso.email_attr')) === $dbuser['email']);
+        $dbuser = User::thisAuth()->where('username', $user)->firstOrNew();
+        $this->assertFalse($a->authSSOGetAttr(LibrenmsConfig::get('sso.realname_attr')) === $dbuser->realname);
+        $this->assertFalse($dbuser->roles()->where('name', 'admin')->exists());
+        $this->assertFalse($a->authSSOGetAttr(LibrenmsConfig::get('sso.email_attr')) === $dbuser->email);
     }
 
     // Excercise general auth flow with updates enabled
-    public function testValidAuthUpdate()
+    public function testValidAuthUpdate(): void
     {
         $this->basicConfig();
         /** @var \LibreNMS\Authentication\SSOAuthorizer */
@@ -166,23 +167,23 @@ class AuthSSOTest extends DBTestCase
         // Create a random username and store it with the defaults
         $this->basicEnvironmentEnv();
         $user = $this->makeUser();
-        $this->assertTrue($a->authenticate(['username' => $user]));
+        $this->assertTrue(auth()->attempt(['username' => $user]));
 
         // Change a few things and reauth
         $_SERVER['mail'] = 'test@example.net';
         $_SERVER['displayName'] = 'Testier User';
-        Config::set('sso.static_level', 10);
-        $this->assertTrue($a->authenticate(['username' => $user]));
+        LibrenmsConfig::set('sso.static_level', 10);
+        $this->assertTrue(auth()->attempt(['username' => $user]));
 
         // Retrieve it and validate the update persisted
-        $dbuser = $a->getUser($a->getUserid($user));
-        $this->assertSame($dbuser['realname'], $a->authSSOGetAttr(Config::get('sso.realname_attr')));
-        $this->assertTrue($dbuser['level'] == 10);
-        $this->assertSame($dbuser['email'], $a->authSSOGetAttr(Config::get('sso.email_attr')));
+        $dbuser = User::thisAuth()->where('username', $user)->firstOrNew();
+        $this->assertSame($dbuser->realname, $a->authSSOGetAttr(LibrenmsConfig::get('sso.realname_attr')));
+        $this->assertTrue($dbuser->roles()->where('name', 'admin')->exists());
+        $this->assertSame($dbuser->email, $a->authSSOGetAttr(LibrenmsConfig::get('sso.email_attr')));
     }
 
     // Check some invalid authentication modes
-    public function testBadAuth()
+    public function testBadAuth(): void
     {
         $this->basicConfig();
         /** @var \LibreNMS\Authentication\SSOAuthorizer */
@@ -191,38 +192,37 @@ class AuthSSOTest extends DBTestCase
         $this->basicEnvironmentEnv();
         unset($_SERVER);
 
-        $this->expectException('LibreNMS\Exceptions\AuthenticationException');
+        $this->expectException(\LibreNMS\Exceptions\AuthenticationException::class);
         $a->authenticate([]);
 
         $this->basicEnvironmentHeader();
         unset($_SERVER);
 
-        $this->expectException('LibreNMS\Exceptions\AuthenticationException');
+        $this->expectException(\LibreNMS\Exceptions\AuthenticationException::class);
         $a->authenticate([]);
     }
 
     // Test some missing attributes
-    public function testNoAttribute()
+    public function testNoAttribute(): void
     {
         $this->basicConfig();
-        /** @var \LibreNMS\Authentication\SSOAuthorizer */
-        $a = LegacyAuth::reset();
+        LegacyAuth::reset();
 
         $this->basicEnvironmentEnv();
         unset($_SERVER['displayName']);
         unset($_SERVER['mail']);
 
-        $this->assertTrue($a->authenticate(['username' => $this->makeUser()]));
+        $this->assertTrue(auth()->attempt(['username' => $this->makeUser()]));
 
         $this->basicEnvironmentHeader();
         unset($_SERVER['HTTP_DISPLAYNAME']);
         unset($_SERVER['HTTP_MAIL']);
 
-        $this->assertTrue($a->authenticate(['username' => $this->makeUser()]));
+        $this->assertTrue(auth()->attempt(['username' => $this->makeUser()]));
     }
 
     // Document the modules current behaviour, so that changes trigger test failures
-    public function testCapabilityFunctions()
+    public function testCapabilityFunctions(): void
     {
         $a = LegacyAuth::reset();
 
@@ -234,7 +234,7 @@ class AuthSSOTest extends DBTestCase
 
     /* Everything from here comprises of targeted tests to excercise single methods */
 
-    public function testGetExternalUserName()
+    public function testGetExternalUserName(): void
     {
         $this->basicConfig();
         /** @var \LibreNMS\Authentication\SSOAuthorizer */
@@ -249,27 +249,27 @@ class AuthSSOTest extends DBTestCase
         $this->basicEnvironmentEnv();
 
         // Missing pointer to attribute
-        Config::forget('sso.user_attr');
+        LibrenmsConfig::forget('sso.user_attr');
         $this->assertNull($a->getExternalUsername());
         $this->basicEnvironmentEnv();
 
         // Non-existant attribute
-        Config::set('sso.user_attr', 'foobar');
+        LibrenmsConfig::set('sso.user_attr', 'foobar');
         $this->assertNull($a->getExternalUsername());
         $this->basicEnvironmentEnv();
 
         // null pointer to attribute
-        Config::set('sso.user_attr', null);
+        LibrenmsConfig::set('sso.user_attr', null);
         $this->assertNull($a->getExternalUsername());
         $this->basicEnvironmentEnv();
 
         // null attribute
-        Config::set('sso.user_attr', 'REMOTE_USER');
+        LibrenmsConfig::set('sso.user_attr', 'REMOTE_USER');
         $_SERVER['REMOTE_USER'] = null;
         $this->assertNull($a->getExternalUsername());
     }
 
-    public function testGetAttr()
+    public function testGetAttr(): void
     {
         /** @var \LibreNMS\Authentication\SSOAuthorizer */
         $a = LegacyAuth::reset();
@@ -277,27 +277,27 @@ class AuthSSOTest extends DBTestCase
         $_SERVER['HTTP_VALID_ATTR'] = 'string';
         $_SERVER['alsoVALID-ATTR'] = 'otherstring';
 
-        Config::set('sso.mode', 'env');
+        LibrenmsConfig::set('sso.mode', 'env');
         $this->assertNull($a->authSSOGetAttr('foobar'));
         $this->assertNull($a->authSSOGetAttr(null));
-        $this->assertNull($a->authSSOGetAttr(1));
+        $this->assertNull($a->authSSOGetAttr(''));
         $this->assertIsString($a->authSSOGetAttr('alsoVALID-ATTR'));
         $this->assertIsString($a->authSSOGetAttr('HTTP_VALID_ATTR'));
 
-        Config::set('sso.mode', 'header');
+        LibrenmsConfig::set('sso.mode', 'header');
         $this->assertNull($a->authSSOGetAttr('foobar'));
         $this->assertNull($a->authSSOGetAttr(null));
-        $this->assertNull($a->authSSOGetAttr(1));
+        $this->assertNull($a->authSSOGetAttr(''));
         $this->assertNull($a->authSSOGetAttr('alsoVALID-ATTR'));
         $this->assertIsString($a->authSSOGetAttr('VALID-ATTR'));
     }
 
-    public function testTrustedProxies()
+    public function testTrustedProxies(): void
     {
         /** @var \LibreNMS\Authentication\SSOAuthorizer */
         $a = LegacyAuth::reset();
 
-        Config::set('sso.trusted_proxies', ['127.0.0.1', '::1', '2001:630:50::/48', '8.8.8.0/25']);
+        LibrenmsConfig::set('sso.trusted_proxies', ['127.0.0.1', '::1', '2001:630:50::/48', '8.8.8.0/25']);
 
         // v4 valid CIDR
         $_SERVER['REMOTE_ADDR'] = '8.8.8.8';
@@ -336,7 +336,7 @@ class AuthSSOTest extends DBTestCase
         $this->assertFalse($a->authSSOProxyTrusted());
 
         // Not a list
-        Config::set('sso.trusted_proxies', '8.8.8.0/25');
+        LibrenmsConfig::set('sso.trusted_proxies', '8.8.8.0/25');
         $_SERVER['REMOTE_ADDR'] = '8.8.8.8';
         $this->assertFalse($a->authSSOProxyTrusted());
 
@@ -345,50 +345,55 @@ class AuthSSOTest extends DBTestCase
         $this->assertFalse($a->authSSOProxyTrusted());
     }
 
-    public function testLevelCaulculationFromAttr()
+    public function testLevelCaulculationFromAttr(): void
     {
-        /** @var \LibreNMS\Authentication\SSOAuthorizer */
+        /** @var \LibreNMS\Authentication\SSOAuthorizer $a */
         $a = LegacyAuth::reset();
 
-        Config::set('sso.mode', 'env');
-        Config::set('sso.group_strategy', 'attribute');
+        LibrenmsConfig::set('sso.mode', 'env');
+        LibrenmsConfig::set('sso.group_strategy', 'attribute');
 
         //Integer
-        Config::set('sso.level_attr', 'level');
-        $_SERVER['level'] = 9;
-        $this->assertSame(9, $a->authSSOCalculateLevel());
+        LibrenmsConfig::set('sso.level_attr', 'level');
+        $_SERVER['level'] = 5;
+        $this->assertSame(['global-read'], $a->getRoles(''));
 
         //String
-        Config::set('sso.level_attr', 'level');
-        $_SERVER['level'] = '9';
-        $this->assertSame(9, $a->authSSOCalculateLevel());
+        LibrenmsConfig::set('sso.level_attr', 'level');
+        $_SERVER['level'] = '5';
+        $this->assertSame(['global-read'], $a->getRoles(''));
+
+        // invalid level
+        LibrenmsConfig::set('sso.level_attr', 'level');
+        $_SERVER['level'] = 9;
+        $this->assertSame([], $a->getRoles(''));
 
         //Invalid String
-        Config::set('sso.level_attr', 'level');
+        LibrenmsConfig::set('sso.level_attr', 'level');
         $_SERVER['level'] = 'foobar';
-        $this->expectException('LibreNMS\Exceptions\AuthenticationException');
-        $a->authSSOCalculateLevel();
+        $this->expectException(\LibreNMS\Exceptions\AuthenticationException::class);
+        $a->getRoles('');
 
         //null
-        Config::set('sso.level_attr', 'level');
+        LibrenmsConfig::set('sso.level_attr', 'level');
         $_SERVER['level'] = null;
-        $this->expectException('LibreNMS\Exceptions\AuthenticationException');
-        $a->authSSOCalculateLevel();
+        $this->expectException(\LibreNMS\Exceptions\AuthenticationException::class);
+        $a->getRoles('');
 
         //Unset pointer
-        Config::forget('sso.level_attr');
+        LibrenmsConfig::forget('sso.level_attr');
         $_SERVER['level'] = '9';
-        $this->expectException('LibreNMS\Exceptions\AuthenticationException');
-        $a->authSSOCalculateLevel();
+        $this->expectException(\LibreNMS\Exceptions\AuthenticationException::class);
+        $a->getRoles('');
 
         //Unset attr
-        Config::set('sso.level_attr', 'level');
+        LibrenmsConfig::set('sso.level_attr', 'level');
         unset($_SERVER['level']);
-        $this->expectException('LibreNMS\Exceptions\AuthenticationException');
-        $a->authSSOCalculateLevel();
+        $this->expectException(\LibreNMS\Exceptions\AuthenticationException::class);
+        $a->getRoles('');
     }
 
-    public function testGroupParsing()
+    public function testGroupParsing(): void
     {
         $this->basicConfig();
         /** @var \LibreNMS\Authentication\SSOAuthorizer */
@@ -396,11 +401,11 @@ class AuthSSOTest extends DBTestCase
 
         $this->basicEnvironmentEnv();
 
-        Config::set('sso.static_level', 0);
-        Config::set('sso.group_strategy', 'map');
-        Config::set('sso.group_delimiter', ';');
-        Config::set('sso.group_attr', 'member');
-        Config::set('sso.group_level_map', ['librenms-admins' => 10, 'librenms-readers' => 1, 'librenms-billingcontacts' => 5]);
+        LibrenmsConfig::set('sso.static_level', 0);
+        LibrenmsConfig::set('sso.group_strategy', 'map');
+        LibrenmsConfig::set('sso.group_delimiter', ';');
+        LibrenmsConfig::set('sso.group_attr', 'member');
+        LibrenmsConfig::set('sso.group_level_map', ['librenms-admins' => 10, 'librenms-readers' => 1, 'librenms-billingcontacts' => 5]);
         $_SERVER['member'] = 'librenms-admins;librenms-readers;librenms-billingcontacts;unrelatedgroup;confluence-admins';
 
         // Valid options
@@ -419,9 +424,9 @@ class AuthSSOTest extends DBTestCase
         $this->assertSame(0, $a->authSSOParseGroups());
 
         // Empty with default access level
-        Config::set('sso.static_level', 5);
+        LibrenmsConfig::set('sso.static_level', 5);
         $this->assertSame(5, $a->authSSOParseGroups());
-        Config::forget('sso.static_level');
+        LibrenmsConfig::forget('sso.static_level');
 
         // Null
         $_SERVER['member'] = null;
@@ -434,44 +439,44 @@ class AuthSSOTest extends DBTestCase
         $_SERVER['member'] = 'librenms-admins;librenms-readers;librenms-billingcontacts;unrelatedgroup;confluence-admins';
 
         // Empty
-        Config::set('sso.group_level_map', []);
+        LibrenmsConfig::set('sso.group_level_map', []);
         $this->assertSame(0, $a->authSSOParseGroups());
 
         // Not associative
-        Config::set('sso.group_level_map', ['foo', 'bar', 'librenms-admins']);
+        LibrenmsConfig::set('sso.group_level_map', ['foo', 'bar', 'librenms-admins']);
         $this->assertSame(0, $a->authSSOParseGroups());
 
         // Null
-        Config::set('sso.group_level_map', null);
+        LibrenmsConfig::set('sso.group_level_map', null);
         $this->assertSame(0, $a->authSSOParseGroups());
 
         // Unset
-        Config::forget('sso.group_level_map');
+        LibrenmsConfig::forget('sso.group_level_map');
         $this->assertSame(0, $a->authSSOParseGroups());
 
         // No delimiter
-        Config::forget('sso.group_delimiter');
+        LibrenmsConfig::forget('sso.group_delimiter');
         $this->assertSame(0, $a->authSSOParseGroups());
 
         // Test group filtering by regex
-        Config::set('sso.group_filter', '/confluence-(.*)/i');
-        Config::set('sso.group_delimiter', ';');
-        Config::set('sso.group_level_map', ['librenms-admins' => 10, 'librenms-readers' => 1, 'librenms-billingcontacts' => 5, 'confluence-admins' => 7]);
+        LibrenmsConfig::set('sso.group_filter', '/confluence-(.*)/i');
+        LibrenmsConfig::set('sso.group_delimiter', ';');
+        LibrenmsConfig::set('sso.group_level_map', ['librenms-admins' => 10, 'librenms-readers' => 1, 'librenms-billingcontacts' => 5, 'confluence-admins' => 7]);
         $this->assertSame(7, $a->authSSOParseGroups());
 
         // Test group filtering by empty regex
-        Config::set('sso.group_filter', '');
+        LibrenmsConfig::set('sso.group_filter', '');
         $this->assertSame(10, $a->authSSOParseGroups());
 
         // Test group filtering by null regex
-        Config::set('sso.group_filter', null);
+        LibrenmsConfig::set('sso.group_filter', null);
         $this->assertSame(10, $a->authSSOParseGroups());
     }
 
     protected function tearDown(): void
     {
-        Config::set('auth_mechanism', $this->original_auth_mech);
-        Config::forget('sso');
+        LibrenmsConfig::set('auth_mechanism', $this->original_auth_mech);
+        LibrenmsConfig::forget('sso');
         $_SERVER = $this->server;
         parent::tearDown();
     }

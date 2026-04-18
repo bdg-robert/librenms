@@ -9,7 +9,7 @@ $rrd_filename = Rrd::name($device['hostname'], ['app', 'freeradius-access', $app
 $fr_access_array = [
     'requests' => 'Requests',
     'accepts' => 'Accepts',
-    'rejects'=> 'Rejects',
+    'rejects' => 'Rejects',
     'challenges' => 'Challenges',
 ];
 $colours = 'mixed';
@@ -22,6 +22,6 @@ if (Rrd::checkRrdExists($rrd_filename)) {
         $i++;
     }
 } else {
-    echo "file missing: $rrd_filename";
+    throw new \LibreNMS\Exceptions\RrdGraphException("No Data file $rrd_filename");
 }
 require 'includes/html/graphs/generic_multi_line.inc.php';

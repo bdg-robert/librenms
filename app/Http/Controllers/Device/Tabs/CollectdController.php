@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CollectdController.php
  *
@@ -25,15 +26,16 @@
 
 namespace App\Http\Controllers\Device\Tabs;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
-use LibreNMS\Config;
+use Illuminate\Http\Request;
 use LibreNMS\Interfaces\UI\DeviceTab;
 
 class CollectdController implements DeviceTab
 {
     public function visible(Device $device): bool
     {
-        return Config::has('collectd_dir') && is_dir(Config::get('collectd_dir') . '/' . $device->hostname . '/');
+        return LibrenmsConfig::has('collectd_dir') && is_dir(LibrenmsConfig::get('collectd_dir') . '/' . $device->hostname . '/');
     }
 
     public function slug(): string
@@ -51,7 +53,7 @@ class CollectdController implements DeviceTab
         return __('CollectD');
     }
 
-    public function data(Device $device): array
+    public function data(Device $device, Request $request): array
     {
         return [];
     }

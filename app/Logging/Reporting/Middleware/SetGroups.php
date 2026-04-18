@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SetGroups.php
  *
@@ -33,11 +34,9 @@ class SetGroups implements \Spatie\FlareClient\FlareMiddleware\FlareMiddleware
     /**
      * Middleware to set LibreNMS and Tools grouping data
      *
-     * @param  \Spatie\FlareClient\Report  $report
-     * @param  callable  $next
      * @return mixed
      */
-    public function handle(Report $report, $next)
+    public function handle(Report $report, \Closure $next)
     {
         try {
             $version = Version::get();
@@ -54,7 +53,7 @@ class SetGroups implements \Spatie\FlareClient\FlareMiddleware\FlareMiddleware
                 'RRDtool' => $version->rrdtool(),
 
             ]);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
         }
 
         return $next($report);

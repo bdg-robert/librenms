@@ -1,4 +1,5 @@
 <?php
+
 /* Copyright (C) 2019 LibreNMS
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,117 +23,100 @@
 
 namespace LibreNMS\Alert\Transport;
 
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Pool;
 use LibreNMS\Alert\Transport;
-use LibreNMS\Config;
 use LibreNMS\Enum\AlertState;
-use LibreNMS\Util\Proxy;
+use LibreNMS\Exceptions\AlertTransportDeliveryException;
+use LibreNMS\Util\Http;
+use LibreNMS\Util\Url;
 
 class Alertmanager extends Transport
 {
-    protected $name = 'Alert Manager';
+    protected string $name = 'Alert Manager';
 
-    public function deliverAlert($obj, $opts)
+    public function deliverAlert(array $alert_data): bool
     {
-        $alertmanager_opts = $this->parseUserOptions($this->config['alertmanager-options']);
-        $alertmanager_opts['url'] = $this->config['alertmanager-url'];
+        $url = $this->config['alertmanager-url'];
+        $username = $this->config['alertmanager-username'];
+        $password = $this->config['alertmanager-password'];
 
-        $alertmanager_username = $this->config['alertmanager-username'];
-        $alertmanager_password = $this->config['alertmanager-password'];
-
-        return $this->contactAlertmanager($obj, $alertmanager_opts, $alertmanager_username, $alertmanager_password);
-    }
-
-    public function contactAlertmanager($obj, $api, string $username, string $password)
-    {
-        if ($obj['state'] == AlertState::RECOVERED) {
-            $alertmanager_status = 'endsAt';
-        } else {
-            $alertmanager_status = 'startsAt';
-        }
-        $gen_url = (Config::get('base_url') . 'device/device=' . $obj['device_id']);
-        $alertmanager_msg = strip_tags($obj['msg']);
+        $alertmanager_status = $alert_data['state'] == AlertState::RECOVERED ? 'endsAt' : 'startsAt';
+        $alertmanager_msg = strip_tags((string) $alert_data['msg']);
         $data = [[
             $alertmanager_status => date('c'),
-            'generatorURL' => $gen_url,
+            'generatorURL' => Url::deviceUrl($alert_data['device_id']),
             'annotations' => [
-                'summary' => $obj['name'],
-                'title' => $obj['title'],
+                'summary' => $alert_data['name'],
+                'title' => $alert_data['title'],
                 'description' => $alertmanager_msg,
             ],
             'labels' => [
-                'alertname' => $obj['name'],
-                'severity' => $obj['severity'],
-                'instance' => $obj['hostname'],
+                'alertname' => $alert_data['name'],
+                'severity' => $alert_data['severity'],
+                'instance' => $alert_data['hostname'],
             ],
         ]];
 
-        $url = $api['url'];
-        unset($api['url']);
-        foreach ($api as $label => $value) {
-            // To allow dynamic values
-            if (preg_match('/^extra_[A-Za-z0-9_]+$/', $label) && (! empty($obj['faults'][1][$value]))) {
-                $data[0]['labels'][$label] = $obj['faults'][1][$value];
+        $alertmanager_opts = $this->parseUserOptions($this->config['alertmanager-options']);
+        foreach ($alertmanager_opts as $label => $value) {
+            if (str_starts_with((string) $label, 'stc_')) {
+                // Static label: strip the stc_ prefix and use the value as-is
+                $cleanLabel = substr((string) $label, 4);
+                $data[0]['labels'][$cleanLabel] = strip_tags((string) $value);
             } else {
-                $data[0]['labels'][$label] = $value;
+                // Dynamic label: try to resolve value from alert data, faults, or fall back to literal
+                $resolved = $alert_data[$value] ?? current(array_filter(
+                    array_column($alert_data['faults'] ?? [], $value),
+                    fn ($v) => ! empty($v)
+                )) ?: $value;
+
+                $data[0]['labels'][$label] = strip_tags((string) $resolved);
+
+                if (str_starts_with((string) $label, 'dyn_') && $data[0]['labels'][$label] == $value) {
+                    unset($data[0]['labels'][$label]);
+                }
             }
         }
 
-        return $this->postAlerts($url, $data, $username, $password);
+        $urls = array_values(array_filter(array_map(trim(...), explode(',', (string) $url))));
+
+        $client = Http::client()->timeout(2);
+
+        $responses = $client->pool(fn (Pool $pool) => array_map(function (string $baseUrl) use ($pool, $username, $password, $data) {
+            $req = $pool;
+            if ($username !== '' && $password !== '') {
+                $req = $req->withBasicAuth($username, $password);
+            }
+
+            return $req->post(rtrim($baseUrl, '/') . '/api/v2/alerts', $data);
+        }, $urls));
+
+        foreach ($responses as $res) {
+            if ($res instanceof ConnectionException) {
+                throw new AlertTransportDeliveryException(
+                    $alert_data,
+                    0,
+                    $res->getMessage(),
+                    $alertmanager_msg,
+                    $data
+                );
+            }
+            if (! $res->successful()) {
+                throw new AlertTransportDeliveryException(
+                    $alert_data,
+                    $res->status(),
+                    $res->body(),
+                    $alertmanager_msg,
+                    $data
+                );
+            }
+        }
+
+        return true;
     }
 
-    public static function postAlerts($url, $data, string $username, string $password)
-    {
-        $curl = curl_init();
-        Proxy::applyToCurl($curl);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($curl, CURLOPT_TIMEOUT, 5);
-        curl_setopt($curl, CURLOPT_TIMEOUT_MS, 5000);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT_MS, 5000);
-        curl_setopt($curl, CURLOPT_POST, true);
-
-        if ($username != '' && $password != '') {
-            curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-            curl_setopt($curl, CURLOPT_USERNAME, $username);
-            curl_setopt($curl, CURLOPT_PASSWORD, $password);
-        }
-
-        $alert_message = json_encode($data);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $alert_message);
-
-        foreach (explode(',', $url) as $am) {
-            $post_url = ($am . '/api/v2/alerts');
-            curl_setopt($curl, CURLOPT_URL, $post_url);
-            $ret = curl_exec($curl);
-            if ($ret === false || curl_errno($curl)) {
-                logfile("Failed to contact $post_url: " . curl_error($curl));
-                continue;
-            }
-            $code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-            if ($code == 200) {
-                curl_close($curl);
-
-                return true;
-            }
-        }
-
-        $err = "Unable to POST to Alertmanager at $post_url .";
-
-        if ($ret === false || curl_errno($curl)) {
-            $err .= ' cURL error: ' . curl_error($curl);
-        } else {
-            $err .= ' HTTP status: ' . curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        }
-
-        curl_close($curl);
-
-        logfile($err);
-
-        return $err;
-    }
-
-    public static function configTemplate()
+    public static function configTemplate(): array
     {
         return [
             'config' => [

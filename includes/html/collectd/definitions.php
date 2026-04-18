@@ -1677,12 +1677,12 @@ function meta_graph_files_count($host, $plugin, $plugin_instance, $type, $type_i
 
     $opts['colors'] = [
         'incoming' => '00e000',
-        'active'   => 'a0e000',
+        'active' => 'a0e000',
         'deferred' => 'a00050',
     ];
 
     $type_instances = ['incoming', 'active', 'deferred'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1694,7 +1694,7 @@ function meta_graph_files_count($host, $plugin, $plugin_instance, $type, $type_i
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -1712,12 +1712,12 @@ function meta_graph_files_size($host, $plugin, $plugin_instance, $type, $type_in
 
     $opts['colors'] = [
         'incoming' => '00e000',
-        'active'   => 'a0e000',
+        'active' => 'a0e000',
         'deferred' => 'a00050',
     ];
 
     $type_instances = ['incoming', 'active', 'deferred'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1729,7 +1729,7 @@ function meta_graph_files_size($host, $plugin, $plugin_instance, $type, $type_in
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -1746,18 +1746,18 @@ function meta_graph_cpu($host, $plugin, $plugin_instance, $type, $type_instances
     $opts['rrd_opts'] = ['-r', '-u', '100', 'COMMENT:Percent         Cur     Min      Ave     Max\l'];
 
     $opts['colors'] = [
-        'idle'      => 'ffffff',
-        'nice'      => '00e000',
-        'user'      => '0000ff',
-        'wait'      => 'ffb000',
-        'system'    => 'ff0000',
-        'softirq'   => 'ff00ff',
+        'idle' => 'ffffff',
+        'nice' => '00e000',
+        'user' => '0000ff',
+        'wait' => 'ffb000',
+        'system' => 'ff0000',
+        'softirq' => 'ff00ff',
         'interrupt' => 'a000a0',
-        'steal'     => '000000',
+        'steal' => '000000',
     ];
 
     $type_instances = ['idle', 'wait', 'nice', 'user', 'system', 'softirq', 'interrupt', 'steal'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1769,7 +1769,7 @@ function meta_graph_cpu($host, $plugin, $plugin_instance, $type, $type_instances
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -1788,14 +1788,14 @@ function meta_graph_memory($host, $plugin, $plugin_instance, $type, $type_instan
 
     // BYTES
     $opts['colors'] = [
-        'free'     => '00e000',
-        'cached'   => '0000ff',
+        'free' => '00e000',
+        'cached' => '0000ff',
         'buffered' => 'ffb000',
-        'used'     => 'ff0000',
+        'used' => 'ff0000',
     ];
 
     $type_instances = ['free', 'cached', 'buffered', 'used'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1807,7 +1807,7 @@ function meta_graph_memory($host, $plugin, $plugin_instance, $type, $type_instan
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -1825,14 +1825,14 @@ function meta_graph_vs_threads($host, $plugin, $plugin_instance, $type, $type_in
     $opts['rrd_opts'] = ['-v', 'Threads'];
 
     $opts['colors'] = [
-        'total'   => 'F0A000',
-        'running'  => 'FF0000',
-        'onhold'  => '00E000',
+        'total' => 'F0A000',
+        'running' => 'FF0000',
+        'onhold' => '00E000',
         'uninterruptable' => '0000FF',
     ];
 
     $type_instances = ['total', 'running', 'onhold', 'uninterruptable'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1844,7 +1844,7 @@ function meta_graph_vs_threads($host, $plugin, $plugin_instance, $type, $type_in
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_line($opts, $sources);
@@ -1862,14 +1862,14 @@ function meta_graph_vs_memory($host, $plugin, $plugin_instance, $type, $type_ins
     $opts['rrd_opts'] = ['-b', '1024', '-v', 'Bytes'];
 
     $opts['colors'] = [
-        'vm'   => 'F0A000',
-        'vml'  => 'FF0000',
-        'rss'  => '00E000',
+        'vm' => 'F0A000',
+        'vml' => 'FF0000',
+        'rss' => '00E000',
         'anon' => '0000FF',
     ];
 
     $type_instances = ['anon', 'rss', 'vml', 'vm'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1881,7 +1881,7 @@ function meta_graph_vs_memory($host, $plugin, $plugin_instance, $type, $type_ins
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_line($opts, $sources);
@@ -1898,7 +1898,7 @@ function meta_graph_if_rx_errors($host, $plugin, $plugin_instance, $type, $type_
     $opts['number_format'] = '%5.2lf';
     $opts['rrd_opts'] = ['-v', 'Errors/s'];
 
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1910,7 +1910,7 @@ function meta_graph_if_rx_errors($host, $plugin, $plugin_instance, $type, $type_
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -1927,7 +1927,7 @@ function meta_graph_mysql_commands($host, $plugin, $plugin_instance, $type, $typ
     $opts['rrd_opts'] = ['COMMENT:Issues/s               Cur    Ave     Min    Max\l'];
     $opts['number_format'] = '%5.2lf';
 
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1939,7 +1939,7 @@ function meta_graph_mysql_commands($host, $plugin, $plugin_instance, $type, $typ
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -1956,7 +1956,7 @@ function meta_graph_nfs_procedure($host, $plugin, $plugin_instance, $type, $type
     $opts['number_format'] = '%5.1lf%s';
     $opts['rrd_opts'] = ['-v', 'Ops/s'];
 
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -1968,7 +1968,7 @@ function meta_graph_nfs_procedure($host, $plugin, $plugin_instance, $type, $type
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -1985,16 +1985,16 @@ function meta_graph_ps_state($host, $plugin, $plugin_instance, $type, $type_inst
     $opts['rrd_opts'] = ['COMMENT:Processes      Cur     Avg      Min     Max\l'];
 
     $opts['colors'] = [
-        'running'  => '00e000',
+        'running' => '00e000',
         'sleeping' => '0000ff',
-        'paging'   => 'ffb000',
-        'zombies'  => 'ff0000',
-        'blocked'  => 'ff00ff',
-        'stopped'  => 'a000a0',
+        'paging' => 'ffb000',
+        'zombies' => 'ff0000',
+        'blocked' => 'ff00ff',
+        'stopped' => 'a000a0',
     ];
 
     $type_instances = ['paging', 'blocked', 'zombies', 'stopped', 'running', 'sleeping'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -2006,7 +2006,7 @@ function meta_graph_ps_state($host, $plugin, $plugin_instance, $type, $type_inst
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -2024,13 +2024,13 @@ function meta_graph_swap($host, $plugin, $plugin_instance, $type, $type_instance
     $opts['rrd_opts'] = ['-b', '1024', 'COMMENT:Bytes        Cur     Avg     Min     Max\l'];
 
     $opts['colors'] = [
-        'free'     => '00e000',
-        'cached'   => '0000ff',
-        'used'     => 'ff0000',
+        'free' => '00e000',
+        'cached' => '0000ff',
+        'used' => 'ff0000',
     ];
 
     $type_instances = ['free', 'cached', 'used'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -2042,7 +2042,7 @@ function meta_graph_swap($host, $plugin, $plugin_instance, $type, $type_instance
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file];
+        $sources[] = ['name' => $inst, 'file' => $file];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -2060,21 +2060,21 @@ function meta_graph_apache_scoreboard($host, $plugin, $plugin_instance, $type, $
     $opts['rrd_opts'] = ['COMMENT:Processes         Cur     Min      Ave     Max\l'];
 
     $opts['colors'] = [
-        'open'         => '00e000',
-        'waiting'      => '0000ff',
-        'starting'     => 'a00000',
-        'reading'      => 'ff0000',
-        'sending'      => '00ff00',
-        'keepalive'    => 'f000f0',
-        'dnslookup'    => '00a000',
-        'logging'      => '008080',
-        'closing'      => 'a000a0',
-        'finishing'    => '000080',
+        'open' => '00e000',
+        'waiting' => '0000ff',
+        'starting' => 'a00000',
+        'reading' => 'ff0000',
+        'sending' => '00ff00',
+        'keepalive' => 'f000f0',
+        'dnslookup' => '00a000',
+        'logging' => '008080',
+        'closing' => 'a000a0',
+        'finishing' => '000080',
         'idle_cleanup' => '000000',
     ];
 
     $type_instances = [/* 'open',*/ 'waiting', 'starting', 'reading', 'sending', 'keepalive', 'dnslookup', 'logging', 'closing', 'finishing', 'idle_cleanup'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -2086,7 +2086,7 @@ function meta_graph_apache_scoreboard($host, $plugin, $plugin_instance, $type, $
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file, 'ds'=>'value'];
+        $sources[] = ['name' => $inst, 'file' => $file, 'ds' => 'value'];
     }
 
     return collectd_draw_meta_stack($opts, $sources);
@@ -2106,20 +2106,20 @@ function meta_graph_tcp_connections($host, $plugin, $plugin_instance, $type, $ty
 
     $opts['colors'] = [
         'ESTABLISHED' => '00e000',
-        'SYN_SENT'    => '00e0ff',
-        'SYN_RECV'    => '00e0a0',
-        'FIN_WAIT1'   => 'f000f0',
-        'FIN_WAIT2'   => 'f000a0',
-        'TIME_WAIT'   => 'ffb000',
-        'CLOSE'       => '0000f0',
-        'CLOSE_WAIT'  => '0000a0',
-        'LAST_ACK'    => '000080',
-        'LISTEN'      => 'ff0000',
-        'CLOSING'     => '000000',
+        'SYN_SENT' => '00e0ff',
+        'SYN_RECV' => '00e0a0',
+        'FIN_WAIT1' => 'f000f0',
+        'FIN_WAIT2' => 'f000a0',
+        'TIME_WAIT' => 'ffb000',
+        'CLOSE' => '0000f0',
+        'CLOSE_WAIT' => '0000a0',
+        'LAST_ACK' => '000080',
+        'LISTEN' => 'ff0000',
+        'CLOSING' => '000000',
     ];
 
     $type_instances = ['ESTABLISHED', 'SYN_SENT', 'SYN_RECV', 'FIN_WAIT1', 'FIN_WAIT2', 'TIME_WAIT', 'CLOSE', 'CLOSE_WAIT', 'LAST_ACK', 'CLOSING', 'LISTEN'];
-    foreach ($type_instances as $k => $inst) {
+    foreach ($type_instances as $inst) {
         $file = '';
         foreach (Config::get('datadirs') as $datadir) {
             if (is_file($datadir . '/' . $title . '-' . $inst . '.rrd')) {
@@ -2131,7 +2131,7 @@ function meta_graph_tcp_connections($host, $plugin, $plugin_instance, $type, $ty
             continue;
         }
 
-        $sources[] = ['name'=>$inst, 'file'=>$file, 'ds'=>'value'];
+        $sources[] = ['name' => $inst, 'file' => $file, 'ds' => 'value'];
     }
 
     return collectd_draw_meta_stack($opts, $sources);

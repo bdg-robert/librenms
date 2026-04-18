@@ -10,21 +10,18 @@ $rrd_filename = Rrd::name($device['hostname'], ['app', 'asterisk', 'iax2', $app-
 $astiax2_access_array = [
     'iax2peers' => 'Total Peers',
     'iax2online' => 'Online',
-    'iax2offline'=> 'Offline',
+    'iax2offline' => 'Offline',
     'iax2unmonitored' => 'Unmonitored',
 ];
 
 $colours = 'mixed';
 $rrd_list = [];
 
-if (Rrd::checkRrdExists($rrd_filename)) {
-    foreach ($astiax2_access_array as $ds => $descr) {
-        $rrd_list[$i]['filename'] = $rrd_filename;
-        $rrd_list[$i]['descr'] = $descr;
-        $rrd_list[$i]['ds'] = $ds;
-        $i++;
-    }
-} else {
-    echo "file missing: $rrd_filename";
+foreach ($astiax2_access_array as $ds => $descr) {
+    $rrd_list[$i]['filename'] = $rrd_filename;
+    $rrd_list[$i]['descr'] = $descr;
+    $rrd_list[$i]['ds'] = $ds;
+    $i++;
 }
+
 require 'includes/html/graphs/generic_multi_line.inc.php';

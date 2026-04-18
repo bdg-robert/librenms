@@ -1,9 +1,10 @@
 <?php
 
-use App\Models\DeviceGraph;
+use App\Facades\LibrenmsConfig;
+use App\Models\Eventlog;
 use Illuminate\Support\Str;
-use LibreNMS\Config;
-use LibreNMS\Enum\Alert;
+use LibreNMS\Enum\Sensor;
+use LibreNMS\Enum\Severity;
 use LibreNMS\Exceptions\JsonAppBase64DecodeException;
 use LibreNMS\Exceptions\JsonAppBlankJsonException;
 use LibreNMS\Exceptions\JsonAppExtendErroredException;
@@ -15,6 +16,7 @@ use LibreNMS\Exceptions\JsonAppWrongVersionException;
 use LibreNMS\RRD\RrdDefinition;
 use LibreNMS\Util\Debug;
 use LibreNMS\Util\Number;
+use LibreNMS\Util\Oid;
 use LibreNMS\Util\UserFuncHelper;
 
 function bulk_sensor_snmpget($device, $sensors)
@@ -23,9 +25,7 @@ function bulk_sensor_snmpget($device, $sensors)
     $sensors = array_chunk($sensors, $oid_per_pdu);
     $cache = [];
     foreach ($sensors as $chunk) {
-        $oids = array_map(function ($data) {
-            return $data['sensor_oid'];
-        }, $chunk);
+        $oids = array_map(fn ($data) => $data['sensor_oid'], $chunk);
         $oids = implode(' ', $oids);
         $multi_response = snmp_get_multi_oid($device, $oids, '-OUQntea');
         $cache = array_merge($cache, $multi_response);
@@ -34,25 +34,8 @@ function bulk_sensor_snmpget($device, $sensors)
     return $cache;
 }
 
-/**
- * @param $device
- * @param  string  $type  type/class of sensor
- * @return array
- */
-function sensor_precache($device, $type)
-{
-    $sensor_cache = [];
-    if (file_exists('includes/polling/sensors/pre-cache/' . $device['os'] . '.inc.php')) {
-        include 'includes/polling/sensors/pre-cache/' . $device['os'] . '.inc.php';
-    }
-
-    return $sensor_cache;
-}
-
 function poll_sensor($device, $class)
 {
-    global $agent_sensors;
-
     $sensors = [];
     $misc_sensors = [];
     $all_sensors = [];
@@ -69,20 +52,17 @@ function poll_sensor($device, $class)
 
     $snmp_data = bulk_sensor_snmpget($device, $sensors);
 
-    $sensor_cache = sensor_precache($device, $class);
-
     foreach ($sensors as $sensor) {
-        echo 'Checking (' . $sensor['poller_type'] . ") $class " . $sensor['sensor_descr'] . '... ' . PHP_EOL;
+        Log::info('Checking (' . $sensor['poller_type'] . ") $class " . $sensor['sensor_descr'] . '... ');
 
         if ($sensor['poller_type'] == 'snmp') {
             $mibdir = null;
 
             $sensor_value = trim(str_replace('"', '', $snmp_data[$sensor['sensor_oid']] ?? ''));
-
-            if (file_exists('includes/polling/sensors/' . $class . '/' . $device['os'] . '.inc.php')) {
-                require 'includes/polling/sensors/' . $class . '/' . $device['os'] . '.inc.php';
-            } elseif (isset($device['os_group']) && file_exists('includes/polling/sensors/' . $class . '/' . $device['os_group'] . '.inc.php')) {
-                require 'includes/polling/sensors/' . $class . '/' . $device['os_group'] . '.inc.php';
+            if (file_exists(LibrenmsConfig::get('install_dir') . '/includes/polling/sensors/' . $class . '/' . $device['os'] . '.inc.php')) {
+                require LibrenmsConfig::get('install_dir') . '/includes/polling/sensors/' . $class . '/' . $device['os'] . '.inc.php';
+            } elseif (isset($device['os_group']) && file_exists(LibrenmsConfig::get('install_dir') . '/includes/polling/sensors/' . $class . '/' . $device['os_group'] . '.inc.php')) {
+                require LibrenmsConfig::get('install_dir') . '/includes/polling/sensors/' . $class . '/' . $device['os_group'] . '.inc.php';
             }
 
             if ($class == 'state') {
@@ -101,7 +81,10 @@ function poll_sensor($device, $class)
                     }
                 }
             }//end if
-            unset($mib);
+            if (isset($mib)) {
+                // @phpstan-ignore unset.variable
+                unset($mib);
+            }
             unset($mibdir);
             $sensor['new_value'] = $sensor_value;
             $all_sensors[] = $sensor;
@@ -111,19 +94,20 @@ function poll_sensor($device, $class)
     foreach ($misc_sensors as $sensor) {
         if ($sensor['poller_type'] == 'agent') {
             if (isset($agent_sensors)) {
+                // @phpstan-ignore variable.undefined
                 $sensor_value = $agent_sensors[$class][$sensor['sensor_type']][$sensor['sensor_index']]['current'];
                 $sensor['new_value'] = $sensor_value;
                 $all_sensors[] = $sensor;
             } else {
-                echo "no agent data!\n";
+                Log::info('no agent data!');
                 continue;
             }
         } elseif ($sensor['poller_type'] == 'ipmi') {
-            echo " already polled.\n";
+            Log::info(' already polled.');
             // ipmi should probably move here from the ipmi poller file (FIXME)
             continue;
         } else {
-            echo "unknown poller type!\n";
+            Log::info('unknown poller type!');
             continue;
         }//end if
     }
@@ -131,34 +115,14 @@ function poll_sensor($device, $class)
 }//end poll_sensor()
 
 /**
- * @param $device
- * @param $all_sensors
+ * @param  $device
+ * @param  $all_sensors
  */
 function record_sensor_data($device, $all_sensors)
 {
-    $supported_sensors = [
-        'current'     => 'A',
-        'frequency'   => 'Hz',
-        'runtime'     => 'Min',
-        'humidity'    => '%',
-        'fanspeed'    => 'rpm',
-        'power'       => 'W',
-        'voltage'     => 'V',
-        'temperature' => 'C',
-        'dbm'         => 'dBm',
-        'charge'      => '%',
-        'load'        => '%',
-        'state'       => '#',
-        'signal'      => 'dBm',
-        'airflow'     => 'cfm',
-        'snr'         => 'SNR',
-        'pressure'    => 'kPa',
-        'cooling'     => 'W',
-    ];
-
     foreach ($all_sensors as $sensor) {
-        $class = ucfirst($sensor['sensor_class']);
-        $unit = $supported_sensors[$sensor['sensor_class']];
+        $class = trans('sensors.' . $sensor['sensor_class'] . '.short');
+        $unit = Sensor::from($sensor['sensor_class'])->unit();
         $sensor_value = Number::extract($sensor['new_value']);
         $prev_sensor_value = $sensor['sensor_current'];
 
@@ -168,11 +132,11 @@ function record_sensor_data($device, $all_sensors)
         }
 
         if ($sensor['sensor_divisor'] && $sensor_value !== 0) {
-            $sensor_value = ($sensor_value / $sensor['sensor_divisor']);
+            $sensor_value /= $sensor['sensor_divisor'];
         }
 
         if ($sensor['sensor_multiplier']) {
-            $sensor_value = ($sensor_value * $sensor['sensor_multiplier']);
+            $sensor_value *= $sensor['sensor_multiplier'];
         }
 
         if (isset($sensor['user_func'])) {
@@ -187,7 +151,7 @@ function record_sensor_data($device, $all_sensors)
 
         $rrd_def = RrdDefinition::make()->addDataset('sensor', $sensor['rrd_type']);
 
-        echo "$sensor_value $unit\n";
+        Log::info("$sensor_value $unit");
 
         $fields = [
             'sensor' => $sensor_value,
@@ -201,15 +165,15 @@ function record_sensor_data($device, $all_sensors)
             'rrd_name' => $rrd_name,
             'rrd_def' => $rrd_def,
         ];
-        data_update($device, 'sensor', $tags, $fields);
+        app('Datastore')->put($device, 'sensor', $tags, $fields);
 
         // FIXME also warn when crossing WARN level!
         if ($sensor['sensor_limit_low'] != '' && $prev_sensor_value > $sensor['sensor_limit_low'] && $sensor_value < $sensor['sensor_limit_low'] && $sensor['sensor_alert'] == 1) {
             echo 'Alerting for ' . $device['hostname'] . ' ' . $sensor['sensor_descr'] . "\n";
-            log_event("$class under threshold: $sensor_value $unit (< {$sensor['sensor_limit_low']} $unit)", $device, $sensor['sensor_class'], 4, $sensor['sensor_id']);
+            Eventlog::log("$class under threshold: $sensor_value $unit (< {$sensor['sensor_limit_low']} $unit)", $device['device_id'], $sensor['sensor_class'], Severity::Warning, $sensor['sensor_id']);
         } elseif ($sensor['sensor_limit'] != '' && $prev_sensor_value < $sensor['sensor_limit'] && $sensor_value > $sensor['sensor_limit'] && $sensor['sensor_alert'] == 1) {
             echo 'Alerting for ' . $device['hostname'] . ' ' . $sensor['sensor_descr'] . "\n";
-            log_event("$class above threshold: $sensor_value $unit (> {$sensor['sensor_limit']} $unit)", $device, $sensor['sensor_class'], 4, $sensor['sensor_id']);
+            Eventlog::log("$class above threshold: $sensor_value $unit (> {$sensor['sensor_limit']} $unit)", $device['device_id'], $sensor['sensor_class'], Severity::Warning, $sensor['sensor_id']);
         }
         if ($sensor['sensor_class'] == 'state' && $prev_sensor_value != $sensor_value) {
             $trans = array_column(
@@ -221,231 +185,13 @@ function record_sensor_data($device, $all_sensors)
                 'state_value'
             );
 
-            log_event("$class sensor {$sensor['sensor_descr']} has changed from {$trans[$prev_sensor_value]} ($prev_sensor_value) to {$trans[$sensor_value]} ($sensor_value)", $device, $class, 3, $sensor['sensor_id']);
+            Eventlog::log($class . ' sensor ' . ($sensor['sensor_descr'] ?? '') . ' has changed from ' . ($trans[$prev_sensor_value] ?? '#unamed state#') . "($prev_sensor_value) to " . ($trans[$sensor_value] ?? '#unamed state#') . " ($sensor_value)", $device['device_id'], $class, Severity::Notice, $sensor['sensor_id']);
         }
         if ($sensor_value != $prev_sensor_value) {
             dbUpdate(['sensor_current' => $sensor_value, 'sensor_prev' => $prev_sensor_value, 'lastupdate' => ['NOW()']], 'sensors', '`sensor_class` = ? AND `sensor_id` = ?', [$sensor['sensor_class'], $sensor['sensor_id']]);
         }
     }
 }
-
-/**
- * @param  array  $device  The device to poll
- * @param  bool  $force_module  Ignore device module overrides
- * @return bool
- */
-function poll_device($device, $force_module = false)
-{
-    global $device, $graphs;
-
-    $device_start = microtime(true);
-
-    $deviceModel = DeviceCache::getPrimary();
-    $device['attribs'] = $deviceModel->getAttribs();
-
-    $os = \LibreNMS\OS::make($device);
-
-    unset($array);
-
-    // Start counting device poll time
-    echo 'Hostname:    ' . $device['hostname'] . PHP_EOL;
-    echo 'Device ID:   ' . $device['device_id'] . PHP_EOL;
-    echo 'OS:          ' . $device['os'] . PHP_EOL;
-
-    if (empty($device['overwrite_ip'])) {
-        $ip = dnslookup($device);
-    } else {
-        $ip = $device['overwrite_ip'];
-    }
-
-    $db_ip = null;
-    if (! empty($ip)) {
-        if (empty($device['overwrite_ip'])) {
-            echo 'Resolved IP: ' . $ip . PHP_EOL;
-        } else {
-            echo 'Assigned IP: ' . $ip . PHP_EOL;
-        }
-        $db_ip = inet_pton($ip);
-    }
-
-    if (! empty($db_ip) && inet6_ntop($db_ip) != inet6_ntop($device['ip'])) {
-        log_event('Device IP changed to ' . $ip, $device, 'system', 3);
-        dbUpdate(['ip' => $db_ip], 'devices', 'device_id=?', [$device['device_id']]);
-    }
-
-    if ($os_group = Config::get("os.{$device['os']}.group")) {
-        $device['os_group'] = $os_group;
-        echo ' (' . $device['os_group'] . ')';
-    }
-
-    echo PHP_EOL . PHP_EOL;
-
-    unset($poll_update);
-    unset($poll_update_query);
-    unset($poll_separator);
-    $poll_update_array = [];
-    $update_array = [];
-
-    $host_rrd = Rrd::name($device['hostname'], '', '');
-    if (Config::get('norrd') !== true && ! is_dir($host_rrd)) {
-        mkdir($host_rrd);
-        echo "Created directory : $host_rrd\n";
-    }
-
-    $helper = new \LibreNMS\Polling\ConnectivityHelper($deviceModel);
-    $helper->saveMetrics();
-
-    if ($helper->isUp()) {
-        if ($device['snmp_disable']) {
-            // only non-snmp modules
-            Config::set('poller_modules', array_intersect_key(Config::get('poller_modules'), [
-                'availability' => true,
-                'ipmi' => true,
-                'unix-agent' => true,
-            ]));
-        } else {
-            // we always want the core module to be included, prepend it
-            Config::set('poller_modules', ['core' => true] + Config::get('poller_modules'));
-        }
-
-        // update $device array status
-        $device['status'] = $deviceModel->status;
-        $device['status_reason'] = $deviceModel->status_reason;
-
-        /** @var \App\Polling\Measure\MeasurementManager $measurements */
-        $measurements = app(\App\Polling\Measure\MeasurementManager::class);
-        $measurements->checkpoint(); // don't count previous stats
-
-        foreach (Config::get('poller_modules') as $module => $module_status) {
-            if (! is_file("includes/polling/$module.inc.php")) {
-                echo "Module $module does not exist, please remove it from your configuration";
-
-                continue;
-            }
-
-            $os_module_status = Config::get("os.{$device['os']}.poller_modules.$module");
-            d_echo('Modules status: Global' . (isset($module_status) ? ($module_status ? '+ ' : '- ') : '  '));
-            d_echo('OS' . (isset($os_module_status) ? ($os_module_status ? '+ ' : '- ') : '  '));
-            d_echo('Device' . (isset($device['attribs']['poll_' . $module]) ? ($device['attribs']['poll_' . $module] ? '+ ' : '- ') : '  '));
-            if ($force_module === true ||
-                ! empty($device['attribs']['poll_' . $module]) ||
-                ($os_module_status && ! isset($device['attribs']['poll_' . $module])) ||
-                ($module_status && ! isset($os_module_status) && ! isset($device['attribs']['poll_' . $module]))) {
-                $start_memory = memory_get_usage();
-                $module_start = microtime(true);
-                echo "\n#### Load poller module $module ####\n";
-
-                try {
-                    include "includes/polling/$module.inc.php";
-                } catch (Throwable $e) {
-                    // isolate module exceptions so they don't disrupt the polling process
-                    Log::error("%rError polling $module module for {$device['hostname']}.%n $e", ['color' => true]);
-                    \App\Models\Eventlog::log("Error polling $module module. Check log file for more details.", $device['device_id'], 'poller', Alert::ERROR);
-                    report($e);
-
-                    // Re-throw exception if we're in CI
-                    if (getenv('CI') == true) {
-                        throw $e;
-                    }
-                }
-
-                $module_time = microtime(true) - $module_start;
-                $module_mem = (memory_get_usage() - $start_memory);
-                printf("\n>> Runtime for poller module '%s': %.4f seconds with %s bytes\n", $module, $module_time, $module_mem);
-                $measurements->printChangedStats();
-                echo "#### Unload poller module $module ####\n\n";
-
-                // save per-module poller stats
-                $tags = [
-                    'module'      => $module,
-                    'rrd_def'     => RrdDefinition::make()->addDataset('poller', 'GAUGE', 0),
-                    'rrd_name'    => ['poller-perf', $module],
-                ];
-                $fields = [
-                    'poller' => $module_time,
-                ];
-                data_update($device, 'poller-perf', $tags, $fields);
-                $os->enableGraph('poller_perf');
-
-                // remove old rrd
-                $oldrrd = Rrd::name($device['hostname'], ['poller', $module, 'perf']);
-                if (is_file($oldrrd)) {
-                    unlink($oldrrd);
-                }
-                unset($tags, $fields, $oldrrd);
-            } elseif (isset($device['attribs']['poll_' . $module]) && $device['attribs']['poll_' . $module] == '0') {
-                echo "Module [ $module ] disabled on host.\n\n";
-            } elseif (isset($os_module_status) && $os_module_status == '0') {
-                echo "Module [ $module ] disabled on os.\n\n";
-            } else {
-                echo "Module [ $module ] disabled globally.\n\n";
-            }
-        }
-
-        // Ping response
-        if ($helper->canPing()) {
-            $os->enableGraph('ping_perf');
-        }
-
-        $device_time = round(microtime(true) - $device_start, 3);
-
-        // Poller performance
-        if (! empty($device_time)) {
-            $tags = [
-                'rrd_def' => RrdDefinition::make()->addDataset('poller', 'GAUGE', 0),
-                'module' => 'ALL',
-            ];
-            $fields = [
-                'poller' => $device_time,
-            ];
-
-            data_update($device, 'poller-perf', $tags, $fields);
-            $os->enableGraph('poller_modules_perf');
-        }
-
-        if (! $force_module) {
-            // don't update last_polled time if we are forcing a specific module to be polled
-            $update_array['last_polled'] = ['NOW()'];
-            $update_array['last_polled_timetaken'] = $device_time;
-
-            echo 'Enabling graphs: ';
-            DeviceGraph::deleted(function ($graph) {
-                echo '-';
-            });
-            DeviceGraph::created(function ($graph) {
-                echo '+';
-            });
-
-            $os->persistGraphs();
-            echo PHP_EOL;
-        }
-
-        $updated = false;
-        if (! empty($update_array)) {
-            $updated = dbUpdate($update_array, 'devices', '`device_id` = ?', [$device['device_id']]);
-        }
-        if ($updated) {
-            d_echo('Updating ' . $device['hostname'] . PHP_EOL);
-        }
-
-        echo "\nPolled in $device_time seconds\n";
-
-        // check if the poll took to long and log an event
-        if ($device_time > Config::get('rrd.step')) {
-            log_event('Polling took longer than ' . round(Config::get('rrd.step') / 60, 2) .
-                ' minutes!  This will cause gaps in graphs.', $device, 'system', 5);
-        }
-
-        unset($storage_cache);
-        // Clear cache of hrStorage ** MAYBE FIXME? **
-        unset($cache);
-        // Clear cache (unify all things here?)
-
-        return true; // device was polled
-    }
-
-    return false; // device not polled
-}//end poll_device()
 
 /**
  * Update the application status and output in the database.
@@ -493,23 +239,23 @@ function update_application($app, $response, $metrics = [], $status = '')
 
         switch ($app->app_state) {
             case 'OK':
-                $severity = Alert::OK;
+                $severity = Severity::Ok;
                 $event_msg = 'changed to OK';
                 break;
             case 'ERROR':
-                $severity = Alert::ERROR;
+                $severity = Severity::Error;
                 $event_msg = 'ends with ERROR';
                 break;
             case 'LEGACY':
-                $severity = Alert::WARNING;
+                $severity = Severity::Warning;
                 $event_msg = 'Client Agent is deprecated';
                 break;
             case 'UNSUPPORTED':
-                $severity = Alert::ERROR;
+                $severity = Severity::Error;
                 $event_msg = 'Client Agent Version is not supported';
                 break;
             default:
-                $severity = Alert::UNKNOWN;
+                $severity = Severity::Unknown;
                 $event_msg = 'has UNKNOWN state';
                 break;
         }
@@ -578,11 +324,9 @@ function update_application($app, $response, $metrics = [], $status = '')
 
         // remove no longer existing metrics (generally should not happen
         foreach ($db_metrics as $db_metric) {
-            dbDelete(
-                'application_metrics',
-                'app_id=? && metric=?',
-                [$app['app_id'], $db_metric['metric']]
-            );
+            \App\Models\ApplicationMetric::where('app_id', $app['app_id'])
+                ->where('metric', $db_metric['metric'])
+                ->delete();
             echo '-';
         }
 
@@ -648,7 +392,7 @@ function update_application($app, $response, $metrics = [], $status = '')
  */
 function json_app_get($device, $extend, $min_version = 1)
 {
-    $output = snmp_get($device, 'nsExtendOutputFull.' . string_to_oid($extend), '-Oqv', 'NET-SNMP-EXTEND-MIB');
+    $output = snmp_get($device, 'nsExtendOutputFull.' . Oid::encodeString($extend), '-Oqv', 'NET-SNMP-EXTEND-MIB');
 
     // save for returning if not JSON
     $orig_output = $output;
@@ -677,10 +421,15 @@ function json_app_get($device, $extend, $min_version = 1)
         if (Debug::isVerbose()) {
             echo 'Decoded Base64+GZip Output: ' . $output . "\n\n";
         }
+    } else {
+        $output = stripslashes($output);
+        if (Debug::isVerbose()) {
+            echo 'Output post stripslashes: ' . $output . "\n\n";
+        }
     }
 
     //  turn the JSON into a array
-    $parsed_json = json_decode(stripslashes($output), true);
+    $parsed_json = json_decode($output, true);
 
     // improper JSON or something else was returned. Populate the variable with an error.
     if (json_last_error() !== JSON_ERROR_NONE) {

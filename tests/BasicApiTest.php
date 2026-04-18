@@ -1,4 +1,5 @@
 <?php
+
 /**
  * BasicApiTest.php
  *
@@ -30,12 +31,13 @@ use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 
-class BasicApiTest extends DBTestCase
+final class BasicApiTest extends DBTestCase
 {
     use DatabaseTransactions;
 
-    public function testListDevices()
+    public function testListDevices(): void
     {
+        /** @var User $user */
         $user = User::factory()->admin()->create();
         $token = ApiToken::generateToken($user);
         $device = Device::factory()->create();
@@ -45,7 +47,7 @@ class BasicApiTest extends DBTestCase
             ->assertJson([
                 'status' => 'ok',
                 'devices' => [$device->toArray()],
-                'count'=> 1,
+                'count' => 1,
             ]);
     }
 }

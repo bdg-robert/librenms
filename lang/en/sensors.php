@@ -33,8 +33,8 @@ return [
     'chromatic_dispersion' => [
         'short' => 'Chromatic Dispersion',
         'long' => 'Chromatic Dispersion',
-        'unit' => 'ps/nm/km',
-        'unit_long' => 'Picoseconds per Nanometer per Kilometer',
+        'unit' => 'ps/nm',
+        'unit_long' => 'Picoseconds per Nanometer',
     ],
     'cooling' => [
         'short' => 'Cooling',
@@ -112,7 +112,7 @@ return [
         'short' => 'Power Consumed',
         'long' => 'Power Consumed',
         'unit' => 'kWh',
-        'unit_long' => 'Killowatt-Hours',
+        'unit_long' => 'Kilowatt-Hours',
     ],
     'power_factor' => [
         'short' => 'Power Factor',
@@ -150,6 +150,12 @@ return [
         'unit' => 'dBmV',
         'unit_long' => 'Decibel-Millivolts',
     ],
+    'printer-supply' => [
+        'short' => 'Printer',
+        'long' => 'Printer Supplies',
+        'unit' => '%',
+        'unit_long' => 'Percent',
+    ],
     'bitrate' => [
         'short' => 'Bitrate',
         'long' => 'Bitrate',
@@ -172,10 +178,12 @@ return [
         'long' => 'Temperature',
         'unit' => '°C',
         'unit_long' => '° Celsius',
+        'unit_f' => '°F',
+        'unit_long_f' => '° Fahrenheit',
     ],
     'voltage' => [
         'short' => 'Voltage',
-        'long' => 'voltage',
+        'long' => 'Voltage',
         'unit' => 'V',
         'unit_long' => 'Volts',
     ],
@@ -190,5 +198,11 @@ return [
         'long' => 'Percent',
         'unit' => '%',
         'unit_long' => 'Percent',
+    ],
+    'signal_loss' => [
+        'short' => 'SL',
+        'long' => 'Signal Loss',
+        'unit' => 'dB',
+        'unit_long' => 'Decibels',
     ],
 ];

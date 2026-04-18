@@ -5,15 +5,15 @@ $temps = snmp_walk($device, '.1.3.6.1.4.1.674.10895.5000.2.6132.1.1.43.1.8.1.5',
 
 $counter = 0;
 if (! empty($temps)) {
-    foreach (explode("\n", $temps) as $i => $t) {
+    foreach (explode("\n", (string) $temps) as $t) {
         $t = explode(' ', $t);
         $oid = $t[0];
         $val = $t[1];
 
-        if (substr($oid, -1) == '1') {
+        if (str_ends_with($oid, '1')) {
             // This code will only pull CPU temp for each stack member, but there is no reason why the additional values couldn't be graphed
-            $counter = $counter + 1;
-            discover_sensor($valid['sensor'], 'temperature', $device, $oid, $counter, 'dnos', 'Unit ' . $counter . ' CPU temperature', '1', '1', null, null, null, null, $val);
+            $counter += 1;
+            discover_sensor(null, 'temperature', $device, $oid, $counter, 'dnos', 'Unit ' . $counter . ' CPU temperature', '1', '1', null, null, null, null, $val);
         }
     }
 }
@@ -31,6 +31,6 @@ if (is_array($oids)) {
         $descr = 'Unit ' . $index . ' ' . $entry['chStackUnitSysType'];
         $oid = '.1.3.6.1.4.1.6027.3.10.1.2.2.1.14.' . $index;
         $current = $entry['chStackUnitTemp'];
-        discover_sensor($valid['sensor'], 'temperature', $device, $oid, $index, 'ftos-sseries', $descr, '1', '1', null, null, null, null, $current);
+        discover_sensor(null, 'temperature', $device, $oid, $index, 'ftos-sseries', $descr, '1', '1', null, null, null, null, $current);
     }
 }

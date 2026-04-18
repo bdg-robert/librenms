@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CiscoDHCPServerTrapTest.php
  *
@@ -23,13 +24,18 @@
 
 namespace LibreNMS\Tests\Feature\SnmpTraps;
 
-class CiscoDHCPServerTrapTest extends SnmpTrapTestCase
+use LibreNMS\Enum\Severity;
+use PHPUnit\Framework\Attributes\TestDox;
+
+#[TestDox('Cisco DHCP Server Trap')]
+final class CiscoDHCPServerTrapTest extends SnmpTrapTestCase
 {
     /**
      * Test CiscoDHCPServer trap handles
      *
      * @return void
      */
+    #[TestDox('Cisco DHCP server free address high')]
     public function testCiscoDHCPServerFreeAddressHigh(): void
     {
         $this->assertTrapLogsMessage('{{ hostname }}
@@ -40,10 +46,11 @@ CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerSharedNetFreeAddrHighThreshold."some-dh
 CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerSharedNetFreeAddresses."some-dhcp-pool" = INTEGER: 99',
             'SNMP Trap: DHCP pool "some-dhcp-pool" address space high. Free addresses: \'= INTEGER: 99\' addresses.',
             'Could not handle CiscoDHCPServerFreeAddressHigh Test trap',
-            [2],
+            [Severity::Info],
         );
     }
 
+    #[TestDox('Cisco DHCP server free address low')]
     public function testCiscoDHCPServerFreeAddressLow(): void
     {
         $this->assertTrapLogsMessage('{{ hostname }}
@@ -54,10 +61,11 @@ CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerSharedNetFreeAddrLowThreshold."some-dhc
 CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerSharedNetFreeAddresses."some-dhcp-pool" = INTEGER: 99',
             'SNMP Trap: DHCP pool "some-dhcp-pool" address space low. Free addresses: \'= INTEGER: 99\' addresses.',
             'Could not handle CiscoDHCPServerFreeAddressHigh Test trap',
-            [5],
+            [Severity::Error],
         );
     }
 
+    #[TestDox('Cisco DHCP server start')]
     public function testCiscoDHCPServerStart(): void
     {
         $this->assertTrapLogsMessage('{{ hostname }}
@@ -67,10 +75,11 @@ SNMPv2-MIB::snmpTrapOID.0 CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerStartTime
 CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerStartTime = Hex-STRING: 07 E6 0B 0A 03 0F 25 00 2B 00',
             'SNMP Trap: Device DHCP service started.',
             'Could not handle CiscoDHCPServerStart Test trap',
-            [2],
+            [Severity::Info],
         );
     }
 
+    #[TestDox('Cisco DHCP server stop')]
     public function testCiscoDHCPServerStop(): void
     {
         $this->assertTrapLogsMessage('{{ hostname }}
@@ -80,7 +89,7 @@ SNMPv2-MIB::snmpTrapOID.0 CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerStopTime
 CISCO-IETF-DHCP-SERVER-MIB::cDhcpv4ServerStopTime = Hex-STRING: 07 E6 0B 0A 03 0F 25 00 2B 00',
             'SNMP Trap: Device DHCP service stopped.',
             'Could not handle CiscoDHCPServerStop Test trap',
-            [5],
+            [Severity::Error],
         );
     }
 }

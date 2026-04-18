@@ -1,17 +1,17 @@
 <?php
 
-use LibreNMS\Config;
+use App\Facades\LibrenmsConfig;
 
 // Load our list of available applications
 $applications = [];
-foreach (glob(Config::get('install_dir') . '/includes/polling/applications/*.inc.php') as $file) {
+foreach (glob(LibrenmsConfig::get('install_dir') . '/includes/polling/applications/*.inc.php') as $file) {
     $name = basename($file, '.inc.php');
     $applications[$name] = $name;
 }
 
 // Generate a list of enabled apps with a value of whether they are discovered or not
 $enabled_apps = array_reduce(dbFetchRows(
-    'SELECT `app_type`,`discovered` FROM `applications` WHERE `device_id`=? ORDER BY `app_type`',
+    'SELECT `app_type`,`discovered` FROM `applications` WHERE `device_id`=? AND deleted_at IS NULL ORDER BY `app_type`',
     [$device['device_id']]
 ), function ($result, $app) {
     $result[$app['app_type']] = $app['discovered'];
@@ -27,7 +27,7 @@ foreach ($applications as $app) {
     if (isset($enabled_apps[$app])) {
         $modifiers = ' checked';
         if ($enabled_apps[$app]
-            && (get_dev_attrib($device, 'poll_applications') || Config::getOsSetting($device['os'], 'poller_modules.applications'))
+            && (get_dev_attrib($device, 'poll_applications') || LibrenmsConfig::getOsSetting($device['os'], 'poller_modules.applications'))
         ) {
             $app_text .= '<span class="text-success"> (Discovered)</span>';
             $modifiers .= ' disabled';

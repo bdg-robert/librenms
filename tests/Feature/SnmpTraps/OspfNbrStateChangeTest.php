@@ -1,4 +1,5 @@
 <?php
+
 /**
  * OspfNbrStateChangeTest.php
  *
@@ -32,9 +33,10 @@ namespace LibreNMS\Tests\Feature\SnmpTraps;
 use App\Models\Device;
 use App\Models\OspfNbr;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use LibreNMS\Enum\Severity;
 use LibreNMS\Tests\Traits\RequiresDatabase;
 
-class OspfNbrStateChangeTest extends SnmpTrapTestCase
+final class OspfNbrStateChangeTest extends SnmpTrapTestCase
 {
     use RequiresDatabase;
     use DatabaseTransactions;
@@ -59,7 +61,7 @@ OSPF-MIB::ospfNbrState.$ospfNbr->ospf_nbr_id down
 SNMPv2-MIB::snmpTrapEnterprise.0 JUNIPER-CHASSIS-DEFINES-MIB::jnxProductNameSRX240 ",
             "OSPF neighbor $ospfNbr->ospfNbrRtrId changed state to down",
             'Could not handle ospfNbrStateChange down',
-            [5],
+            [Severity::Error],
             $device,
         );
 
@@ -87,7 +89,7 @@ OSPF-MIB::ospfNbrState.$ospfNbr->ospf_nbr_id full
 SNMPv2-MIB::snmpTrapEnterprise.0 JUNIPER-CHASSIS-DEFINES-MIB::jnxProductNameSRX240 ",
             "OSPF neighbor $ospfNbr->ospfNbrRtrId changed state to full",
             'Could not handle ospfNbrStateChange full',
-            [1],
+            [Severity::Ok],
             $device,
         );
 
@@ -115,7 +117,7 @@ OSPF-MIB::ospfNbrState.$ospfNbr->ospf_nbr_id exstart
 SNMPv2-MIB::snmpTrapEnterprise.0 JUNIPER-CHASSIS-DEFINES-MIB::jnxProductNameSRX240 ",
             "OSPF neighbor $ospfNbr->ospfNbrRtrId changed state to exstart",
             'Could not handle ospfNbrStateChange exstart',
-            [4],
+            [Severity::Warning],
             $device,
         );
 

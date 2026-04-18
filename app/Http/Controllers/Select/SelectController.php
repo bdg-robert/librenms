@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SelectController.php
  *
@@ -27,13 +28,18 @@ namespace App\Http\Controllers\Select;
 
 use App\Http\Controllers\PaginatedAjaxController;
 use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 
 abstract class SelectController extends PaginatedAjaxController
 {
+    protected ?string $idField = null;
+    protected ?string $textField = null;
+
     final protected function baseRules()
     {
         return [
@@ -46,34 +52,50 @@ abstract class SelectController extends PaginatedAjaxController
     /**
      * The default method called by the route handler
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function __invoke(Request $request)
     {
         $this->validate($request, $this->rules());
-        $limit = $request->get('limit', 50);
 
-        $query = $this->baseQuery($request)->when($request->has('id'), function ($query) {
-            return $query->whereKey(request('id'));
-        });
-        $this->filter($request, $query, $this->filterFields($request));
-        $this->search($request->get('term'), $query, $this->searchFields($request));
-        $this->sort($request, $query);
-        $paginator = $query->simplePaginate($limit);
+        $limit = $request->input('limit', 50);
+        $paginator = $this->buildQuery($this, $request)->simplePaginate($limit);
 
-        return $this->formatResponse($paginator);
+        return $this->formatResponse($paginator, $paginator->hasMorePages());
+    }
+
+    protected function buildQuery(SelectController $controller, Request $request): EloquentBuilder|Builder
+    {
+        $query = $controller->baseQuery($request);
+        if ($controller->idField && $controller->textField) {
+            $query->select([$controller->idField, $controller->textField]);
+        }
+
+        $controller->filterById($query, $request->input('id'));
+        $controller->filter($request, $query, $controller->filterFields($request));
+        $controller->search($request->input('term'), $query, $controller->searchFields($request));
+        $controller->sort($request, $query);
+
+        return $query;
     }
 
     /**
-     * @param  Paginator|Collection  $paginator
+     * @param  Paginator|Collection<int, mixed>  $paginator
      * @return \Illuminate\Http\JsonResponse
      */
-    protected function formatResponse($paginator)
+    protected function formatResponse($paginator, bool $hasMore = false): JsonResponse
     {
+        $results = ($paginator instanceof Paginator ? collect($paginator->items()) : $paginator)
+            ->map(fn ($model) => $this->formatItem($model));
+
+        if ($this->canPrependFirstItem(request())) {
+            $results->prepend($this->prependItem());
+        }
+
         return response()->json([
-            'results' => collect($paginator->items())->map([$this, 'formatItem']),
-            'pagination' => ['more' => $paginator->hasMorePages()],
+            'results' => $results->filter(),
+            'pagination' => ['more' => $hasMore],
         ]);
     }
 
@@ -88,6 +110,14 @@ abstract class SelectController extends PaginatedAjaxController
      */
     public function formatItem($model)
     {
+        if ($this->idField && $this->textField) {
+            return [
+                'id' => $model->getAttribute($this->idField),
+                'text' => $model->getAttribute($this->textField),
+            ];
+        }
+
+        // guess
         $attributes = collect($model->getAttributes());
 
         return [
@@ -96,14 +126,48 @@ abstract class SelectController extends PaginatedAjaxController
         ];
     }
 
-    protected function includeGeneral(): bool
+    protected function prependItem(): ?array
     {
-        if (request()->has('id') && request('id') !== 0) {
+        return null;
+    }
+
+    protected function canPrependFirstItem(Request $request): bool
+    {
+        $item = $this->prependItem();
+
+        if (empty($item)) {
             return false;
-        } elseif (request()->has('term') && ! Str::contains('general', strtolower(request('term')))) {
+        }
+
+        if ($request->page > 1) {
+            return false;
+        }
+
+        if ($request->has('id') && $request->id != $item['id']) { // purposely loose comparison
+            return false;
+        }
+
+        if ($request->has('term') && ! str_contains(strtolower((string) $item['text']), strtolower($request->term))) {
             return false;
         }
 
         return true;
+    }
+
+    protected function filterById(EloquentBuilder|Builder $query, ?string $id): EloquentBuilder|Builder
+    {
+        if ($id) {
+            // multiple
+            if (str_contains($id, ',')) {
+                $keys = explode(',', $id);
+
+                return $this->idField ? $query->whereIn($this->idField, $keys) : $query->whereKey($keys);
+            }
+
+            // use id field if given
+            return $this->idField ? $query->where($this->idField, $id) : $query->whereKey($id);
+        }
+
+        return $query;
     }
 }

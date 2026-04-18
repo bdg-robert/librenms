@@ -27,15 +27,15 @@ print_optionbar_start(28);
     <?php echo csrf_field() ?>
     <div class="form-group">
         <label for="package">Package</label>
-        <input type="text" name="package" id="package" size=20 value="<?php echo htmlspecialchars($_POST['package']); ?>" class="form-control input-sm" placeholder="Any" />
+        <input type="text" name="package" id="package" size=20 value="<?php echo htmlspecialchars((string) $_POST['package']); ?>" class="form-control input-sm" placeholder="Any" />
     </div>
     <div class="form-group">
         <label for="version">Version</label>
-        <input type="text" name="version" id="version" size=20 value="<?php echo htmlspecialchars($_POST['version']); ?>" class="form-control input-sm" placeholder="Any" />
+        <input type="text" name="version" id="version" size=20 value="<?php echo htmlspecialchars((string) $_POST['version']); ?>" class="form-control input-sm" placeholder="Any" />
     </div>
     <div class="form-group">
         <label for="version">Arch</label>
-        <input type="text" name="arch" id="arch" size=20 value="<?php echo htmlspecialchars($_POST['arch']); ?>" class="form-control input-sm" placeholder="Any" />
+        <input type="text" name="arch" id="arch" size=20 value="<?php echo htmlspecialchars((string) $_POST['arch']); ?>" class="form-control input-sm" placeholder="Any" />
     </div>
     <button type="submit" class="btn btn-default input-sm">Search</button>
 </form>
@@ -43,7 +43,7 @@ print_optionbar_start(28);
 print_optionbar_end();
 
 if (isset($_POST['results_amount']) && $_POST['results_amount'] > 0) {
-    $results = $_POST['results'];
+    $results = (int) $_POST['results_amount'];
 } else {
     $results = 50;
 }
@@ -70,17 +70,17 @@ if (isset($_POST['results_amount']) && $_POST['results_amount'] > 0) {
 <?php
 
 $count_query = 'SELECT COUNT(*) FROM ( ';
-$full_query = '';
 $query = 'SELECT packages.name FROM packages,devices ';
 $param = [];
 
-if (! Auth::user()->hasGlobalRead()) {
+if (Gate::denies('viewAll', \App\Models\Device::class)) {
     $device_ids = Permissions::devicesForUser()->toArray() ?: [0];
     $where .= ' AND `D`.`device_id` IN ' . dbGenPlaceholders(count($device_ids));
     $param = array_merge($param, $device_ids);
 }
 
-$query .= " WHERE packages.device_id = devices.device_id AND packages.name LIKE '%" . $_POST['package'] . "%' $sql_where GROUP BY packages.name";
+$query .= " WHERE packages.device_id = devices.device_id AND packages.name LIKE ? $sql_where GROUP BY packages.name";
+$param[] = '%' . $_POST['package'] . '%';
 
 $where = '';
 $ver = '';
@@ -107,7 +107,7 @@ if (! isset($_POST['page_number']) && $_POST['page_number'] < 1) {
 }
 
 $start = ($page_number - 1) * $results;
-$full_query = $full_query . $query . " LIMIT $start,$results";
+$full_query = $query . " LIMIT $start,$results";
 
 ?>
         <tr>
@@ -131,7 +131,7 @@ foreach (dbFetchRows($full_query, $param) as $entry) {
 }
 
 if (! empty($_POST['version'])) {
-    [$opt, $ver] = explode(' ', $_POST['version']);
+    [$opt, $ver] = explode(' ', (string) $_POST['version']);
 }
 
 foreach ($ordered as $name => $entry) {
@@ -151,7 +151,7 @@ foreach ($ordered as $name => $entry) {
             $devs[] = generate_device_link($variation);
         }
     }
-    if (sizeof($arch) > 0 && sizeof($vers) > 0) {
+    if (count($arch) > 0 && count($vers) > 0) {
         ?>
         <tr>
             <td><a href="<?php echo \LibreNMS\Util\Url::generate(['page' => 'packages', 'name' => $name]); ?>"><?php echo $name; ?></a></td>
@@ -172,11 +172,11 @@ if ((int) ($count / $results) > 0 && $count != $results) {
 ?>
 
     </table>
-    <input type="hidden" name="page_number" id="page_number" value="<?php echo htmlspecialchars($page_number); ?>">
+    <input type="hidden" name="page_number" id="page_number" value="<?php echo htmlspecialchars((string) $page_number); ?>">
     <input type="hidden" name="results_amount" id="results_amount" value="<?php echo htmlspecialchars($results); ?>">
-    <input type="hidden" name="package" id="results_packages" value="<?php echo htmlspecialchars($_POST['package']); ?>">
-    <input type="hidden" name="version" id="results_version" value="<?php echo htmlspecialchars($_POST['version']); ?>">
-    <input type="hidden" name="arch" id="results_arch" value="<?php echo htmlspecialchars($_POST['arch']); ?>">
+    <input type="hidden" name="package" id="results_packages" value="<?php echo htmlspecialchars((string) $_POST['package']); ?>">
+    <input type="hidden" name="version" id="results_version" value="<?php echo htmlspecialchars((string) $_POST['version']); ?>">
+    <input type="hidden" name="arch" id="results_arch" value="<?php echo htmlspecialchars((string) $_POST['arch']); ?>">
 </form>
 <script type="text/javascript">
     function updateResults(results) {
